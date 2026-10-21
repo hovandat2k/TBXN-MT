@@ -153,6 +153,9 @@ button:disabled{opacity:.5;cursor:default}
 #missNote:empty{display:none}
 
 /* ===== Export ===== */
+#prevWrap[hidden]{display:none}
+.ptog{padding:0;min-height:0;gap:10px;background:none}
+.ptog .chev{font-size:12.5px;font-weight:700;color:var(--brand);background:var(--soft);border-radius:999px;padding:4px 10px;white-space:nowrap}
 #prevWrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff;max-height:70vh}
 #prev{display:block;width:100%;height:auto}
 .actions{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
@@ -258,11 +261,11 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
   <!-- 4. Ảnh xuất -->
   <section class="card" id="expCard">
     <div class="tbar">
-      <h2 style="margin:0">Phiếu kết quả</h2>
+      <button type="button" class="ptog" id="prevTog" aria-expanded="false" aria-controls="prevWrap"><h2 style="margin:0">Phiếu kết quả</h2><span class="chev">Xem phiếu ▾</span></button>
       <span class="sp"></span>
       <div class="seg" id="expSeg"><button type="button" data-e="full" class="on">Đầy đủ cột</button><button type="button" data-e="short">Rút gọn</button></div>
     </div>
-    <div id="prevWrap"><img id="prev" alt="Phiếu kết quả"></div>
+    <div id="prevWrap" hidden><img id="prev" alt="Phiếu kết quả"></div>
     <div class="actions">
       <button type="button" class="primary" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
       <button type="button" class="ghost" id="shareImg"><span class="i">📤</span>Chia sẻ</button>
@@ -569,13 +572,17 @@ async function makeCanvas(mono = false){
   g.fillStyle = '#fff'; g.fillRect(0, 0, Wc, Hc);
   g.textBaseline = 'middle';
   // tiêu đề
-  if (logo){ g.save(); roundRect(g, M, 20, 54, 54, 13); g.clip(); if (mono) g.filter = 'grayscale(1)'; g.drawImage(logo, M, 20, 54, 54); g.restore(); }
+  // tiêu đề in hoa, logo + chữ căn giữa phiếu
+  const TITLE = 'PHIẾU BÁO CÁO CÀ TƯƠI';
+  g.font = `800 28px ${SANS}`; const titleW = g.measureText(TITLE).width;
+  const gx = Math.round(Wc / 2 - (54 + 16 + titleW) / 2), tx = gx + 70;
+  if (logo){ g.save(); roundRect(g, gx, 20, 54, 54, 13); g.clip(); if (mono) g.filter = 'grayscale(1)'; g.drawImage(logo, gx, 20, 54, 54); g.restore(); }
   const dates = gs.map(x => x.date).filter(Boolean);
   const range = dates.length ? (dates.length > 1 ? `${dates[0]} – ${dates[dates.length - 1]}` : dates[0]) : '';
   g.fillStyle = T('#1b5f8c'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
-  g.fillText('Phiếu báo cáo cà tươi', M + 68, 38);
+  g.fillText(TITLE, tx, 37);
   g.fillStyle = T('#5a7d93'); g.font = `600 15.5px ${SANS}`;
-  g.fillText([range ? 'Ngày cân ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), M + 68, 63);
+  g.textAlign = 'center'; g.fillText([range ? 'Ngày cân ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
   // bảng
   const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
   const XE = xs[xs.length - 1];
@@ -654,6 +661,7 @@ async function renderExport(){
   const card = $('#expCard');
   if (!rows.length){ card.hidden = true; return; }
   card.hidden = false;
+  if ($('#prevWrap').hidden) return;          // phiếu đang thu gọn: chỉ vẽ khi mở ra
   try {
     const c = await makeCanvas();
     lastBlob = await new Promise(r => c.toBlob(r, 'image/png'));
@@ -670,6 +678,12 @@ function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()
 document.querySelectorAll('#expSeg button').forEach(b => {
   b.classList.toggle('on', b.dataset.e === expMode);
   b.addEventListener('click', () => { expMode = b.dataset.e; LS.set('tbxn_exp', expMode); document.querySelectorAll('#expSeg button').forEach(x => x.classList.toggle('on', x === b)); renderExport(); });
+});
+$('#prevTog').addEventListener('click', () => {
+  const w = $('#prevWrap'), open = w.hidden;
+  w.hidden = !open; $('#prevTog').setAttribute('aria-expanded', open);
+  $('#prevTog .chev').textContent = open ? 'Ẩn phiếu ▴' : 'Xem phiếu ▾';
+  if (open) renderExport();
 });
 $('#prev').addEventListener('click', () => { $('#zoomImg').src = $('#prev').src; $('#zoomDlg').showModal(); });
 $('#copyImg').addEventListener('click', async () => {
@@ -732,6 +746,7 @@ $('#resetBtn').addEventListener('click', () => {
   $('#srcBox').classList.remove('show'); $('#srcBox').open = false;
   $('#prog').classList.remove('show'); $('#progBar').style.width = '0'; $('#progTxt').textContent = '';
   $('#appendChk').checked = false;
+  $('#prevWrap').hidden = true; $('#prevTog').setAttribute('aria-expanded', false); $('#prevTog .chev').textContent = 'Xem phiếu ▾';
   renderTable(); renderExport();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   toast('Đã xoá');
