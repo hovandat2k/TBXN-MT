@@ -282,9 +282,9 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
 <dialog id="setDlg">
   <form method="dialog" class="dlg">
     <h3>Cài đặt nhận dạng</h3>
-    <p>Mặc định trang đọc ảnh ngay trên máy (miễn phí, không gửi ảnh đi đâu). Chữ in đọc tốt, nhưng <b>số xanh – nổi viết tay</b> có thể đọc sai.
-      Để đọc chữ viết tay chính xác hơn, nhập khoá <b>Google Gemini API</b> (miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>) — khi đó ảnh sẽ được gửi tới Google để đọc.</p>
-    <label for="gKey">Gemini API key (để trống = chỉ đọc trên máy)</label>
+    <p>Mặc định, ảnh được đọc ngay trên máy — miễn phí và không gửi đi đâu. Chữ in đọc tốt, nhưng <b>số xanh – nổi viết tay</b> có thể bị sai.
+      Để đọc chính xác hơn, hãy nhập khoá <b>Google Gemini API</b> (miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>) để ảnh được đọc bằng AI của Google.</p>
+    <label for="gKey">Gemini API key</label>
     <input class="fld" id="gKey" type="password" autocomplete="off" placeholder="AIza…">
     <label for="gModel">Model</label>
     <input class="fld" id="gModel" list="gModels" placeholder="gemini-3.8-flash">
