@@ -582,7 +582,7 @@ async function makeCanvas(mono = false){
   g.fillStyle = T('#1b5f8c'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
   g.fillText(TITLE, tx, 37);
   g.fillStyle = T('#5a7d93'); g.font = `600 15.5px ${SANS}`;
-  g.textAlign = 'center'; g.fillText([range ? 'Ngày cân ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
+  g.textAlign = 'center'; g.fillText([range ? 'Ngày ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
   // bảng
   const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
   const XE = xs[xs.length - 1];
