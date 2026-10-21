@@ -219,14 +219,14 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
 
   <!-- 1. Nhập ảnh -->
   <section class="card">
-    <div id="drop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh phiếu cân">
+    <div id="drop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh / PDF phiếu cân">
       <div class="big">🖼️</div>
       <div class="t">Nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> để dán ảnh</div>
     </div>
-    <input type="file" id="file" accept="image/*" hidden>
+    <input type="file" id="file" accept="image/*,application/pdf,.pdf" hidden>
     <div class="pbtns">
       <button type="button" class="primary" id="pasteBtn">📋 Dán ảnh</button>
-      <button type="button" class="ghost" id="pickBtn">📁 Chọn ảnh</button>
+      <button type="button" class="ghost" id="pickBtn">📁 Chọn ảnh/PDF</button>
       <button type="button" class="ghost" id="manualBtn">✏️ Nhập tay</button>
     </div>
     <div class="opt">
@@ -757,10 +757,10 @@ $('#resetBtn').addEventListener('click', () => {
 let busy = false;
 document.addEventListener('paste', e => {
   const items = [...(e.clipboardData ? e.clipboardData.items : [])];
-  const it = items.find(i => i.type.startsWith('image/'));
+  const it = items.find(i => i.type.startsWith('image/') || i.type === 'application/pdf');
   if (!it) return;                              // dán chữ vào ô nhập vẫn hoạt động bình thường
   e.preventDefault();
-  handleImage(it.getAsFile());
+  handleFile(it.getAsFile());
 });
 $('#pasteBtn').addEventListener('click', async () => {
   try {
@@ -778,28 +778,88 @@ $('#pasteBtn').addEventListener('click', async () => {
 $('#pickBtn').addEventListener('click', () => $('#file').click());
 $('#drop').addEventListener('click', () => $('#file').click());
 $('#drop').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#file').click(); } });
-$('#file').addEventListener('change', e => { const f = e.target.files[0]; if (f) handleImage(f); e.target.value = ''; });
+$('#file').addEventListener('change', e => { const f = e.target.files[0]; if (f) handleFile(f); e.target.value = ''; });
 ['dragenter','dragover'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.add('over'); }));
 ['dragleave','drop'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.remove('over'); }));
-$('#drop').addEventListener('drop', e => { const f = [...e.dataTransfer.files].find(f => f.type.startsWith('image/')); if (f) handleImage(f); });
+$('#drop').addEventListener('drop', e => { const f = [...e.dataTransfer.files].find(f => f.type.startsWith('image/') || isPdf(f)); if (f) handleFile(f); else toast('Chỉ nhận ảnh hoặc tệp PDF'); });
 
+/* ---------- PDF: chuyển từng trang thành ảnh rồi đọc như ảnh ---------- */
+const isPdf = f => !!f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''));
+function handleFile(f){
+  if (isPdf(f)) return handlePdf(f);
+  if (f.type && !f.type.startsWith('image/')){ toast('Chỉ nhận ảnh hoặc tệp PDF'); return; }
+  return handleImage(f);
+}
+let pdfLibP = null;
+function loadPdfLib(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (!pdfLibP) pdfLibP = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload = () => {
+      if (!window.pdfjsLib){ rej(new Error('Không tải được bộ đọc PDF')); return; }
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      res(window.pdfjsLib);
+    };
+    sc.onerror = () => { pdfLibP = null; rej(new Error('Không tải được bộ đọc PDF (kiểm tra kết nối mạng).')); };
+    document.head.appendChild(sc);
+  });
+  return pdfLibP;
+}
+async function pdfToImages(file){
+  progress(0.02, 'Đang mở tệp PDF…');
+  const lib = await loadPdfLib();
+  const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const n = Math.min(doc.numPages, 20), out = [];
+  if (doc.numPages > 20) toast(`PDF có ${doc.numPages} trang — chỉ đọc 20 trang đầu`, 4000);
+  for (let i = 1; i <= n; i++){
+    progress(0.02 + 0.06 * (i / n), `Đang chuyển trang PDF ${i}/${n} thành ảnh…`);
+    const page = await doc.getPage(i), v1 = page.getViewport({ scale: 1 });
+    const sc = Math.max(1.5, Math.min(4, 2200 / v1.width)), vp = page.getViewport({ scale: sc });
+    const c = mkCanvas(vp.width, vp.height), g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    out.push(await new Promise(r => c.toBlob(r, 'image/png')));
+    page.cleanup();
+  }
+  doc.destroy();
+  return out;
+}
+async function handlePdf(file){
+  if (busy){ toast('Đang đọc tệp trước, vui lòng chờ…'); return; }
+  let imgs;
+  try { busy = true; imgs = await pdfToImages(file); }
+  catch(e){ console.error(e); progress(1, '❌ ' + (e.message || e)); toast('❌ ' + (e.message || 'Không đọc được PDF')); return; }
+  finally { busy = false; }
+  if (!imgs.length){ toast('PDF không có trang nào'); return; }
+  return handleImage(imgs);
+}
+
+let progPrefix = '';
 function progress(p, txt){
   $('#prog').classList.add('show');
   if (p != null) $('#progBar').style.width = Math.max(3, Math.min(100, p * 100)) + '%';
-  if (txt != null) $('#progTxt').textContent = txt;
+  if (txt != null) $('#progTxt').textContent = (/^[✅❌]/.test(txt) ? '' : progPrefix) + txt;
 }
 function progressDone(txt){ progress(1, txt); setTimeout(() => { if (!busy) $('#prog').classList.remove('show'); }, 2500); }
 
-async function handleImage(blob){
+async function handleImage(input){
   if (busy){ toast('Đang đọc ảnh trước, vui lòng chờ…'); return; }
   busy = true;
   ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = true);
+  const pages = Array.isArray(input) ? input : [input];
   try {
-    const url = URL.createObjectURL(blob);
-    $('#srcImg').src = url; $('#srcBox').classList.add('show');
+    const old = $('#srcImg').src; if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+    $('#srcImg').src = URL.createObjectURL(pages[0]); $('#srcBox').classList.add('show');
     progress(0.02, 'Đang chuẩn bị ảnh…');
-    const res = await readSheet(blob);
-    if (!res.rows.length) throw new Error('Không tìm thấy dòng dữ liệu nào trong ảnh.');
+    const res = { rows: [], via: '' };
+    for (let i = 0; i < pages.length; i++){
+      progPrefix = pages.length > 1 ? `Trang ${i + 1}/${pages.length}: ` : '';
+      const r = await readSheet(pages[i]);
+      res.rows.push(...r.rows); res.via = r.via;
+    }
+    progPrefix = '';
+    if (!res.rows.length) throw new Error('Không tìm thấy dòng dữ liệu nào trong ' + (pages.length > 1 ? 'tệp PDF.' : 'ảnh.'));
     const append = $('#appendChk').checked;
     if (!append){ rows = []; Object.keys(crops).forEach(k => delete crops[k]); }
     res.rows.forEach(r => { const nr = newRow(r); if (r.crop) crops[nr.id] = r.crop; delete nr.crop; rows.push(nr); });
@@ -812,7 +872,7 @@ async function handleImage(blob){
     progress(1, '❌ ' + (e.message || e));
     toast('❌ ' + (e.message || 'Không đọc được ảnh'));
   } finally {
-    busy = false;
+    busy = false; progPrefix = '';
     ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = false);
   }
 }
