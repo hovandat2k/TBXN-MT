@@ -146,7 +146,16 @@ button:disabled{opacity:.5;cursor:default}
 /* ===== Export ===== */
 #prevWrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff;max-height:70vh}
 #prev{display:block;width:100%;height:auto}
-.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.actions .danger{color:var(--warn)}
+#printArea{display:none}
+@media print{
+  @page{margin:8mm}
+  html,body{background:#fff !important;padding:0 !important}
+  body > *:not(#printArea){display:none !important}
+  #printArea{display:block !important}
+  #printArea img{display:block;width:100%;height:auto}
+}
 .actions button{flex-direction:column;gap:2px;min-height:0;padding:8px 2px;font-size:12px;font-weight:700;border-radius:12px;line-height:1.15}
 .actions button .i{font-size:18px;line-height:1}
 
@@ -240,21 +249,23 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
   <!-- 4. Ảnh xuất -->
   <section class="card" id="expCard">
     <div class="tbar">
-      <h2 style="margin:0">Ảnh kết quả</h2>
+      <h2 style="margin:0">Phiếu kết quả</h2>
       <span class="sp"></span>
       <div class="seg" id="expSeg"><button type="button" data-e="full" class="on">Đầy đủ cột</button><button type="button" data-e="short">Rút gọn</button></div>
     </div>
-    <div id="prevWrap"><img id="prev" alt="Ảnh kết quả"></div>
+    <div id="prevWrap"><img id="prev" alt="Phiếu kết quả"></div>
     <div class="actions">
       <button type="button" class="primary" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
       <button type="button" class="ghost" id="shareImg"><span class="i">📤</span>Chia sẻ</button>
       <button type="button" class="ghost" id="dlImg"><span class="i">⬇️</span>Tải ảnh</button>
-      <button type="button" class="ghost" id="copyTxt"><span class="i">📝</span>Sao chép chữ</button>
+      <button type="button" class="ghost" id="printBtn"><span class="i">🖨️</span>In phiếu</button>
+      <button type="button" class="ghost danger" id="resetBtn"><span class="i">🗑️</span>Xoá</button>
     </div>
   </section>
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="printArea"><img id="printImg" alt=""></div>
 
 <dialog id="setDlg">
   <form method="dialog" class="dlg">
@@ -363,6 +374,7 @@ function renderTable(){
   document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
   if (!rows.length){
     box.innerHTML = `<div class="empty"><b>📄</b>Chưa có dữ liệu. Dán ảnh phiếu cân ở trên, hoặc bấm “Nhập tay”.</div>`;
+    updateNumbers();
     return;
   }
   const gs = groups();
@@ -549,7 +561,7 @@ async function makeCanvas(){
   const dates = gs.map(x => x.date).filter(Boolean);
   const range = dates.length ? (dates.length > 1 ? `${dates[0]} – ${dates[dates.length - 1]}` : dates[0]) : '';
   g.fillStyle = '#1b5f8c'; g.font = `800 26px ${SANS}`; g.textAlign = 'left';
-  g.fillText('Bảng cân xanh – nổi', M + 68, 38);
+  g.fillText('Phiếu báo cáo cà tươi', M + 68, 38);
   g.fillStyle = '#5a7d93'; g.font = `600 15.5px ${SANS}`;
   g.fillText([range ? 'Ngày cân ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), M + 68, 63);
   // bảng
@@ -642,7 +654,7 @@ async function freshBlob(){
   const c = await makeCanvas();
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
-function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `xanh-noi_${d}.png`; }
+function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `phieu-ca-tuoi_${d}.png`; }
 document.querySelectorAll('#expSeg button').forEach(b => {
   b.classList.toggle('on', b.dataset.e === expMode);
   b.addEventListener('click', () => { expMode = b.dataset.e; LS.set('tbxn_exp', expMode); document.querySelectorAll('#expSeg button').forEach(x => x.classList.toggle('on', x === b)); renderExport(); });
@@ -663,7 +675,7 @@ async function shareBlob(){
   const blob = await freshBlob();
   const file = new File([blob], fileName(), { type: 'image/png' });
   if (navigator.canShare && navigator.canShare({ files: [file] })){
-    await navigator.share({ files: [file], title: 'Bảng xanh – nổi', text: summaryText() });
+    await navigator.share({ files: [file], title: 'Phiếu báo cáo cà tươi', text: summaryText() });
     return true;
   }
   return false;
@@ -690,11 +702,27 @@ function summaryText(){
   out.push(`➡️ TỔNG KL: ${fmtKg(A.tl)} kg`, `➡️ TB Xanh: ${fmtPct(A.x)}%`, `➡️ TB Nổi: ${fmtPct(A.n)}%`);
   return out.join('\n');
 }
-$('#copyTxt').addEventListener('click', async () => {
-  const t = summaryText();
-  try { await navigator.clipboard.writeText(t); }
-  catch(e){ const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-  toast('✅ Đã sao chép dạng chữ');
+// In phiếu: đặt ảnh phiếu vào vùng in riêng rồi mở hộp thoại in
+$('#printBtn').addEventListener('click', async () => {
+  try {
+    const blob = await freshBlob(), url = URL.createObjectURL(blob);
+    const img = $('#printImg');
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    window.print();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch(e){ toast('Không in được: ' + (e.message || e)); }
+});
+// Xoá toàn bộ trang: bảng, ảnh gốc, tiến trình, phiếu
+$('#resetBtn').addEventListener('click', () => {
+  if (!confirm('Xoá toàn bộ dữ liệu trên trang?')) return;
+  rows = []; Object.keys(crops).forEach(k => delete crops[k]); save();
+  const old = $('#srcImg').src; $('#srcImg').removeAttribute('src'); if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+  $('#srcBox').classList.remove('show'); $('#srcBox').open = false;
+  $('#prog').classList.remove('show'); $('#progBar').style.width = '0'; $('#progTxt').textContent = '';
+  $('#appendChk').checked = false;
+  renderTable(); renderExport();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('Đã xoá');
 });
 
 /* =========================================================================
