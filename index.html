@@ -1,0 +1,1399 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#cfe8f8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="Dán ảnh phiếu cân, tự đọc khách hàng, TL thực, xanh – nổi và tính trung bình có trọng số.">
+<title>Trung bình Xanh – Nổi</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<style>
+:root{
+  --bg:#f3f9fd; --surface:#ffffff; --ink:#1f3a4d; --muted:#6a8799; --line:#d8e9f4;
+  --brand:#4ea8de; --brand-2:#8cc8ee; --accent:#5bb2e6; --btn:#cfe8f8; --btn-ink:#1b5f8c; --ok:#2c7a5a; --warn:#c0492f; --amber:#d99a1c;
+  --field:#fff; --soft:#eef6fc; --shadow:0 6px 20px rgba(60,140,200,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1820; --surface:#15232e; --ink:#e2f0f9; --muted:#8fb0c4; --line:#24394a;
+    --brand:#7cc3ef; --brand-2:#4f9fcf; --accent:#7cc3ef; --btn:#7cc3ef; --btn-ink:#0e1820; --field:#112029; --soft:#182a37; --shadow:0 6px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1820; --surface:#15232e; --ink:#e2f0f9; --muted:#8fb0c4; --line:#24394a;
+  --brand:#7cc3ef; --brand-2:#4f9fcf; --accent:#7cc3ef; --btn:#7cc3ef; --btn-ink:#0e1820; --field:#112029; --soft:#182a37; --shadow:0 6px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px;line-height:1.45;padding:0 16px calc(32px + env(safe-area-inset-bottom))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding:calc(18px + env(safe-area-inset-top)) 0 12px;display:flex;align-items:center;gap:12px}
+.logo{width:44px;height:44px;border-radius:12px;box-shadow:var(--shadow);flex:none;display:block}
+h1{font-size:20px;margin:0;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.sub{margin:0;color:var(--muted);font-size:12.5px}
+.hbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink);width:44px;height:44px;min-height:0;padding:0;border-radius:14px;font-size:18px;flex:none}
+.hbtn:first-of-type{margin-left:auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px;font-weight:800;display:flex;align-items:center;gap:8px}
+.card h2 .tag{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted)}
+button{font:inherit;font-weight:700;font-size:14.5px;border:0;border-radius:13px;padding:10px 14px;cursor:pointer;transition:transform .08s, opacity .15s;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;color:var(--ink);background:transparent}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.5;cursor:default}
+.primary{background:var(--btn);color:var(--btn-ink)}
+.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+:root[data-theme="dark"] .primary{color:#0e1820}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .primary{color:#0e1820}}
+
+/* ===== Paste zone ===== */
+#drop{border:2px dashed color-mix(in srgb,var(--brand) 55%,transparent);border-radius:16px;padding:20px 14px;text-align:center;
+  background:color-mix(in srgb,var(--brand) 6%,transparent);cursor:pointer;transition:background .15s,border-color .15s;outline:none}
+#drop:focus-visible,#drop.over{background:color-mix(in srgb,var(--brand) 14%,transparent);border-color:var(--brand)}
+#drop .big{font-size:30px;line-height:1}
+#drop .t{font-weight:800;font-size:16px;margin-top:6px}
+#drop .t kbd{font:inherit;font-size:13px;background:var(--surface);border:1px solid var(--line);border-bottom-width:2.5px;border-radius:7px;padding:1px 7px;margin:0 2px}
+#drop .s{color:var(--muted);font-size:13px;margin-top:2px}
+.pbtns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.pbtns button{flex:1 1 0}
+.opt{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13.5px;color:var(--muted);flex-wrap:wrap}
+.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:var(--ink);user-select:none}
+.switch input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border-radius:999px;background:var(--line);position:relative;margin:0;transition:.15s;cursor:pointer;flex:none}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch input:checked{background:var(--brand)}
+.switch input:checked::after{left:19px}
+.aitag{margin-left:auto;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;background:var(--soft);color:var(--muted)}
+.aitag.on{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+#prog{margin-top:12px;display:none}
+#prog.show{display:block}
+.bar{height:8px;border-radius:999px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand-2),var(--brand));border-radius:999px;transition:width .25s}
+#progTxt{font-size:13px;color:var(--muted);margin-top:6px;font-weight:600}
+#srcBox{margin-top:12px;display:none}
+#srcBox.show{display:block}
+#srcBox summary{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--brand);list-style:none;display:flex;align-items:center;gap:6px}
+#srcBox summary::-webkit-details-marker{display:none}
+#srcBox summary::before{content:"▸";transition:transform .15s}
+#srcBox[open] summary::before{transform:rotate(90deg)}
+#srcImg{display:block;width:100%;margin-top:8px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+
+/* ===== Data table ===== */
+.tbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.tbar .sp{flex:1}
+.seg{display:inline-grid;grid-auto-flow:column;gap:3px;background:var(--soft);border-radius:12px;padding:3px}
+.seg button{min-height:32px;padding:4px 11px;border-radius:9px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 5px rgba(0,0,0,.12)}
+.small{min-height:34px;padding:6px 11px;font-size:13px;border-radius:10px}
+.empty{text-align:center;color:var(--muted);padding:24px 10px;font-size:14px}
+.empty b{display:block;font-size:30px;margin-bottom:6px}
+.grp{margin-bottom:14px}
+.grp:last-child{margin-bottom:0}
+.ghead{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--soft);border-radius:12px;font-weight:700;font-size:14px;margin-bottom:6px}
+.ghead input{width:130px;font-weight:800}
+.ghead .gsum{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600;text-align:right}
+.ghead .gsum b{color:var(--ink)}
+.rhead,.row{display:grid;grid-template-columns:30px minmax(0,1fr) 118px 78px 78px 34px;gap:6px;align-items:start}
+.rhead{font-size:12px;font-weight:700;color:var(--muted);padding:0 2px 4px}
+.rhead span:nth-child(n+3){text-align:center}
+.row{padding:6px 2px;border-bottom:1px solid var(--line)}
+.row:last-of-type{border-bottom:0}
+.row .n{font-weight:800;color:var(--muted);text-align:center;padding-top:9px;font-size:14px}
+.row .del{width:34px;height:38px;min-height:0;padding:0;font-size:16px;color:var(--muted);border-radius:10px}
+.row .del:hover{color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent)}
+.fld{width:100%;font:inherit;font-size:15.5px;font-weight:600;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;
+  padding:7px 9px;outline:none;transition:border-color .15s, box-shadow .15s;-webkit-appearance:none;appearance:none;min-width:0}
+.fld:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.fld.num{text-align:right;font-variant-numeric:tabular-nums}
+.fld.pct{text-align:center;font-variant-numeric:tabular-nums}
+.fld.warn{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 9%,var(--field))}
+.fld.okv{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.cl{display:block;font-size:11px;font-weight:700;color:var(--muted);margin:0 0 2px 2px;display:none}
+.hw{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11.5px;color:var(--muted);font-weight:600}
+.hw img{height:30px;max-width:100%;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+.hw .rd{white-space:nowrap}
+.meta{font-size:11.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note{font-size:12px;color:var(--muted);margin-top:4px;text-align:right}
+.note.w{color:var(--amber);font-weight:600}
+.addrow{margin-top:6px;width:100%;border:1.5px dashed var(--line);color:var(--muted);min-height:36px;font-size:13px}
+
+/* full-column table */
+.full{overflow-x:auto;border:1px solid var(--line);border-radius:12px;-webkit-overflow-scrolling:touch}
+.full table{border-collapse:collapse;min-width:1080px;width:100%;font-size:13.5px}
+.full th{background:var(--soft);font-weight:700;font-size:12.5px;padding:7px 5px;white-space:nowrap;text-align:center;color:var(--muted)}
+.full td{padding:4px;border-top:1px solid var(--line);vertical-align:middle}
+.full td.gtd{background:color-mix(in srgb,var(--brand) 8%,transparent);font-weight:800;padding:7px 10px}
+.full .fld{font-size:13.5px;padding:5px 6px;border-radius:8px}
+.full td.c{text-align:center;color:var(--muted);font-weight:700}
+
+/* ===== Summary ===== */
+.stats{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px}
+.stat{background:var(--soft);border-radius:16px;padding:12px 14px;min-width:0}
+.stat .l{font-size:12.5px;color:var(--muted);font-weight:700}
+.stat .v{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .v small{font-size:14px;font-weight:700;color:var(--muted);margin-left:3px}
+.stat.main{background:linear-gradient(135deg,#d7eefc,#b3dcf5);color:#164a6e}
+.stat.main .l,.stat.main .v small{color:#2c6a94}
+.formula{font-size:12px;color:var(--muted);margin-top:10px}
+#missNote{font-size:12.5px;color:var(--amber);font-weight:600;margin-top:8px}
+#missNote:empty{display:none}
+
+/* ===== Export ===== */
+#prevWrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff;max-height:70vh}
+#prev{display:block;width:100%;height:auto}
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.actions button{flex-direction:column;gap:2px;min-height:0;padding:8px 2px;font-size:12px;font-weight:700;border-radius:12px;line-height:1.15}
+.actions button .i{font-size:18px;line-height:1}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#1d4f70;color:#fff;
+  padding:12px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:20;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* dialogs */
+dialog{border:0;border-radius:20px;padding:0;max-width:min(520px,calc(100% - 24px));width:100%;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(10,30,45,.45)}
+.dlg{padding:18px}
+.dlg h3{margin:0 0 6px;font-size:17px}
+.dlg p{margin:0 0 12px;font-size:13.5px;color:var(--muted)}
+.dlg label{display:block;font-weight:700;font-size:13px;margin:10px 0 4px}
+.dlg .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.dlg a{color:var(--brand)}
+#zoomDlg{max-width:min(1100px,calc(100% - 16px))}
+#zoomDlg img{display:block;width:100%;height:auto;background:#fff}
+#zoomDlg .dlg{padding:8px}
+
+@media (max-width:640px){
+  body{padding:0 12px calc(28px + env(safe-area-inset-bottom))}
+  .card{padding:13px;border-radius:18px}
+  h1{font-size:18px}
+  .rhead{display:none}
+  .row{grid-template-columns:24px repeat(3,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh d" ". tl x no .";row-gap:6px;padding:9px 0}
+  .row .n{grid-area:n;padding-top:8px}
+  .row .ckh{grid-area:kh}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .del{grid-area:d;width:30px}
+  .cl{display:block}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat.main{grid-column:1 / -1}
+  .stat .v{font-size:24px}
+  .ghead{flex-wrap:wrap}
+  .ghead .gsum{margin-left:0;width:100%;text-align:left}
+  .pbtns button{font-size:13.5px;padding:9px 8px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img class="logo" src="icons/icon-192.png" alt="">
+    <div>
+      <h1>Trung bình Xanh – Nổi</h1>
+      <p class="sub">Dán ảnh phiếu cân → tự đọc &amp; tính</p>
+    </div>
+    <button class="hbtn" id="setBtn" aria-label="Cài đặt nhận dạng" title="Cài đặt nhận dạng">⚙️</button>
+    <button class="hbtn" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối">🌓</button>
+  </header>
+
+  <!-- 1. Nhập ảnh -->
+  <section class="card">
+    <div id="drop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh phiếu cân">
+      <div class="big">🖼️</div>
+      <div class="t">Nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> để dán ảnh</div>
+      <div class="s">hoặc kéo thả / bấm vào đây để chọn ảnh chụp màn hình</div>
+    </div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <div class="pbtns">
+      <button type="button" class="primary" id="pasteBtn">📋 Dán ảnh</button>
+      <button type="button" class="ghost" id="pickBtn">📁 Chọn ảnh</button>
+      <button type="button" class="ghost" id="manualBtn">✏️ Nhập tay</button>
+    </div>
+    <div class="opt">
+      <label class="switch"><input type="checkbox" id="appendChk"> Ghép thêm vào bảng hiện có</label>
+      <span class="aitag" id="aiTag">Đọc ảnh: trên máy</span>
+    </div>
+    <div id="prog"><div class="bar"><i id="progBar"></i></div><div id="progTxt"></div></div>
+    <details id="srcBox"><summary>Xem ảnh gốc</summary><img id="srcImg" alt="Ảnh đã dán"></details>
+  </section>
+
+  <!-- 2. Bảng dữ liệu -->
+  <section class="card" id="tableCard">
+    <div class="tbar">
+      <h2 style="margin:0">Bảng dữ liệu</h2>
+      <span class="sp"></span>
+      <div class="seg" id="viewSeg"><button type="button" data-v="short" class="on">4 cột</button><button type="button" data-v="full">Tất cả cột</button></div>
+      <button type="button" class="ghost small" id="clearBtn" title="Xoá toàn bộ bảng">🗑️ Xoá</button>
+    </div>
+    <div id="tbl"></div>
+  </section>
+
+  <!-- 3. Kết quả -->
+  <section class="card" id="sumCard">
+    <h2>Kết quả <span class="tag" id="sumTag"></span></h2>
+    <div class="stats">
+      <div class="stat main"><div class="l">Tổng khối lượng</div><div class="v"><span id="sTL">0</span><small>kg</small></div></div>
+      <div class="stat"><div class="l">TB Xanh</div><div class="v"><span id="sX">–</span><small>%</small></div></div>
+      <div class="stat"><div class="l">TB Nổi</div><div class="v"><span id="sN">–</span><small>%</small></div></div>
+    </div>
+    <div id="missNote"></div>
+    <div class="formula">TB có trọng số = Σ(TL thực × %) ÷ Σ TL thực (chỉ tính các dòng đã có số %).</div>
+  </section>
+
+  <!-- 4. Ảnh xuất -->
+  <section class="card" id="expCard">
+    <div class="tbar">
+      <h2 style="margin:0">Ảnh kết quả</h2>
+      <span class="sp"></span>
+      <div class="seg" id="expSeg"><button type="button" data-e="full" class="on">Đầy đủ cột</button><button type="button" data-e="short">Rút gọn</button></div>
+    </div>
+    <div id="prevWrap"><img id="prev" alt="Ảnh kết quả"></div>
+    <div class="actions">
+      <button type="button" class="primary" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
+      <button type="button" class="ghost" id="shareImg"><span class="i">📤</span>Chia sẻ</button>
+      <button type="button" class="ghost" id="dlImg"><span class="i">⬇️</span>Tải ảnh</button>
+      <button type="button" class="ghost" id="copyTxt"><span class="i">📝</span>Sao chép chữ</button>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<dialog id="setDlg">
+  <form method="dialog" class="dlg">
+    <h3>Cài đặt nhận dạng</h3>
+    <p>Mặc định trang đọc ảnh ngay trên máy (miễn phí, không gửi ảnh đi đâu). Chữ in đọc tốt, nhưng <b>số xanh – nổi viết tay</b> có thể đọc sai.
+      Để đọc chữ viết tay chính xác hơn, nhập khoá <b>Google Gemini API</b> (miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>) — khi đó ảnh sẽ được gửi tới Google để đọc.</p>
+    <label for="gKey">Gemini API key (để trống = chỉ đọc trên máy)</label>
+    <input class="fld" id="gKey" type="password" autocomplete="off" placeholder="AIza…">
+    <label for="gModel">Model</label>
+    <input class="fld" id="gModel" list="gModels" placeholder="gemini-3.8-flash">
+    <datalist id="gModels"><option value="gemini-3.8-flash"><option value="gemini-3.6-flash"><option value="gemini-3.5-flash-lite"><option value="gemini-flash-latest"><option value="gemini-2.5-flash"></datalist>
+    <div class="row2">
+      <button value="cancel" class="ghost">Đóng</button>
+      <button value="save" class="primary" id="setSave">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="zoomDlg"><form method="dialog" class="dlg"><img id="zoomImg" alt=""><div class="row2"><button class="ghost" value="close">Đóng</button></div></form></dialog>
+
+<script>
+'use strict';
+/* =========================================================================
+   Tiện ích
+   ========================================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const LS = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+function toast(msg, ms = 2600){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), ms); }
+
+// Khối lượng: "41,926" | "41.926" | "41926" -> 41926 ; "12,5" -> 12.5
+function parseKg(s){
+  s = String(s ?? '').trim().replace(/\s/g, '');
+  if (!s) return null;
+  if (/^\d{1,3}([.,]\d{3})+$/.test(s)) return +s.replace(/[.,]/g, '');
+  s = s.replace(',', '.');
+  if (!/^\d*\.?\d+$/.test(s)) return null;
+  return +s;
+}
+// Phần trăm: "17" | "17.5" | "17,5"
+function parsePct(s){
+  s = String(s ?? '').trim().replace(/\s|%/g, '').replace(',', '.');
+  if (!s || !/^\d*\.?\d+$/.test(s)) return null;
+  return +s;
+}
+const fmtKg = n => n == null || isNaN(n) ? '' : (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const fmtPct = n => n == null || isNaN(n) ? '–' : (Math.round(n * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
+const fmtPctIn = n => n == null || isNaN(n) ? '' : String(Math.round(n * 100) / 100);
+
+/* =========================================================================
+   Trạng thái
+   ========================================================================= */
+const FIELDS = ['stt','soxe','hang','khach','tl1','tl2','tlh','bi','thuc','gio','xanh','noi'];
+const COLS_FULL = [
+  ['stt','STT'],['soxe','Số xe'],['hang','Hàng hóa'],['khach','Khách hàng'],['tl1','TL Lần 1'],['tl2','TL Lần 2'],
+  ['tlh','TL Hàng'],['bi','TL Bì'],['thuc','TL Thực'],['gio','Giờ cân'],['xanh','Xanh (%)'],['noi','Nổi (%)']
+];
+const NUMF = new Set(['tl1','tl2','tlh','bi','thuc']);
+let rows = LS.get('tbxn_rows', []);
+let view = LS.get('tbxn_view', 'short');
+let expMode = LS.get('tbxn_exp', 'full');
+let uid = rows.reduce((m, r) => Math.max(m, r.id || 0), 0) + 1;
+const crops = {}; // id -> dataURL ảnh chữ viết tay (không lưu)
+
+function newRow(o = {}){
+  const r = { id: uid++, date: '', flags: {} };
+  FIELDS.forEach(f => r[f] = '');
+  return Object.assign(r, o, { id: r.id, flags: Object.assign({}, o.flags || {}) });
+}
+function save(){ LS.set('tbxn_rows', rows); }
+
+/* =========================================================================
+   Tính toán
+   ========================================================================= */
+function groups(){
+  const g = [], idx = new Map();
+  rows.forEach(r => {
+    const k = r.date || '';
+    if (!idx.has(k)){ idx.set(k, g.length); g.push({ date: k, rows: [] }); }
+    g[idx.get(k)].rows.push(r);
+  });
+  return g;
+}
+function agg(list){
+  let tl = 0, wx = 0, sx = 0, wn = 0, sn = 0, miss = 0;
+  list.forEach(r => {
+    const t = parseKg(r.thuc); if (t == null) return;
+    tl += t;
+    const x = parsePct(r.xanh), n = parsePct(r.noi);
+    if (x != null){ wx += t * x; sx += t; }
+    if (n != null){ wn += t * n; sn += t; }
+    if (x == null || n == null) miss++;
+  });
+  return { tl, x: sx ? wx / sx : null, n: sn ? wn / sn : null, miss };
+}
+
+/* =========================================================================
+   Vẽ bảng
+   ========================================================================= */
+function renderTable(){
+  const box = $('#tbl');
+  document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  if (!rows.length){
+    box.innerHTML = `<div class="empty"><b>📄</b>Chưa có dữ liệu. Dán ảnh phiếu cân ở trên, hoặc bấm “Nhập tay”.</div>`;
+    return;
+  }
+  const gs = groups();
+  if (view === 'full'){
+    let h = `<div class="full"><table><thead><tr>${COLS_FULL.map(c => `<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>`;
+    gs.forEach((g, gi) => {
+      h += `<tr><td class="gtd" colspan="${COLS_FULL.length + 1}">Ngày cân : <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" style="width:130px;display:inline-block;font-weight:800"></td></tr>`;
+      g.rows.forEach(r => {
+        h += `<tr data-id="${r.id}">` + COLS_FULL.map(([f]) => {
+          const cls = NUMF.has(f) ? 'num' : (f === 'xanh' || f === 'noi') ? 'pct' : '';
+          const w = { stt: 46, soxe: 110, hang: 150, khach: 170, gio: 92, xanh: 66, noi: 66 }[f] || 88;
+          return `<td><input class="fld ${cls} ${r.flags[f] ? 'warn' : ''}" data-f="${f}" value="${esc(r[f])}" style="width:${w}px" ${NUMF.has(f) || f === 'xanh' || f === 'noi' ? 'inputmode="decimal"' : ''}></td>`;
+        }).join('') + `<td class="c"><button class="del" data-del="${r.id}" title="Xoá dòng" style="width:30px;height:32px;min-height:0;padding:0">✕</button></td></tr>`;
+      });
+    });
+    box.innerHTML = h + `</tbody></table></div><button type="button" class="addrow" data-add="${gs.length - 1}">＋ Thêm dòng</button>`;
+  } else {
+    box.innerHTML = gs.map((g, gi) => `
+      <div class="grp">
+        <div class="ghead">📅 Ngày cân <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" placeholder="dd/mm/yyyy"><span class="gsum" data-gs="${gi}"></span></div>
+        <div class="rhead"><span>#</span><span>Khách hàng</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span></span></div>
+        ${g.rows.map((r, i) => rowHTML(r, i + 1)).join('')}
+        <button type="button" class="addrow" data-add="${gi}">＋ Thêm dòng</button>
+      </div>`).join('');
+  }
+  updateNumbers();
+}
+function rowHTML(r, n){
+  const crop = crops[r.id];
+  const hw = crop ? `<div class="hw" title="Chữ viết tay đọc được">✍️ <img src="${crop}" data-zoom="1" alt=""><span class="rd">${esc(r.hwText || '')}</span></div>` : '';
+  const meta = [r.soxe, r.gio].filter(Boolean).join(' · ');
+  return `<div class="row" data-id="${r.id}">
+    <div class="n">${n}</div>
+    <div class="ckh"><input class="fld ${r.flags.khach ? 'warn' : ''}" data-f="khach" value="${esc(r.khach)}" placeholder="Khách hàng">
+      ${meta ? `<div class="meta">${esc(meta)}</div>` : ''}${hw}</div>
+    <div class="ctl"><span class="cl">TL thực (kg)</span><input class="fld num ${r.flags.thuc ? 'warn' : r.flags.thucOk ? 'okv' : ''}" data-f="thuc" value="${esc(r.thuc)}" inputmode="decimal" placeholder="0"
+      title="${r.flags.thuc ? 'Không khớp TL Hàng − TL Bì, hãy kiểm tra' : r.flags.thucOk ? 'Đã khớp TL Hàng − TL Bì' : ''}"></div>
+    <div class="cx"><span class="cl">Xanh %</span><input class="fld pct ${r.flags.xanh ? 'warn' : ''}" data-f="xanh" value="${esc(r.xanh)}" inputmode="decimal" placeholder="–"></div>
+    <div class="cn"><span class="cl">Nổi %</span><input class="fld pct ${r.flags.noi ? 'warn' : ''}" data-f="noi" value="${esc(r.noi)}" inputmode="decimal" placeholder="–"></div>
+    <button type="button" class="del" data-del="${r.id}" title="Xoá dòng" aria-label="Xoá dòng">✕</button>
+  </div>`;
+}
+
+function updateNumbers(){
+  const gs = groups();
+  gs.forEach((g, gi) => {
+    const a = agg(g.rows), el = document.querySelector(`[data-gs="${gi}"]`);
+    if (el) el.innerHTML = `<b>${fmtKg(a.tl)}</b> kg · X <b>${fmtPct(a.x)}</b>% · N <b>${fmtPct(a.n)}</b>%`;
+  });
+  const a = agg(rows);
+  $('#sTL').textContent = fmtKg(a.tl) || '0';
+  $('#sX').textContent = fmtPct(a.x);
+  $('#sN').textContent = fmtPct(a.n);
+  $('#sumTag').textContent = rows.length ? `${rows.length} xe · ${gs.length} ngày` : '';
+  $('#missNote').textContent = a.miss ? `⚠️ ${a.miss} dòng chưa đủ số xanh/nổi — dòng đó không được tính vào trung bình tương ứng.` : '';
+  scheduleExport();
+}
+
+// Sự kiện bảng (uỷ quyền)
+$('#tbl').addEventListener('input', e => {
+  const inp = e.target;
+  if (inp.classList.contains('gdate')){
+    const g = groups()[+inp.dataset.g]; if (!g) return;
+    g.rows.forEach(r => r.date = inp.value.trim());
+    save(); scheduleExport();
+    return;
+  }
+  const host = inp.closest('[data-id]'); if (!host || !inp.dataset.f) return;
+  const r = rows.find(x => x.id === +host.dataset.id); if (!r) return;
+  r[inp.dataset.f] = inp.value;
+  if (r.flags[inp.dataset.f]){ delete r.flags[inp.dataset.f]; inp.classList.remove('warn'); }
+  if (inp.dataset.f === 'thuc'){ delete r.flags.thucOk; inp.classList.remove('okv'); }
+  save(); updateNumbers();
+});
+$('#tbl').addEventListener('change', e => {
+  const inp = e.target;
+  if (inp.classList.contains('gdate')){ renderTable(); return; } // gộp nhóm nếu trùng ngày
+  if (!inp.dataset.f || !NUMF.has(inp.dataset.f)) return;
+  const v = parseKg(inp.value); if (v == null) return;
+  const host = inp.closest('[data-id]'); const r = rows.find(x => x.id === +host.dataset.id);
+  inp.value = r[inp.dataset.f] = fmtKg(v); save();
+});
+$('#tbl').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.matches('input.fld')) return;
+  e.preventDefault();
+  const all = [...document.querySelectorAll('#tbl input.fld')];
+  const i = all.indexOf(e.target);
+  // xuống cùng cột ở dòng kế tiếp
+  const f = e.target.dataset.f;
+  const next = all.slice(i + 1).find(x => x.dataset.f === f) || all[i + 1];
+  if (next){ next.focus(); next.select(); } else e.target.blur();
+});
+$('#tbl').addEventListener('focusin', e => { if (e.target.matches('input.fld')) setTimeout(() => e.target.select(), 0); });
+$('#tbl').addEventListener('click', e => {
+  const d = e.target.closest('[data-del]');
+  if (d){ rows = rows.filter(r => r.id !== +d.dataset.del); save(); renderTable(); return; }
+  const a = e.target.closest('[data-add]');
+  if (a){
+    const g = groups()[+a.dataset.add];
+    const date = g ? g.date : today();
+    const last = g ? g.rows[g.rows.length - 1] : null;
+    const r = newRow({ date, stt: String((g ? g.rows.length : 0) + 1) });
+    const at = last ? rows.indexOf(last) + 1 : rows.length;
+    rows.splice(at, 0, r); save(); renderTable();
+    const inp = document.querySelector(`[data-id="${r.id}"] input[data-f="khach"]`); if (inp) inp.focus();
+    return;
+  }
+  const z = e.target.closest('[data-zoom]');
+  if (z){ $('#zoomImg').src = z.src; $('#zoomDlg').showModal(); }
+});
+function today(){ const d = new Date(); return [d.getDate(), d.getMonth() + 1].map(x => String(x).padStart(2, '0')).join('/') + '/' + d.getFullYear(); }
+
+document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => { view = b.dataset.v; LS.set('tbxn_view', view); renderTable(); }));
+$('#clearBtn').addEventListener('click', () => {
+  if (!rows.length) return;
+  if (!confirm('Xoá toàn bộ bảng?')) return;
+  rows = []; save(); renderTable();
+});
+$('#manualBtn').addEventListener('click', () => {
+  const g = groups(); const date = g.length ? g[g.length - 1].date : today();
+  const r = newRow({ date, stt: String((g.length ? g[g.length - 1].rows.length : 0) + 1) });
+  rows.push(r); save(); renderTable();
+  const inp = document.querySelector(`[data-id="${r.id}"] input[data-f="khach"]`); if (inp){ inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); inp.focus(); }
+});
+
+/* =========================================================================
+   Ảnh xuất (giống phiếu cân + 2 cột Xanh, Nổi)
+   ========================================================================= */
+/* Vẽ trực tiếp lên canvas: không cần thư viện, ảnh sắc nét trên mọi máy */
+const SERIF = '"Times New Roman", Times, "Liberation Serif", "Tinos", "Noto Serif", serif';
+const SANS = '"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+let logoImg = null;
+function getLogo(){
+  if (logoImg) return logoImg;
+  logoImg = new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'icons/icon-192.png'; });
+  return logoImg;
+}
+function sheetCols(){
+  return expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)']];
+}
+function cellText(r, f, i){
+  let v = r[f] ?? '';
+  if (NUMF.has(f)){ const n = parseKg(v); v = n == null ? String(v) : fmtKg(n); }
+  else if (f === 'xanh' || f === 'noi'){ const n = parsePct(v); v = n == null ? '' : fmtPct(n); }
+  else if (f === 'stt' && !String(v).trim()) v = String(i + 1);
+  v = String(v).trim();
+  if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
+  return [v];
+}
+async function makeCanvas(){
+  try { if (document.fonts){ await Promise.race([Promise.all([document.fonts.load('800 22px "Be Vietnam Pro"'), document.fonts.load('600 15px "Be Vietnam Pro"')]), new Promise(r => setTimeout(r, 1500))]); } } catch(e){}
+  const logo = await getLogo();
+  const cols = sheetCols(), gs = groups(), A = agg(rows);
+  const FS = 23, PADX = 14, LH = 26;
+  const S = 2;                                   // độ phân giải x2
+  const m = mkCanvas(10, 10).getContext('2d');
+  const tw = (t, w = 400, sz = FS) => { m.font = `${w} ${sz}px ${SERIF}`; return m.measureText(t).width; };
+  // độ rộng cột
+  const isNX = f => f === 'xanh' || f === 'noi';
+  const widths = cols.map(([f, t]) => {
+    let w = tw(t, isNX(f) ? 700 : 400);
+    rows.forEach((r, i) => cellText(r, f, i).forEach(l => { w = Math.max(w, tw(l)); }));
+    if (f === 'thuc') gs.forEach(g => { w = Math.max(w, tw(fmtKg(agg(g.rows).tl), 700)); }), w = Math.max(w, tw(fmtKg(A.tl), 800, FS + 1));
+    return Math.ceil(w + PADX * 2 + (f === 'khach' ? 30 : 0));
+  });
+  const iThuc = cols.findIndex(c => c[0] === 'thuc');
+  const hasWrap = cols.some(c => c[0] === 'hang') && rows.some((r, i) => cellText(r, 'hang', i).length > 1);
+  const H_HEAD = 58, H_DATE = 50, H_ROW = hasWrap ? 73 : 54, H_TOT = 48, H_GRAND = 56;
+  // nhãn "Tổng cộng" cần đủ chỗ
+  const labW = tw('TỔNG CỘNG TẤT CẢ :', 800, FS) + 40;
+  let leftW = widths.slice(0, iThuc).reduce((a, b) => a + b, 0);
+  if (leftW < labW){ const add = Math.ceil((labW - leftW) / Math.max(1, iThuc)); for (let k = 0; k < iThuc; k++) widths[k] += add; leftW = widths.slice(0, iThuc).reduce((a, b) => a + b, 0); }
+  const tableW = widths.reduce((a, b) => a + b, 0);
+  const M = 24, TOP = 92;
+  let tableH = H_HEAD + gs.reduce((a, g) => a + H_DATE + g.rows.length * H_ROW + H_TOT, 0) + (gs.length > 1 ? H_GRAND : 0);
+  const SUMH = 96;
+  const Wc = Math.max(tableW + M * 2, 640), Hc = TOP + tableH + SUMH + 34;
+  const cv = mkCanvas(Wc * S, Hc * S), g = cv.getContext('2d');
+  g.scale(S, S);
+  g.fillStyle = '#fff'; g.fillRect(0, 0, Wc, Hc);
+  g.textBaseline = 'middle';
+  // tiêu đề
+  if (logo){ g.save(); roundRect(g, M, 20, 54, 54, 13); g.clip(); g.drawImage(logo, M, 20, 54, 54); g.restore(); }
+  const dates = gs.map(x => x.date).filter(Boolean);
+  const range = dates.length ? (dates.length > 1 ? `${dates[0]} – ${dates[dates.length - 1]}` : dates[0]) : '';
+  g.fillStyle = '#1b5f8c'; g.font = `800 26px ${SANS}`; g.textAlign = 'left';
+  g.fillText('Bảng cân xanh – nổi', M + 68, 38);
+  g.fillStyle = '#5a7d93'; g.font = `600 15.5px ${SANS}`;
+  g.fillText([range ? 'Ngày cân ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), M + 68, 63);
+  // bảng
+  const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
+  const XE = xs[xs.length - 1];
+  let y = TOP;
+  const line = (x1, y1, x2, y2, w = 1.6) => { g.beginPath(); g.lineWidth = w; g.strokeStyle = '#000'; g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+  const nxFill = (y1, h, c) => cols.forEach(([f], k) => { if (isNX(f)){ g.fillStyle = c; g.fillRect(xs[k], y1, widths[k], h); } });
+  const txt = (t, x, yy, align = 'center', w = 400, sz = FS, color = '#000') => { g.font = `${w} ${sz}px ${SERIF}`; g.fillStyle = color; g.textAlign = align; g.fillText(t, x, yy); };
+  const cellX = (k, align) => align === 'right' ? xs[k + 1] - PADX : align === 'left' ? xs[k] + PADX : (xs[k] + xs[k + 1]) / 2;
+  // header
+  nxFill(y, H_HEAD, '#dcefFB'.toLowerCase());
+  cols.forEach(([f, t], k) => txt(t, cellX(k), y + H_HEAD / 2 + 1, 'center', isNX(f) ? 700 : 400, FS, isNX(f) ? '#0f4c75' : '#000'));
+  line(X0, y, XE, y); xs.forEach(x => line(x, y, x, y + H_HEAD));
+  y += H_HEAD;
+  gs.forEach(gr => {
+    line(X0, y, XE, y);
+    line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
+    txt(`Ngày cân : ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
+    y += H_DATE;
+    gr.rows.forEach((r, i) => {
+      line(X0, y, XE, y);
+      nxFill(y + 0.8, H_ROW - 1.6, '#eef7fd');
+      cols.forEach(([f], k) => {
+        const ls = cellText(r, f, i);
+        const al = f === 'thuc' ? 'right' : 'center';
+        const bad = (isNX(f) && !ls[0]);
+        if (bad){ txt('–', cellX(k), y + H_ROW / 2 + 1, 'center', 400, FS, '#9ab'); return; }
+        ls.forEach((l, j) => txt(l, cellX(k, al), y + H_ROW / 2 + 1 + (j - (ls.length - 1) / 2) * LH, al));
+      });
+      xs.forEach(x => line(x, y, x, y + H_ROW));
+      y += H_ROW;
+    });
+    // tổng ngày
+    const a = agg(gr.rows);
+    line(X0, y, XE, y);
+    nxFill(y + 0.8, H_TOT - 1.6, '#dcefFB'.toLowerCase());
+    txt('Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
+    txt(fmtKg(a.tl), cellX(iThuc, 'right'), y + H_TOT / 2 + 1, 'right', 700);
+    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(a.x), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, '#0f4c75'); if (f === 'noi') txt(fmtPct(a.n), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, '#0f4c75'); });
+    line(X0, y, X0, y + H_TOT); line(XE, y, XE, y + H_TOT);
+    cols.forEach(([f], k) => { if (isNX(f)){ line(xs[k], y, xs[k], y + H_TOT); } });
+    y += H_TOT;
+  });
+  if (gs.length > 1){
+    line(X0, y, XE, y);
+    g.fillStyle = '#d7eefc'; g.fillRect(X0, y, XE - X0, H_GRAND);
+    nxFill(y, H_GRAND, '#c2e2f7');
+    txt('TỔNG CỘNG TẤT CẢ :', xs[iThuc] - 30, y + H_GRAND / 2 + 1, 'right', 800);
+    txt(fmtKg(A.tl), cellX(iThuc, 'right'), y + H_GRAND / 2 + 1, 'right', 800, FS + 1);
+    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(A.x), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, '#0f4c75'); if (f === 'noi') txt(fmtPct(A.n), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, '#0f4c75'); });
+    line(X0, y, X0, y + H_GRAND); line(XE, y, XE, y + H_GRAND);
+    cols.forEach(([f], k) => { if (isNX(f)) line(xs[k], y, xs[k], y + H_GRAND); });
+    y += H_GRAND;
+  }
+  line(X0, y, XE, y);
+  // ô tổng kết
+  y += 20;
+  const boxes = [['Tổng khối lượng', fmtKg(A.tl) + ' kg', '#d7eefc', '#164a6e'], ['TB Xanh', fmtPct(A.x) + ' %', '#eef7fd', '#0f4c75'], ['TB Nổi', fmtPct(A.n) + ' %', '#eef7fd', '#0f4c75']];
+  const gap = 12, bw = (XE - X0 - gap * 2) / 3;
+  boxes.forEach(([l, v, bg, fg], k) => {
+    const bx = X0 + k * (bw + gap);
+    g.fillStyle = bg; roundRect(g, bx, y, bw, 70, 14); g.fill();
+    g.textAlign = 'left'; g.fillStyle = '#4c7590'; g.font = `700 14.5px ${SANS}`; g.fillText(l, bx + 16, y + 22);
+    g.fillStyle = fg; g.font = `800 ${bw < 200 ? 22 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
+  });
+  g.textAlign = 'left'; g.fillStyle = '#7b98aa'; g.font = `500 12.5px ${SANS}`;
+  g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
+  return cv;
+}
+function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+let expTimer = null, lastBlob = null;
+function scheduleExport(){
+  clearTimeout(expTimer);
+  expTimer = setTimeout(renderExport, 300);
+}
+async function renderExport(){
+  const card = $('#expCard');
+  if (!rows.length){ card.hidden = true; return; }
+  card.hidden = false;
+  try {
+    const c = await makeCanvas();
+    lastBlob = await new Promise(r => c.toBlob(r, 'image/png'));
+    const url = URL.createObjectURL(lastBlob);
+    const old = $('#prev').src; $('#prev').src = url; if (old.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(old), 1000);
+  } catch(e){ console.error(e); }
+}
+async function freshBlob(){
+  clearTimeout(expTimer);
+  const c = await makeCanvas();
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `xanh-noi_${d}.png`; }
+document.querySelectorAll('#expSeg button').forEach(b => {
+  b.classList.toggle('on', b.dataset.e === expMode);
+  b.addEventListener('click', () => { expMode = b.dataset.e; LS.set('tbxn_exp', expMode); document.querySelectorAll('#expSeg button').forEach(x => x.classList.toggle('on', x === b)); renderExport(); });
+});
+$('#prev').addEventListener('click', () => { $('#zoomImg').src = $('#prev').src; $('#zoomDlg').showModal(); });
+$('#copyImg').addEventListener('click', async () => {
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) throw new Error('nosupport');
+    // Truyền Promise vào ClipboardItem để Safari/iOS giữ thao tác người dùng
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': freshBlob() })]);
+    toast('✅ Đã sao chép ảnh — dán vào Zalo/Messenger');
+  } catch(e){
+    const ok = await shareBlob().catch(() => false);
+    if (!ok) toast('Trình duyệt chưa hỗ trợ sao chép ảnh. Hãy dùng “Tải ảnh”.');
+  }
+});
+async function shareBlob(){
+  const blob = await freshBlob();
+  const file = new File([blob], fileName(), { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })){
+    await navigator.share({ files: [file], title: 'Bảng xanh – nổi', text: summaryText() });
+    return true;
+  }
+  return false;
+}
+$('#shareImg').addEventListener('click', async () => {
+  try { if (!(await shareBlob())){ toast('Thiết bị không hỗ trợ chia sẻ trực tiếp — đã tải ảnh về'); download(); } }
+  catch(e){ if (e.name !== 'AbortError') toast('Không chia sẻ được: ' + e.message); }
+});
+async function download(){
+  const blob = await freshBlob();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName();
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+$('#dlImg').addEventListener('click', () => download().catch(e => toast('Lỗi: ' + e.message)));
+function summaryText(){
+  const out = [];
+  groups().forEach(g => {
+    out.push(`📅 Ngày cân ${g.date || ''}`.trim());
+    g.rows.forEach((r, i) => out.push(`${i + 1}. ${r.khach || '?'} — ${fmtKg(parseKg(r.thuc)) || '?'} kg — Xanh ${fmtPct(parsePct(r.xanh))}% · Nổi ${fmtPct(parsePct(r.noi))}%`));
+    const a = agg(g.rows);
+    out.push(`   Tổng: ${fmtKg(a.tl)} kg · Xanh ${fmtPct(a.x)}% · Nổi ${fmtPct(a.n)}%`, '');
+  });
+  const A = agg(rows);
+  out.push(`➡️ TỔNG KL: ${fmtKg(A.tl)} kg`, `➡️ TB Xanh: ${fmtPct(A.x)}%`, `➡️ TB Nổi: ${fmtPct(A.n)}%`);
+  return out.join('\n');
+}
+$('#copyTxt').addEventListener('click', async () => {
+  const t = summaryText();
+  try { await navigator.clipboard.writeText(t); }
+  catch(e){ const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast('✅ Đã sao chép dạng chữ');
+});
+
+/* =========================================================================
+   Nhận ảnh: Ctrl+V, nút Dán, chọn file, kéo thả
+   ========================================================================= */
+let busy = false;
+document.addEventListener('paste', e => {
+  const items = [...(e.clipboardData ? e.clipboardData.items : [])];
+  const it = items.find(i => i.type.startsWith('image/'));
+  if (!it) return;                              // dán chữ vào ô nhập vẫn hoạt động bình thường
+  e.preventDefault();
+  handleImage(it.getAsFile());
+});
+$('#pasteBtn').addEventListener('click', async () => {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.read) throw new Error('nosupport');
+    const items = await navigator.clipboard.read();
+    for (const it of items){
+      const t = it.types.find(x => x.startsWith('image/'));
+      if (t){ handleImage(await it.getType(t)); return; }
+    }
+    toast('Bộ nhớ tạm không có ảnh. Hãy chụp/sao chép ảnh trước.');
+  } catch(e){
+    toast('Không đọc được bộ nhớ tạm — hãy nhấn Ctrl+V, hoặc “Chọn ảnh”.');
+  }
+});
+$('#pickBtn').addEventListener('click', () => $('#file').click());
+$('#drop').addEventListener('click', () => $('#file').click());
+$('#drop').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#file').click(); } });
+$('#file').addEventListener('change', e => { const f = e.target.files[0]; if (f) handleImage(f); e.target.value = ''; });
+['dragenter','dragover'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.add('over'); }));
+['dragleave','drop'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.remove('over'); }));
+$('#drop').addEventListener('drop', e => { const f = [...e.dataTransfer.files].find(f => f.type.startsWith('image/')); if (f) handleImage(f); });
+
+function progress(p, txt){
+  $('#prog').classList.add('show');
+  if (p != null) $('#progBar').style.width = Math.max(3, Math.min(100, p * 100)) + '%';
+  if (txt != null) $('#progTxt').textContent = txt;
+}
+function progressDone(txt){ progress(1, txt); setTimeout(() => { if (!busy) $('#prog').classList.remove('show'); }, 2500); }
+
+async function handleImage(blob){
+  if (busy){ toast('Đang đọc ảnh trước, vui lòng chờ…'); return; }
+  busy = true;
+  ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = true);
+  try {
+    const url = URL.createObjectURL(blob);
+    $('#srcImg').src = url; $('#srcBox').classList.add('show');
+    progress(0.02, 'Đang chuẩn bị ảnh…');
+    const res = await readSheet(blob);
+    if (!res.rows.length) throw new Error('Không tìm thấy dòng dữ liệu nào trong ảnh.');
+    const append = $('#appendChk').checked;
+    if (!append){ rows = []; Object.keys(crops).forEach(k => delete crops[k]); }
+    res.rows.forEach(r => { const nr = newRow(r); if (r.crop) crops[nr.id] = r.crop; delete nr.crop; rows.push(nr); });
+    save(); renderTable();
+    const warn = res.rows.filter(r => Object.keys(r.flags || {}).some(k => k !== 'thucOk')).length;
+    progressDone(`✅ Đọc xong ${res.rows.length} dòng${res.via ? ' (' + res.via + ')' : ''}.` + (warn ? ` ${warn} dòng có ô viền vàng cần kiểm tra.` : ''));
+    setTimeout(() => $('#tableCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  } catch(e){
+    console.error(e);
+    progress(1, '❌ ' + (e.message || e));
+    toast('❌ ' + (e.message || 'Không đọc được ảnh'));
+  } finally {
+    busy = false;
+    ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = false);
+  }
+}
+
+/* =========================================================================
+   Nhận dạng ảnh trên máy (Tesseract.js)
+   ========================================================================= */
+let workerP = null, workerProgress = null;
+function getWorker(){
+  if (!workerP){
+    if (!window.Tesseract) return Promise.reject(new Error('Chưa tải được bộ nhận dạng chữ (kiểm tra kết nối mạng).'));
+    workerP = Tesseract.createWorker('vie', 1, {
+      logger: m => { if (workerProgress) workerProgress(m); }
+    }).catch(e => { workerP = null; throw e; });
+  }
+  return workerP;
+}
+async function ocr(canvas, { psm = '6', whitelist = '' } = {}){
+  const w = await getWorker();
+  await w.setParameters({ tessedit_pageseg_mode: String(psm), tessedit_char_whitelist: whitelist, preserve_interword_spaces: '1' });
+  const { data } = await w.recognize(canvas, {}, { text: true, tsv: true, blocks: false, hocr: false });
+  return { text: data.text || '', words: parseTSV(data.tsv || '') };
+}
+function parseTSV(tsv){
+  const out = [];
+  tsv.split('\n').forEach(line => {
+    const p = line.split('\t');
+    if (p.length < 12 || p[0] !== '5') return;
+    const t = p.slice(11).join('\t').trim();
+    if (!t) return;
+    const x0 = +p[6], y0 = +p[7], w = +p[8], h = +p[9];
+    out.push({ t, x0, y0, x1: x0 + w, y1: y0 + h, cx: x0 + w / 2, cy: y0 + h / 2, h, conf: +p[10], line: p[2] + '.' + p[3] + '.' + p[4] });
+  });
+  return out;
+}
+
+function loadBitmap(blob){
+  if (window.createImageBitmap) return createImageBitmap(blob).catch(() => loadImg(blob));
+  return loadImg(blob);
+}
+function loadImg(blob){
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Ảnh không hợp lệ')); i.src = URL.createObjectURL(blob); });
+}
+function mkCanvas(w, h){ const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; }
+
+// Ước lượng góc nghiêng (độ) bằng phép chiếu: góc làm các dòng/đường kẻ "sắc" nhất
+function estimateSkew(bmp){
+  const s = Math.min(1, 900 / bmp.width), w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
+  const c = mkCanvas(w, h), g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(bmp, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data;
+  const bgOf = background(d, w, h);
+  const xs = [], ys = [];
+  for (let y = 0, i = 0; y < h; y++) for (let x = 0; x < w; x++, i++){
+    const p = i * 4, v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 * 255 / bgOf(i);
+    if (v < 120){ xs.push(x - w / 2); ys.push(y); }
+  }
+  if (xs.length < 200) return 0;
+  const step = Math.max(1, Math.floor(xs.length / 60000));
+  const score = a => {
+    const t = Math.tan(a * Math.PI / 180), hist = new Float64Array(h * 2 + 10);
+    for (let k = 0; k < xs.length; k += step){ const yy = Math.round(ys[k] - xs[k] * t + h / 2); if (yy >= 0 && yy < hist.length) hist[yy]++; }
+    let sc = 0; for (let k = 0; k < hist.length; k++) sc += hist[k] * hist[k]; return sc;
+  };
+  let best = 0, bs = score(0);
+  for (let a = -5; a <= 5.001; a += 0.25){ const v = score(a); if (v > bs * 1.0005){ bs = v; best = a; } }
+  const c0 = best;
+  for (let a = c0 - 0.25; a <= c0 + 0.25; a += 0.05){ const v = score(a); if (v > bs * 1.0005){ bs = v; best = a; } }
+  return Math.abs(best) < 0.08 ? 0 : best;   // âm = ảnh bị xoay ngược chiều kim đồng hồ
+}
+// Làm mượt hộp (2r+1)^2 bằng ảnh tích phân
+function boxBlur(a, W, H, r){
+  const I = new Float64Array((W + 1) * (H + 1)), o = new Float32Array(W * H);
+  for (let y = 0; y < H; y++){ let row = 0; for (let x = 0; x < W; x++){ row += a[y * W + x]; I[(y + 1) * (W + 1) + x + 1] = I[y * (W + 1) + x + 1] + row; } }
+  for (let y = 0; y < H; y++){ const y0 = Math.max(0, y - r), y1 = Math.min(H, y + r + 1);
+    for (let x = 0; x < W; x++){ const x0 = Math.max(0, x - r), x1 = Math.min(W, x + r + 1);
+      o[y * W + x] = (I[y1 * (W + 1) + x1] - I[y0 * (W + 1) + x1] - I[y1 * (W + 1) + x0] + I[y0 * (W + 1) + x0]) / ((y1 - y0) * (x1 - x0)); } }
+  return o;
+}
+// Nới rộng mặt nạ (max-filter tách theo 2 chiều)
+function dilate(m, W, H, r){
+  const t = new Uint8Array(W * H), o = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++){ const b = y * W; let last = -1e9;
+    for (let x = 0; x < W; x++){ if (m[b + x]) last = x; if (x - last <= r) t[b + x] = 1; }
+    last = 1e9; for (let x = W - 1; x >= 0; x--){ if (m[b + x]) last = x; if (last - x <= r) t[b + x] = 1; } }
+  for (let x = 0; x < W; x++){ let last = -1e9;
+    for (let y = 0; y < H; y++){ if (t[y * W + x]) last = y; if (y - last <= r) o[y * W + x] = 1; }
+    last = 1e9; for (let y = H - 1; y >= 0; y--){ if (t[y * W + x]) last = y; if (last - y <= r) o[y * W + x] = 1; } }
+  return o;
+}
+// Nền giấy theo từng vùng (lấy giá trị sáng nhất lân cận) -> hàm tra theo chỉ số điểm ảnh
+function background(d, W, H){
+  const B = 32, bw = Math.ceil(W / B), bh = Math.ceil(H / B), m = new Float32Array(bw * bh);
+  for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2){
+    const p = (y * W + x) * 4, v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000, k = ((y / B) | 0) * bw + ((x / B) | 0);
+    if (v > m[k]) m[k] = v;
+  }
+  const m2 = new Float32Array(bw * bh);
+  for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++){
+    let mx = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+      const yy = by + dy, xx = bx + dx; if (yy >= 0 && yy < bh && xx >= 0 && xx < bw) mx = Math.max(mx, m[yy * bw + xx]);
+    }
+    m2[by * bw + bx] = Math.max(90, mx);
+  }
+  return i => {
+    const y = (i / W) | 0, x = i - y * W;
+    const fx = Math.min(bw - 1, Math.max(0, x / B - 0.5)), fy = Math.min(bh - 1, Math.max(0, y / B - 0.5));
+    const x0 = fx | 0, y0 = fy | 0, x1 = Math.min(bw - 1, x0 + 1), y1 = Math.min(bh - 1, y0 + 1), ax = fx - x0, ay = fy - y0;
+    return (m2[y0 * bw + x0] * (1 - ax) + m2[y0 * bw + x1] * ax) * (1 - ay) + (m2[y1 * bw + x0] * (1 - ax) + m2[y1 * bw + x1] * ax) * ay;
+  };
+}
+
+// Phân tích lưới bảng: đường kẻ ngang, dọc từng dải, ô
+function analyzeGrid(gray, ink, W, H){
+  const dark = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) dark[i] = gray[i] < 150 && !ink[i] ? 1 : 0;
+  // đường ngang
+  const hy = [];
+  for (let y = 0; y < H; y++){
+    let run = 0, best = 0, o = y * W;
+    for (let x = 0, gap = 0; x < W; x++){ if (dark[o + x]){ run++; gap = 0; if (run > best) best = run; } else if (++gap > 3){ run = 0; } }
+    if (best >= W * 0.3) hy.push(y);
+  }
+  const hLines = [];
+  hy.forEach(y => { const L = hLines[hLines.length - 1]; if (L && y - L.y1 <= 2) L.y1 = y; else hLines.push({ y0: y, y1: y }); });
+  // các dải giữa 2 đường ngang
+  const bands = [];
+  const edges = [{ y0: -1, y1: -1 }, ...hLines, { y0: H, y1: H }];
+  for (let i = 0; i < edges.length - 1; i++){
+    const y0 = edges[i].y1 + 1, y1 = edges[i + 1].y0 - 1;
+    if (y1 - y0 < 12) continue;
+    // đường dọc trong dải
+    const hh = y1 - y0 + 1, need = Math.max(6, (hh - 4) * 0.88);
+    const vx = [];
+    for (let x = 0; x < W; x++){
+      let c = 0;
+      for (let y = y0 + 2; y <= y1 - 2; y++) c += dark[y * W + x];
+      if (c >= need) vx.push(x);
+    }
+    const seps = [];
+    vx.forEach(x => { const s = seps[seps.length - 1]; if (s && x - s.x1 <= 2) s.x1 = x; else seps.push({ x0: x, x1: x }); });
+    const bounds = [-1, ...seps.flatMap(s => [s.x0, s.x1]), W];
+    const cells = [];
+    for (let k = 0; k < bounds.length - 1; k += 2){
+      const a = bounds[k] + 1, b = bounds[k + 1] - 1;
+      if (b - a >= Math.max(14, W * 0.012)) cells.push({ x0: a, x1: b });
+    }
+    // dải bị ngăn ở mép (chỉ có viền ngoài) => 1 ô
+    bands.push({ y0, y1, seps, cells, top: i > 0, bottom: i < edges.length - 2 });
+  }
+  return { hLines, bands, dark };
+}
+
+async function readSheet(blob){
+  const bmp = await loadBitmap(blob);
+  const iw = bmp.width, ih = bmp.height;
+  let scale = iw < 1100 ? 2.5 : iw < 2000 ? 2 : iw < 3000 ? 1.3 : 1;
+  while (iw * ih * scale * scale > 14e6 && scale > 0.5) scale = Math.round((scale - 0.1) * 10) / 10;
+  // Ảnh chụp bằng điện thoại thường hơi nghiêng: ước lượng góc rồi xoay thẳng
+  const ang = estimateSkew(bmp);
+  const rad = ang * Math.PI / 180, cs = Math.abs(Math.cos(rad)), sn = Math.abs(Math.sin(rad));
+  const W = Math.round((iw * cs + ih * sn) * scale), H = Math.round((ih * cs + iw * sn) * scale);
+  const src = mkCanvas(W, H), sctx = src.getContext('2d', { willReadFrequently: true });
+  sctx.imageSmoothingQuality = 'high';
+  sctx.fillStyle = '#fff'; sctx.fillRect(0, 0, W, H);
+  sctx.save(); sctx.translate(W / 2, H / 2); sctx.rotate(-rad); sctx.scale(scale, scale);
+  sctx.drawImage(bmp, -iw / 2, -ih / 2); sctx.restore();
+  const img = sctx.getImageData(0, 0, W, H), d = img.data;
+  const gray = new Uint8Array(W * H), ink = new Uint8Array(W * H);
+  const bgOf = background(d, W, H);   // nền giấy (ảnh chụp có bóng, ố vàng) -> chuẩn hoá về trắng
+  // Mực bút màu: sắc xanh (b vượt r,g) hoặc đỏ/tím (r vượt g), làm mượt để khử viền màu giả do nén JPEG
+  const chB = new Float32Array(W * H), chR = new Float32Array(W * H);
+  for (let i = 0, p = 0; i < W * H; i++, p += 4){
+    const r = d[p], g = d[p + 1], b = d[p + 2];
+    gray[i] = Math.min(255, ((r * 299 + g * 587 + b * 114) / 1000) * 255 / bgOf(i));
+    chB[i] = b - (r + g) / 2; chR[i] = r - g;
+  }
+  const dk = new Float32Array(W * H); for (let i = 0; i < W * H; i++) dk[i] = 255 - gray[i];
+  const rr = Math.max(2, Math.round(2 * scale)), sB = boxBlur(chB, W, H, rr), sR = boxBlur(chR, W, H, rr), sD = boxBlur(dk, W, H, rr);
+  // điểm phải tự có màu VÀ vùng quanh nó "đậm sắc" so với độ tối: viền màu khử răng cưa / JPEG quanh chữ đen bị loại
+  for (let i = 0; i < W * H; i++){
+    const blue = chB[i] > 25 && sB[i] > 22 && sB[i] > 0.4 * sD[i];
+    const red = chR[i] > 40 && sR[i] > 35 && sR[i] > 0.45 * sD[i];
+    ink[i] = gray[i] < 225 && (blue || red) ? 1 : 0;
+  }
+  for (let i = 0, p = 0; i < W * H; i++, p += 4){ if (!ink[i]){ const bgv = bgOf(i); d[p] = Math.min(255, d[p] * 255 / bgv); d[p + 1] = Math.min(255, d[p + 1] * 255 / bgv); d[p + 2] = Math.min(255, d[p + 2] * 255 / bgv); } }
+  sctx.putImageData(img, 0, 0);
+  progress(0.08, 'Đang tìm đường kẻ bảng…');
+  const grid = analyzeGrid(gray, ink, W, H);
+
+  // Ảnh sạch: bỏ đường kẻ + nét bút để đọc chữ in
+  const clean = mkCanvas(W, H), cctx = clean.getContext('2d', { willReadFrequently: true });
+  const cimg = cctx.createImageData(W, H), cd = cimg.data;
+  const isLine = new Uint8Array(W * H);
+  grid.hLines.forEach(L => { for (let y = Math.max(0, L.y0 - 1); y <= Math.min(H - 1, L.y1 + 1); y++) isLine.fill(1, y * W, y * W + W); });
+  grid.bands.forEach(b => b.seps.forEach(s => { for (let y = b.y0; y <= b.y1; y++) for (let x = Math.max(0, s.x0 - 1); x <= Math.min(W - 1, s.x1 + 1); x++) isLine[y * W + x] = 1; }));
+  const inkD = dilate(ink, W, H, Math.max(2, Math.round(2.2 * scale)));
+  for (let i = 0, p = 0; i < W * H; i++, p += 4){
+    const v = isLine[i] || ink[i] || (inkD[i] && gray[i] > 90) ? 255 : gray[i];   // xoá nét bút + quầng mờ, giữ nét chữ in đậm
+    cd[p] = cd[p + 1] = cd[p + 2] = v; cd[p + 3] = 255;
+  }
+  cctx.putImageData(cimg, 0, 0);
+
+  // OCR toàn trang
+  workerProgress = m => {
+    if (m.status === 'recognizing text') progress(0.15 + 0.5 * (m.progress || 0), 'Đang đọc chữ trong bảng…');
+    else if (/load|initializ/i.test(m.status)) progress(0.1, 'Đang tải bộ nhận dạng tiếng Việt (chỉ lần đầu)…');
+  };
+  const full = await ocr(clean, { psm: '11' });
+  workerProgress = null;
+  const words = full.words;
+
+  let rowsOut = [];
+  const dataBands = grid.bands.filter(b => b.cells.length >= 4);
+  if (grid.hLines.length >= 3 && dataBands.length >= 2){
+    rowsOut = await parseGrid(grid, words, { W, H, gray, ink, isLine, src, clean, scale });
+  }
+  if (!rowsOut.length){
+    progress(0.7, 'Không thấy lưới bảng rõ ràng — đọc theo dòng chữ…');
+    rowsOut = await parseLoose(words, { W, H, gray, ink, isLine, src, clean, scale });
+  }
+
+  let via = 'đọc trên máy';
+  const key = LS.get('tbxn_gkey', '');
+  if (key){
+    progress(0.9, 'Đang nhờ Gemini đọc chữ viết tay…');
+    try {
+      const g = await geminiRead(blob, key, LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash');
+      rowsOut = mergeGemini(rowsOut, g);
+      via = 'Gemini + trên máy';
+    } catch(e){
+      console.warn(e);
+      toast('Gemini lỗi: ' + e.message + ' — dùng kết quả đọc trên máy', 4500);
+    }
+  }
+  return { rows: rowsOut, via };
+}
+
+const reTime = /\d{1,2}[:.;]\d{2}/;
+const reDate = /(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{4})/;
+function joinWords(ws){
+  if (!ws.length) return '';
+  const lines = [];
+  [...ws].sort((a, b) => a.cy - b.cy).forEach(w => {
+    const L = lines.find(l => Math.abs(l.cy - w.cy) < Math.max(l.h, w.h) * 0.55);
+    if (L){ L.ws.push(w); } else lines.push({ cy: w.cy, h: w.h, ws: [w] });
+  });
+  return lines.map(l => l.ws.sort((a, b) => a.x0 - b.x0).map(w => w.t).join(' ')).join(' ').replace(/\s+/g, ' ').trim();
+}
+function cleanText(s){
+  return s.replace(/[|“”"'`‘’_~^*<>{}\[\]]/g, ' ').replace(/^[\s\-.,:;]+|[\s\-.,:;]+$/g, '').replace(/\s+/g, ' ').trim();
+}
+function cleanNum(s){
+  s = String(s || '').replace(/[oOQD]/g, '0').replace(/[lI|!]/g, '1').replace(/[sS]/g, '5').replace(/[\/;:]/g, ',');
+  s = s.replace(/[^\d.,]/g, '').replace(/^[.,]+|[.,]+$/g, '');
+  return s;
+}
+const numOf = s => { const c = cleanNum(s); return c ? parseKg(c) : null; };
+function fixDate(m){ return m ? `${m[1].padStart(2, '0')}/${m[2].padStart(2, '0')}/${m[3]}` : ''; }
+
+function mapHeader(cellTexts){
+  const map = {};
+  cellTexts.forEach((t, i) => {
+    const n = norm(t).replace(/\s+/g, ' ');
+    if (/stt/.test(n)) map.stt = i;
+    else if (/so\s*xe|xe$/.test(n)) map.soxe = i;
+    else if (/kh.?ch/.test(n)) map.khach = i;
+    else if (/l.n\s*1|lan1/.test(n)) map.tl1 = i;
+    else if (/l.n\s*2|lan2/.test(n)) map.tl2 = i;
+    else if (/th.?c/.test(n) && /tl|th/.test(n)) map.thuc = i;
+    else if (/gi.\s*c|gio|can$/.test(n) && !/ngay/.test(n)) map.gio = i;
+    else if (/\bbi\b|tl\s*b/.test(n)) map.bi = i;
+    else if (/tl\s*h/.test(n)) map.tlh = i;
+    else if (/h.ng\s*h|hoa/.test(n)) map.hang = i;
+  });
+  return map;
+}
+const DEFAULT_MAP = { stt: 0, soxe: 1, hang: 2, khach: 3, tl1: 4, tl2: 5, tlh: 6, bi: 7, thuc: 8, gio: 9 };
+
+async function parseGrid(grid, words, ctx){
+  const bands = grid.bands;
+  const wIn = (b, c) => words.filter(w => w.cy >= b.y0 && w.cy <= b.y1 && (!c || (w.cx >= c.x0 && w.cx <= c.x1)));
+  // tìm dòng tiêu đề
+  let hdrIdx = bands.findIndex(b => b.cells.length >= 4 && /kh.?ch|th.?c|gi.\s*c|stt|s. xe|l.n\s*[12]/.test(norm(joinWords(wIn(b)))));
+  let map = null, nCells = 0, colX = null;
+  if (hdrIdx >= 0){
+    const hb = bands[hdrIdx];
+    map = mapHeader(hb.cells.map(c => joinWords(wIn(hb, c))));
+    nCells = hb.cells.length; colX = hb.cells;
+    if (nCells === 10) for (const k in DEFAULT_MAP) if (map[k] == null) map[k] = DEFAULT_MAP[k];
+  }
+  // không có tiêu đề: lấy số ô phổ biến nhất
+  if (!map || map.khach == null || map.thuc == null){
+    const cnt = {}; bands.forEach(b => { if (b.cells.length >= 4) cnt[b.cells.length] = (cnt[b.cells.length] || 0) + 1; });
+    nCells = +Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || 0;
+    if (nCells === 10) map = Object.assign({}, DEFAULT_MAP);
+    else if (nCells >= 4){
+      map = map || {};
+      // đoán: cột Giờ là cột cuối, TL thực là cột kế cuối, khách hàng là cột chữ trước cột số đầu tiên
+      map.gio = map.gio ?? nCells - 1; map.thuc = map.thuc ?? nCells - 2;
+      map.khach = map.khach ?? Math.max(0, nCells - 7);
+    } else return [];
+    colX = colX || (bands.find(b => b.cells.length === nCells) || {}).cells;
+    hdrIdx = -1;
+  }
+  const out = [];
+  let date = '';
+  const dataIdx = [];
+  for (let i = hdrIdx + 1; i < bands.length; i++){
+    const b = bands[i];
+    const txt = joinWords(wIn(b));
+    const dm = txt.match(reDate);
+    if (b.cells.length < Math.max(4, nCells - 2)){
+      if (dm && /ng.y|can|c.n/i.test(norm(txt))) date = fixDate(dm);
+      else if (dm && b.cells.length <= 2 && !/t.ng|cong/.test(norm(txt))) date = fixDate(dm);
+      continue;
+    }
+    if (/t.ng\s*c.ng/.test(norm(txt))) continue;
+    // ánh xạ ô theo toạ độ cột tiêu đề (an toàn khi số ô lệch)
+    const cellOf = k => {
+      const ref = colX && colX[map[k]]; if (!ref) return b.cells[map[k]];
+      return b.cells.reduce((best, c) => {
+        const ov = Math.min(c.x1, ref.x1) - Math.max(c.x0, ref.x0);
+        return ov > (best ? Math.min(best.x1, ref.x1) - Math.max(best.x0, ref.x0) : 0) ? c : best;
+      }, null) || ref;
+    };
+    const get = k => { if (map[k] == null) return ''; const c = cellOf(k); return c ? joinWords(wIn(b, c)) : ''; };
+    const r = { date, flags: {}, _band: i, _cells: {} };
+    ['stt','soxe','hang','khach','tl1','tl2','tlh','bi','thuc','gio'].forEach(k => { r[k] = get(k); if (map[k] != null) r._cells[k] = cellOf(k); });
+    if (!/\d/.test(r.thuc) && !/\d/.test(r.tlh) && !reTime.test(r.gio)) continue;   // dòng tiêu đề / dòng rác
+    r.khach = cleanText(r.khach); r.hang = cleanText(r.hang); r.soxe = cleanText(r.soxe);
+    r.stt = (r.stt.match(/\d+/) || [''])[0];
+    const tm = r.gio.match(/(\d{1,2})[:.;](\d{2})(?:[:.;](\d{2}))?/);
+    r.gio = tm ? [tm[1].padStart(2, '0'), tm[2], tm[3]].filter(Boolean).join(':') : cleanText(r.gio);
+    out.push(r); dataIdx.push(i);
+  }
+  // Kiểm tra số liệu, đọc lại các ô số nghi ngờ
+  const total = out.length;
+  for (let k = 0; k < out.length; k++){
+    const r = out[k], b = bands[r._band];
+    progress(0.66 + 0.2 * (k / Math.max(1, total)), `Đang kiểm tra dòng ${k + 1}/${total}…`);
+    const nums = {};
+    ['tl1','tl2','tlh','bi','thuc'].forEach(f => nums[f] = numOf(r[f]));
+    let rc = reconcile(nums);
+    if (!rc.ok){
+      for (const f of ['thuc','tlh','bi','tl1','tl2']){
+        const c = r._cells[f]; if (!c) continue;
+        const crop = cropCanvas(ctx.clean, c.x0 + 2, b.y0 + 2, c.x1 - 2, b.y1 - 2, 2);
+        const o = await ocr(crop, { psm: '7', whitelist: '0123456789,.' });
+        const v = numOf(o.text); if (v != null) nums[f] = v;
+      }
+      rc = reconcile(nums);
+    }
+    ['tl1','tl2','tlh','bi','thuc'].forEach(f => { if (rc.vals[f] != null) r[f] = fmtKg(rc.vals[f]); });
+    if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
+    { const a = parseKg(r.tl1), b2 = parseKg(r.tl2), h = parseKg(r.tlh);
+      if (a != null && b2 != null && h != null && Math.abs(b2 - a) !== h){ r.flags.tl1 = r.flags.tl2 = true; } }
+    if (!r.khach) r.flags.khach = true;
+    // giờ cân bị chữ viết tay đè -> đọc lại riêng phần trên của ô
+    if (!reTime.test(r.gio) && r._cells.gio){
+      const c = r._cells.gio, crop = cropCanvas(ctx.clean, c.x0 + 2, b.y0 + 2, c.x1 - 2, b.y0 + (b.y1 - b.y0) * 0.62, 1.5);
+      const o = await ocr(crop, { psm: '7', whitelist: '0123456789:' });
+      const tm = o.text.match(/(\d{1,2}):?(\d{2}):?(\d{2})/);
+      r.gio = tm ? [tm[1].padStart(2, '0'), tm[2], tm[3]].join(':') : r.gio;
+    }
+    // chữ viết tay dưới giờ cân
+    const gc = r._cells.gio;
+    if (gc){
+      const tws = wIn(b, gc).filter(w => reTime.test(w.t) || /^\d+$/.test(w.t));
+      let tTop, tBot;
+      const medH = median(words.map(w => w.h)) || 20 * ctx.scale;
+      if (tws.length){ tTop = Math.min(...tws.map(w => w.y0)); tBot = Math.max(...tws.map(w => w.y1)); }
+      else { const cy = (b.y0 + b.y1) / 2; tTop = cy - medH / 2; tBot = cy + medH / 2; }
+      const nextBand = bands[r._band + 1];
+      let yEnd;
+      const nr = out[k + 1];
+      if (nr && nr._band === r._band + 1){
+        const nb = bands[nr._band];
+        const nws = wIn(nb, nr._cells.gio || gc).filter(w => reTime.test(w.t));
+        yEnd = nws.length ? Math.min(...nws.map(w => w.y0)) - 3 : (nb.y0 + nb.y1) / 2 - medH / 2;
+      } else if (nextBand){
+        yEnd = nextBand.y1;
+      } else yEnd = Math.min(ctx.H - 1, b.y1 + (b.y1 - b.y0));
+      const hw = await readHandwriting(ctx, gc.x0 + 2, tBot + 3, gc.x1 - 2, yEnd, tTop);
+      applyHW(r, hw);
+    }
+    delete r._band; delete r._cells;
+  }
+  return out;
+}
+function median(a){ if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; }
+
+// Đối chiếu: TL Thực = TL Hàng − TL Bì ; TL Hàng = TL Lần 2 − TL Lần 1
+function reconcile(n){
+  const v = Object.assign({}, n);
+  const cand = [];
+  if (n.thuc != null) cand.push(n.thuc);
+  if (n.tlh != null && n.bi != null) cand.push(n.tlh - n.bi);
+  if (n.tl1 != null && n.tl2 != null && n.bi != null) cand.push(Math.abs(n.tl2 - n.tl1) - n.bi);
+  const votes = {}; cand.forEach(c => votes[c] = (votes[c] || 0) + 1);
+  const best = Object.keys(votes).sort((a, b) => votes[b] - votes[a])[0];
+  if (best != null && votes[best] >= 2 && +best > 0){
+    v.thuc = +best;
+    if (n.bi != null){
+      const h = v.thuc + n.bi;
+      if (n.tlh !== h) v.tlh = h;
+    }
+    return { ok: true, vals: v };
+  }
+  if (v.thuc == null && cand.length) v.thuc = cand[0];
+  return { ok: false, vals: v };
+}
+
+function cropCanvas(c, x0, y0, x1, y1, up = 1){
+  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+  x1 = Math.min(c.width - 1, Math.ceil(x1)); y1 = Math.min(c.height - 1, Math.ceil(y1));
+  const w = Math.max(1, x1 - x0 + 1), h = Math.max(1, y1 - y0 + 1), pad = 12;
+  const o = mkCanvas(w * up + pad * 2, h * up + pad * 2), g = o.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, o.width, o.height);
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(c, x0, y0, w, h, pad, pad, w * up, h * up);
+  return o;
+}
+
+// Đọc chữ viết tay trong vùng (dưới giờ cân)
+async function readHandwriting(ctx, x0, y0, x1, y1, tTop){
+  const { W, H, gray, ink, isLine, src } = ctx;
+  x0 = Math.max(0, Math.floor(x0)); x1 = Math.min(W - 1, Math.ceil(x1));
+  y0 = Math.max(0, Math.floor(y0)); y1 = Math.min(H - 1, Math.ceil(y1));
+  if (x1 - x0 < 8 || y1 - y0 < 6) return null;
+  // ưu tiên nét bút màu; nếu không có thì lấy nét tối (bút đen) đã bỏ đường kẻ
+  let inkCnt = 0;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) inkCnt += ink[y * W + x];
+  const useInk = inkCnt > 30 * ctx.scale;
+  const fg = (i) => useInk ? ink[i] : (!isLine[i] && gray[i] < 140);
+  let bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1, cnt = 0;
+  // chiếu theo hàng để bỏ vệt rời rạc
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++){
+    if (fg(y * W + x)){ cnt++; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
+  }
+  if (cnt < 25 * ctx.scale || bx1 - bx0 < 6 * ctx.scale) return null;
+  // nếu nét bút màu kéo dài lên trên (đè giờ cân) thì mở rộng vùng lên trên
+  if (useInk && by0 <= y0 + 1){
+    for (let y = y0 - 1; y >= Math.max(0, tTop); y--){
+      let any = false; for (let x = x0; x <= x1; x++) if (ink[y * W + x]){ any = true; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; }
+      if (!any) break; by0 = y;
+    }
+  }
+  const pad = Math.round(4 * ctx.scale);
+  bx0 = Math.max(0, bx0 - pad); by0 = Math.max(0, by0 - pad); bx1 = Math.min(W - 1, bx1 + pad); by1 = Math.min(H - 1, by1 + pad);
+  const w = bx1 - bx0 + 1, h = by1 - by0 + 1;
+  // ảnh nhị phân cho OCR
+  const up = Math.max(1, Math.min(4, 70 / h));
+  const bin = mkCanvas(w * up + 40, h * up + 40), bg = bin.getContext('2d');
+  const tmp = mkCanvas(w, h), tg = tmp.getContext('2d'), ti = tg.createImageData(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const i = (by0 + y) * W + (bx0 + x), on = fg(i) ? 0 : 255, p = (y * w + x) * 4;
+    ti.data[p] = ti.data[p + 1] = ti.data[p + 2] = on; ti.data[p + 3] = 255;
+  }
+  tg.putImageData(ti, 0, 0);
+  bg.fillStyle = '#fff'; bg.fillRect(0, 0, bin.width, bin.height);
+  bg.imageSmoothingQuality = 'high';
+  bg.drawImage(tmp, 20, 20, w * up, h * up);
+  // ảnh màu để người dùng xem lại
+  const view = mkCanvas(w, h); view.getContext('2d').drawImage(src, bx0, by0, w, h, 0, 0, w, h);
+  const vs = Math.min(1, 90 / h);
+  const v2 = mkCanvas(w * vs, h * vs); v2.getContext('2d').drawImage(view, 0, 0, v2.width, v2.height);
+  const crop = v2.toDataURL('image/png');
+  let o = await ocr(bin, { psm: '7', whitelist: '0123456789XxNn-., ' });
+  let p = parseXN(o.text);
+  if (!p || p.weak){ const o2 = await ocr(bin, { psm: '6', whitelist: '0123456789XxNn-., ' }); const p2 = parseXN(o2.text); if (p2 && (!p || !p2.weak)){ o = o2; p = p2; } }
+  const cw = o.words.filter(w => /\d/.test(w.t));
+  const conf = cw.length ? Math.min(...cw.map(w => w.conf)) : 0;
+  return { crop, text: o.text.trim(), parsed: p, conf };
+}
+function parseXN(t){
+  const s = String(t || '').replace(/\s+/g, '').replace(/,/g, '.');
+  let m = s.match(/(\d{1,3}(?:\.\d+)?)[xX×K%]+[-–—~.]*(\d{1,3}(?:\.\d+)?)[nNHM]?/);
+  let x, n;
+  if (m){ x = m[1]; n = m[2]; }
+  else {
+    const nums = s.match(/\d+(?:\.\d+)?/g) || [];
+    if (nums.length < 2) return nums.length === 1 ? { x: nums[0], n: null, weak: true } : null;
+    x = nums[0]; n = nums[1];
+  }
+  const fix = v => { if (v == null) return null; let f = +v; if (f > 100 && /^\d{3}$/.test(v)) f = +(v.slice(0, 2) + '.' + v.slice(2)); return f; };
+  return { x: fix(x), n: fix(n), weak: !m };
+}
+function applyHW(r, hw){
+  if (!hw){ r.flags.xanh = r.flags.noi = true; return; }
+  r.crop = hw.crop; r.hwText = hw.text;
+  const p = hw.parsed;
+  const unsure = !p || p.weak || hw.conf < 80;   // độ tin cậy thấp -> viền vàng để người dùng xem lại
+  if (p && p.x != null && p.x <= 100){ r.xanh = fmtPctIn(p.x); if (unsure) r.flags.xanh = true; } else r.flags.xanh = true;
+  if (p && p.n != null && p.n <= 100){ r.noi = fmtPctIn(p.n); if (unsure) r.flags.noi = true; } else r.flags.noi = true;
+  // chữ viết tay luôn nên được người dùng nhìn lại => viền vàng nhẹ nếu không chắc
+}
+
+// Dự phòng khi không có lưới: dùng giờ cân làm mốc từng dòng
+async function parseLoose(words, ctx){
+  const times = words.filter(w => /^\d{1,2}[:.;]\d{2}([:.;]\d{2})?$/.test(w.t)).sort((a, b) => a.cy - b.cy);
+  if (!times.length) return [];
+  const medH = median(words.map(w => w.h)) || 20;
+  const hdr = words.find(w => /kh.?ch/.test(norm(w.t)));
+  const thucH = words.find(w => /th.?c/.test(norm(w.t)) && w !== hdr);
+  const dates = words.filter(w => reDate.test(w.t)).map(w => ({ y: w.cy, d: fixDate(w.t.match(reDate)) }));
+  const out = [];
+  for (let k = 0; k < times.length; k++){
+    const t = times[k], same = words.filter(w => Math.abs(w.cy - t.cy) < medH * 0.9);
+    const nums = same.filter(w => w.x1 < t.x0 && /^[\d.,]+$/.test(cleanNum(w.t)) && /\d/.test(w.t)).sort((a, b) => a.x0 - b.x0);
+    const big = nums.filter(w => numOf(w.t) != null);
+    const vals = big.map(w => numOf(w.t));
+    const n = { thuc: vals[vals.length - 1] ?? null, bi: vals[vals.length - 2] ?? null, tlh: vals[vals.length - 3] ?? null, tl2: vals[vals.length - 4] ?? null, tl1: vals[vals.length - 5] ?? null };
+    const rc = reconcile(n);
+    let khach = '';
+    if (hdr){
+      const firstNum = big.length >= 5 ? big[big.length - 5] : big[0];
+      khach = joinWords(words.filter(w => Math.abs(w.cy - t.cy) < medH * 1.6 && w.cx > hdr.x0 - medH * 4 && (!firstNum || w.x1 < firstNum.x0) && !/^[\d.,:]+$/.test(w.t)));
+    }
+    const dd = dates.filter(x => x.y < t.cy).pop();
+    const r = { date: dd ? dd.d : '', stt: '', soxe: '', hang: '', khach: cleanText(khach), gio: t.t.replace(/[.;]/g, ':'), flags: { khach: true } };
+    ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = rc.vals[f] != null ? fmtKg(rc.vals[f]) : '');
+    if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
+    const next = times[k + 1];
+    const hw = await readHandwriting(ctx, t.x0 - medH * 2, t.y1 + 3, t.x1 + medH * 3, next ? next.y0 - 3 : t.y1 + medH * 3, t.y0);
+    applyHW(r, hw);
+    out.push(r);
+  }
+  void thucH;
+  return out;
+}
+
+/* =========================================================================
+   Gemini (tuỳ chọn) — đọc chữ viết tay chính xác hơn
+   ========================================================================= */
+function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
+async function geminiRead(blob, key, model){
+  const b64 = await blobToB64(blob);
+  const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" theo dạng "aX - bN" (a = % xanh, b = % nổi; ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20).
+Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"), theo đúng thứ tự từ trên xuống. Trả về JSON:
+{"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null}]}
+Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi là số (có thể có phần thập phân), null nếu không có chữ viết tay. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 60000);
+  const r = await fetch(url, {
+    method: 'POST', signal: ctl.signal,
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({
+      contents: [{ parts: [{ inline_data: { mime_type: blob.type || 'image/png', data: b64 } }, { text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 }
+    })
+  }).finally(() => clearTimeout(to));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+  const txt = (((j.candidates || [])[0] || {}).content || {}).parts?.map(p => p.text || '').join('') || '';
+  const m = txt.match(/\{[\s\S]*\}/);
+  const data = JSON.parse(m ? m[0] : txt);
+  return (data.rows || []).map(x => ({
+    date: x.ngay || '', stt: String(x.stt ?? ''), soxe: x.so_xe || '', hang: x.hang_hoa || '', khach: x.khach_hang || '',
+    tl1: num(x.tl_lan1), tl2: num(x.tl_lan2), tlh: num(x.tl_hang), bi: num(x.tl_bi), thuc: num(x.tl_thuc), gio: x.gio_can || '',
+    xanh: x.xanh == null || x.xanh === '' ? null : +String(x.xanh).replace(',', '.'), noi: x.noi == null || x.noi === '' ? null : +String(x.noi).replace(',', '.')
+  }));
+  function num(v){ if (v == null || v === '') return null; return typeof v === 'number' ? v : parseKg(String(v)); }
+}
+function mergeGemini(local, gem){
+  const toRow = g => {
+    const n = { tl1: g.tl1, tl2: g.tl2, tlh: g.tlh, bi: g.bi, thuc: g.thuc }, rc = reconcile(n);
+    const r = { date: g.date, stt: g.stt, soxe: g.soxe, hang: g.hang, khach: g.khach, gio: g.gio, flags: {} };
+    ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = rc.vals[f] != null ? fmtKg(rc.vals[f]) : '');
+    if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
+    r.xanh = g.xanh != null && !isNaN(g.xanh) ? fmtPctIn(g.xanh) : ''; if (!r.xanh) r.flags.xanh = true;
+    r.noi = g.noi != null && !isNaN(g.noi) ? fmtPctIn(g.noi) : ''; if (!r.noi) r.flags.noi = true;
+    return r;
+  };
+  if (!gem.length) return local;
+  if (local.length !== gem.length) return gem.map(toRow);   // số dòng lệch: tin Gemini
+  return local.map((L, i) => {
+    const G = toRow(gem[i]), r = Object.assign({}, L, { flags: Object.assign({}, L.flags) });
+    // chữ viết tay: ưu tiên Gemini; nếu hai bên khác nhau thì đánh dấu để kiểm tra
+    ['xanh','noi'].forEach(f => {
+      if (G[f] !== ''){
+        const same = L[f] !== '' && Math.abs(parsePct(L[f]) - parsePct(G[f])) < 0.01;
+        r[f] = G[f];
+        if (same) delete r.flags[f]; else r.flags[f] = L[f] !== '';   // khác nhau => vàng
+        if (L[f] === '') delete r.flags[f];
+      }
+    });
+    if (G.khach && (!L.khach || L.flags.khach)){ r.khach = G.khach; delete r.flags.khach; }
+    else if (G.khach && norm(G.khach) === norm(L.khach)) r.khach = G.khach;   // lấy bản có dấu chuẩn
+    if (!L.date && G.date) r.date = G.date;
+    if (L.flags.thuc && G.flags.thucOk){ ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = G[f]); delete r.flags.thuc; r.flags.thucOk = true; }
+    ['soxe','hang','gio','stt'].forEach(f => { if (!r[f] && G[f]) r[f] = G[f]; });
+    return r;
+  });
+}
+
+/* =========================================================================
+   Cài đặt, giao diện
+   ========================================================================= */
+function refreshAiTag(){
+  const on = !!LS.get('tbxn_gkey', '');
+  $('#aiTag').textContent = on ? 'Đọc ảnh: Gemini + trên máy' : 'Đọc ảnh: trên máy';
+  $('#aiTag').classList.toggle('on', on);
+}
+$('#setBtn').addEventListener('click', () => {
+  $('#gKey').value = LS.get('tbxn_gkey', ''); $('#gModel').value = LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash';
+  $('#setDlg').showModal();
+});
+$('#aiTag').addEventListener('click', () => $('#setBtn').click());
+$('#setDlg').addEventListener('close', () => {
+  if ($('#setDlg').returnValue !== 'save') return;
+  LS.set('tbxn_gkey', $('#gKey').value.trim()); LS.set('tbxn_gmodel', $('#gModel').value.trim());
+  refreshAiTag(); toast('Đã lưu cài đặt');
+});
+(function(){
+  const t = LS.get('tbxn_theme', null);
+  if (t) document.documentElement.dataset.theme = t;
+  $('#themeBtn').addEventListener('click', () => {
+    const cur = document.documentElement.dataset.theme;
+    const dark = cur ? cur === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    const n = dark ? 'light' : 'dark'; document.documentElement.dataset.theme = n; LS.set('tbxn_theme', n);
+  });
+})();
+
+refreshAiTag();
+renderTable();
+if (!rows.length) $('#expCard').hidden = true;
+// Tải sẵn bộ nhận dạng khi rảnh để lần dán đầu nhanh hơn
+if ('requestIdleCallback' in window) requestIdleCallback(() => getWorker().catch(() => {}), { timeout: 4000 });
+else setTimeout(() => getWorker().catch(() => {}), 2500);
+</script>
+</body>
+</html>
