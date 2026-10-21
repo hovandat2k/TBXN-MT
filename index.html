@@ -191,7 +191,6 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
     <img class="logo" src="icons/icon-192.png" alt="">
     <div>
       <h1>Trung bình Xanh – Nổi</h1>
-      <p class="sub">Dán ảnh phiếu cân → tự đọc &amp; tính</p>
     </div>
     <button class="hbtn" id="setBtn" aria-label="Cài đặt nhận dạng" title="Cài đặt nhận dạng">⚙️</button>
     <button class="hbtn" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối">🌓</button>
@@ -202,7 +201,6 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
     <div id="drop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh phiếu cân">
       <div class="big">🖼️</div>
       <div class="t">Nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> để dán ảnh</div>
-      <div class="s">hoặc kéo thả / bấm vào đây để chọn ảnh chụp màn hình</div>
     </div>
     <input type="file" id="file" accept="image/*" hidden>
     <div class="pbtns">
@@ -212,7 +210,6 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
     </div>
     <div class="opt">
       <label class="switch"><input type="checkbox" id="appendChk"> Ghép thêm vào bảng hiện có</label>
-      <span class="aitag" id="aiTag">Đọc ảnh: trên máy</span>
     </div>
     <div id="prog"><div class="bar"><i id="progBar"></i></div><div id="progTxt"></div></div>
     <details id="srcBox"><summary>Xem ảnh gốc</summary><img id="srcImg" alt="Ảnh đã dán"></details>
@@ -223,7 +220,7 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
     <div class="tbar">
       <h2 style="margin:0">Bảng dữ liệu</h2>
       <span class="sp"></span>
-      <div class="seg" id="viewSeg"><button type="button" data-v="short" class="on">4 cột</button><button type="button" data-v="full">Tất cả cột</button></div>
+      <div class="seg" id="viewSeg"><button type="button" data-v="short" class="on">Rút gọn</button><button type="button" data-v="full">Tất cả cột</button></div>
       <button type="button" class="ghost small" id="clearBtn" title="Xoá toàn bộ bảng">🗑️ Xoá</button>
     </div>
     <div id="tbl"></div>
@@ -238,7 +235,6 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
       <div class="stat"><div class="l">TB Nổi</div><div class="v"><span id="sN">–</span><small>%</small></div></div>
     </div>
     <div id="missNote"></div>
-    <div class="formula">TB có trọng số = Σ(TL thực × %) ÷ Σ TL thực (chỉ tính các dòng đã có số %).</div>
   </section>
 
   <!-- 4. Ảnh xuất -->
@@ -657,7 +653,7 @@ $('#copyImg').addEventListener('click', async () => {
     if (!navigator.clipboard || !window.ClipboardItem) throw new Error('nosupport');
     // Truyền Promise vào ClipboardItem để Safari/iOS giữ thao tác người dùng
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': freshBlob() })]);
-    toast('✅ Đã sao chép ảnh — dán vào Zalo/Messenger');
+    toast('✅ Đã sao chép ảnh');
   } catch(e){
     const ok = await shareBlob().catch(() => false);
     if (!ok) toast('Trình duyệt chưa hỗ trợ sao chép ảnh. Hãy dùng “Tải ảnh”.');
@@ -1365,14 +1361,11 @@ function mergeGemini(local, gem){
    ========================================================================= */
 function refreshAiTag(){
   const on = !!LS.get('tbxn_gkey', '');
-  $('#aiTag').textContent = on ? 'Đọc ảnh: Gemini + trên máy' : 'Đọc ảnh: trên máy';
-  $('#aiTag').classList.toggle('on', on);
 }
 $('#setBtn').addEventListener('click', () => {
   $('#gKey').value = LS.get('tbxn_gkey', ''); $('#gModel').value = LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash';
   $('#setDlg').showModal();
 });
-$('#aiTag').addEventListener('click', () => $('#setBtn').click());
 $('#setDlg').addEventListener('close', () => {
   if ($('#setDlg').returnValue !== 'save') return;
   LS.set('tbxn_gkey', $('#gKey').value.trim()); LS.set('tbxn_gmodel', $('#gModel').value.trim());
