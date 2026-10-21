@@ -38,7 +38,16 @@ header{padding:calc(18px + env(safe-area-inset-top)) 0 12px;display:flex;align-i
 .logo{width:44px;height:44px;border-radius:12px;box-shadow:var(--shadow);flex:none;display:block}
 h1{font-size:20px;margin:0;font-weight:800;letter-spacing:-.01em;line-height:1.2}
 .sub{margin:0;color:var(--muted);font-size:12.5px}
-.hbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink);width:44px;height:44px;min-height:0;padding:0;border-radius:14px;font-size:18px;flex:none}
+.hbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink);width:44px;height:44px;min-height:0;padding:0;border-radius:14px;font-size:18px;flex:none;position:relative}
+#setBtn[data-ai]::after{content:"";position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;border:2px solid var(--surface)}
+#setBtn[data-ai="ok"]::after{background:#2fa36b}
+#setBtn[data-ai="err"]::after{background:var(--warn)}
+#setBtn[data-ai="unk"]::after{background:var(--amber)}
+.gstat{margin-top:12px;padding:9px 12px;border-radius:12px;font-size:13.5px;font-weight:600;background:var(--soft);color:var(--muted);display:flex;align-items:center;gap:8px}
+.gstat.ok{background:color-mix(in srgb,#2fa36b 14%,transparent);color:#1f7a4f}
+.gstat.err{background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--warn)}
+.gstat.wait{color:var(--brand)}
+.dlg .row2 .test{margin-right:auto}
 .hbtn:first-of-type{margin-left:auto}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
 .card h2{font-size:15px;margin:0 0 10px;font-weight:800;display:flex;align-items:center;gap:8px}
@@ -276,10 +285,12 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
     <input class="fld" id="gKey" type="password" autocomplete="off" placeholder="AIza…">
     <label for="gModel">Model</label>
     <input class="fld" id="gModel" list="gModels" placeholder="gemini-3.8-flash">
-    <datalist id="gModels"><option value="gemini-3.8-flash"><option value="gemini-3.6-flash"><option value="gemini-3.5-flash-lite"><option value="gemini-flash-latest"><option value="gemini-2.5-flash"></datalist>
+    <datalist id="gModels"><option value="gemini-3.8-flash"><option value="gemini-3.6-flash"><option value="gemini-3.5-flash-lite"><option value="gemini-flash-latest"></datalist>
+    <div class="gstat" id="gStat"></div>
     <div class="row2">
+      <button type="button" class="ghost test" id="gTest">🔍 Kiểm tra</button>
       <button value="cancel" class="ghost">Đóng</button>
-      <button value="save" class="primary" id="setSave">Lưu</button>
+      <button type="button" class="primary" id="setSave">Lưu</button>
     </div>
   </form>
 </dialog>
@@ -1019,8 +1030,10 @@ async function readSheet(blob){
       const g = await geminiRead(blob, key, LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash');
       rowsOut = mergeGemini(rowsOut, g);
       via = 'Gemini + trên máy';
+      LS.set('tbxn_gok', true); refreshAiTag();
     } catch(e){
       console.warn(e);
+      if (!/abort|fetch|network/i.test(String(e.message))){ LS.set('tbxn_gok', false); refreshAiTag(); }
       toast('Gemini lỗi: ' + e.message + ' — dùng kết quả đọc trên máy', 4500);
     }
   }
@@ -1388,17 +1401,70 @@ function mergeGemini(local, gem){
 /* =========================================================================
    Cài đặt, giao diện
    ========================================================================= */
+// Trạng thái Gemini: chấm màu trên nút ⚙️ (xanh = đang dùng key, đỏ = key lỗi, vàng = chưa kiểm tra)
 function refreshAiTag(){
-  const on = !!LS.get('tbxn_gkey', '');
+  const on = !!LS.get('tbxn_gkey', ''), st = LS.get('tbxn_gok', null);
+  const b = $('#setBtn');
+  if (!on){ b.removeAttribute('data-ai'); b.title = 'Cài đặt nhận dạng — đang đọc trên máy'; return; }
+  b.dataset.ai = st === true ? 'ok' : st === false ? 'err' : 'unk';
+  b.title = st === true ? 'Đang dùng Gemini (' + (LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash') + ')' : st === false ? 'Key Gemini đang lỗi — bấm để kiểm tra' : 'Đã lưu key Gemini (chưa kiểm tra)';
+}
+function setStat(cls, html){ const e = $('#gStat'); e.className = 'gstat ' + cls; e.innerHTML = html; }
+function showSavedStat(){
+  const key = LS.get('tbxn_gkey', ''), st = LS.get('tbxn_gok', null), m = esc(LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash');
+  if (!key) setStat('', '⚪ Chưa có key — đang <b>&nbsp;đọc trên máy</b>');
+  else if (st === true) setStat('ok', `🟢 Đang dùng Gemini · ${m}`);
+  else if (st === false) setStat('err', '🔴 Key đã lưu nhưng đang lỗi — bấm “Kiểm tra”');
+  else setStat('', `🟡 Đã lưu key · ${m} — chưa kiểm tra`);
+}
+// Kiểm tra key: hỏi thông tin model (không tốn lượt đọc ảnh)
+async function testKey(key, model){
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}`, { headers: { 'x-goog-api-key': key }, signal: ctl.signal });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) return { ok: true, name: j.displayName || model };
+    const msg = (j.error && j.error.message) || '';
+    if (r.status === 404) return { ok: false, msg: `Không tìm thấy model “${model}”. Hãy chọn model khác.` };
+    if (/API key not valid|API_KEY_INVALID/i.test(msg) || r.status === 400) return { ok: false, msg: 'Key không hợp lệ — kiểm tra lại đã sao chép đủ chưa.' };
+    if (r.status === 403) return { ok: false, msg: 'Key bị từ chối (chưa bật Gemini API hoặc bị giới hạn).' };
+    if (r.status === 429) return { ok: false, msg: 'Đã hết lượt miễn phí tạm thời — thử lại sau.' };
+    return { ok: false, msg: msg || ('Lỗi HTTP ' + r.status) };
+  } catch(e){
+    return { ok: false, net: true, msg: e.name === 'AbortError' ? 'Quá thời gian chờ — kiểm tra mạng.' : 'Không kết nối được tới Google — kiểm tra mạng.' };
+  } finally { clearTimeout(to); }
+}
+async function runTest(){
+  const key = $('#gKey').value.trim(), model = $('#gModel').value.trim() || 'gemini-3.8-flash';
+  if (!key){ setStat('', '⚪ Chưa nhập key — trang sẽ đọc trên máy'); return null; }
+  setStat('wait', '⏳ Đang kiểm tra key với Google…');
+  $('#gTest').disabled = $('#setSave').disabled = true;
+  const r = await testKey(key, model);
+  $('#gTest').disabled = $('#setSave').disabled = false;
+  if (r.ok) setStat('ok', `✅ Key hoạt động · ${esc(r.name)}`);
+  else setStat('err', '❌ ' + esc(r.msg));
+  return r;
 }
 $('#setBtn').addEventListener('click', () => {
   $('#gKey').value = LS.get('tbxn_gkey', ''); $('#gModel').value = LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash';
+  $('#setSave').textContent = 'Lưu'; $('#setSave').dataset.force = '';
+  showSavedStat();
   $('#setDlg').showModal();
 });
-$('#setDlg').addEventListener('close', () => {
-  if ($('#setDlg').returnValue !== 'save') return;
-  LS.set('tbxn_gkey', $('#gKey').value.trim()); LS.set('tbxn_gmodel', $('#gModel').value.trim());
-  refreshAiTag(); toast('Đã lưu cài đặt');
+['gKey','gModel'].forEach(id => $('#' + id).addEventListener('input', () => { $('#setSave').textContent = 'Lưu'; $('#setSave').dataset.force = ''; }));
+$('#gTest').addEventListener('click', runTest);
+$('#setSave').addEventListener('click', async () => {
+  const key = $('#gKey').value.trim(), model = $('#gModel').value.trim();
+  const commit = ok => {
+    LS.set('tbxn_gkey', key); LS.set('tbxn_gmodel', model); LS.set('tbxn_gok', key ? ok : null);
+    refreshAiTag(); $('#setDlg').close();
+  };
+  if (!key){ commit(null); toast('Đã lưu — đọc ảnh trên máy'); return; }
+  if ($('#setSave').dataset.force){ commit(null); toast('Đã lưu key (chưa kiểm tra được)'); return; }
+  const r = await runTest();
+  if (r && r.ok){ commit(true); toast('✅ Đã lưu — đang dùng Gemini'); return; }
+  // lỗi: giữ hộp thoại mở để sửa; nếu do mạng thì cho phép vẫn lưu
+  if (r && r.net){ $('#setSave').textContent = 'Vẫn lưu'; $('#setSave').dataset.force = '1'; }
 });
 (function(){
   const t = LS.get('tbxn_theme', null);
