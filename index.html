@@ -80,6 +80,10 @@ button:disabled{opacity:.5;cursor:default}
 .aitag{margin-left:auto;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;background:var(--soft);color:var(--muted)}
 .aitag.on{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
 #prog{margin-top:12px;display:none}
+.progrow{display:flex;align-items:center;gap:8px;margin-top:6px}
+.progrow #progTxt{margin-top:0;flex:1}
+#cancelBtn[hidden]{display:none}
+#cancelBtn{min-height:30px;padding:4px 10px;font-size:12.5px;flex:none}
 #prog.show{display:block}
 .bar{height:8px;border-radius:999px;background:var(--soft);overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand-2),var(--brand));border-radius:999px;transition:width .25s}
@@ -232,7 +236,7 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
     <div class="opt">
       <label class="switch"><input type="checkbox" id="appendChk"> Ghép thêm vào bảng hiện có</label>
     </div>
-    <div id="prog"><div class="bar"><i id="progBar"></i></div><div id="progTxt"></div></div>
+    <div id="prog"><div class="bar"><i id="progBar"></i></div><div class="progrow"><div id="progTxt"></div><button type="button" class="ghost small" id="cancelBtn" hidden>✕ Huỷ</button></div></div>
     <details id="srcBox"><summary>Xem ảnh gốc</summary><img id="srcImg" alt="Ảnh đã dán"></details>
   </section>
 
@@ -808,11 +812,12 @@ function loadPdfLib(){
 }
 async function pdfToImages(file){
   progress(0.02, 'Đang mở tệp PDF…');
-  const lib = await loadPdfLib();
+  const lib = await withTimeout(loadPdfLib(), LIM.pdf, 'Tải bộ đọc PDF quá lâu — kiểm tra mạng');
   const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const n = Math.min(doc.numPages, 20), out = [];
   if (doc.numPages > 20) toast(`PDF có ${doc.numPages} trang — chỉ đọc 20 trang đầu`, 4000);
   for (let i = 1; i <= n; i++){
+    check();
     progress(0.02 + 0.06 * (i / n), `Đang chuyển trang PDF ${i}/${n} thành ảnh…`);
     const page = await doc.getPage(i), v1 = page.getViewport({ scale: 1 });
     const sc = Math.max(1.5, Math.min(4, 2200 / v1.width)), vp = page.getViewport({ scale: sc });
@@ -828,9 +833,9 @@ async function pdfToImages(file){
 async function handlePdf(file){
   if (busy){ toast('Đang đọc tệp trước, vui lòng chờ…'); return; }
   let imgs;
-  try { busy = true; imgs = await pdfToImages(file); }
-  catch(e){ console.error(e); progress(1, '❌ ' + (e.message || e)); toast('❌ ' + (e.message || 'Không đọc được PDF')); return; }
-  finally { busy = false; }
+  try { busy = true; startJob(); imgs = await pdfToImages(file); }
+  catch(e){ console.error(e); progress(1, (job && job.cancelled ? '⏹ Đã huỷ.' : '❌ ' + (e.message || e))); if (!(job && job.cancelled)) toast('❌ ' + (e.message || 'Không đọc được PDF')); return; }
+  finally { busy = false; endJob(); }
   if (!imgs.length){ toast('PDF không có trang nào'); return; }
   return handleImage(imgs);
 }
@@ -839,40 +844,67 @@ let progPrefix = '';
 function progress(p, txt){
   $('#prog').classList.add('show');
   if (p != null) $('#progBar').style.width = Math.max(3, Math.min(100, p * 100)) + '%';
-  if (txt != null) $('#progTxt').textContent = (/^[✅❌]/.test(txt) ? '' : progPrefix) + txt;
+  if (txt != null) $('#progTxt').textContent = (/^[✅❌⏹]/.test(txt) ? '' : progPrefix) + txt;
 }
 function progressDone(txt){ progress(1, txt); setTimeout(() => { if (!busy) $('#prog').classList.remove('show'); }, 2500); }
 
+function startJob(){
+  job = { t0: Date.now(), cancelled: false, ctl: new AbortController() };
+  $('#cancelBtn').hidden = false;
+  return job;
+}
+function endJob(){ job = null; $('#cancelBtn').hidden = true; }
+$('#cancelBtn').addEventListener('click', () => {
+  if (!job || job.cancelled) return;
+  job.cancelled = true; job.ctl.abort(); killWorker();
+  progress(null, 'Đang huỷ…');
+});
 async function handleImage(input){
   if (busy){ toast('Đang đọc ảnh trước, vui lòng chờ…'); return; }
-  busy = true;
+  busy = true; startJob();
   ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = true);
   const pages = Array.isArray(input) ? input : [input];
+  const res = { rows: [], via: '' };
+  let stopped = null, failed = 0;
   try {
     const old = $('#srcImg').src; if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
     $('#srcImg').src = URL.createObjectURL(pages[0]); $('#srcBox').classList.add('show');
     progress(0.02, 'Đang chuẩn bị ảnh…');
-    const res = { rows: [], via: '' };
     for (let i = 0; i < pages.length; i++){
+      if (job.cancelled) break;
+      job.t0 = Date.now();                       // mỗi trang có giới hạn thời gian riêng
       progPrefix = pages.length > 1 ? `Trang ${i + 1}/${pages.length}: ` : '';
-      const r = await readSheet(pages[i]);
-      res.rows.push(...r.rows); res.via = r.via;
+      try {
+        const r = await readSheet(pages[i]);
+        res.rows.push(...r.rows); res.via = r.via;
+      } catch(e){
+        console.warn(e);
+        if (job.cancelled){ stopped = 'cancel'; break; }
+        failed++; stopped = e;                   // trang lỗi / quá giờ: bỏ qua, đọc tiếp trang sau
+      }
     }
+    if (job.cancelled) stopped = 'cancel';
     progPrefix = '';
-    if (!res.rows.length) throw new Error('Không tìm thấy dòng dữ liệu nào trong ' + (pages.length > 1 ? 'tệp PDF.' : 'ảnh.'));
+    if (!res.rows.length){
+      if (stopped === 'cancel') throw new StopErr('Đã huỷ đọc ảnh.');
+      const timeout = stopped && /lâu|thời gian/i.test(stopped.message);
+      throw new Error((timeout ? 'Không đọc được trong thời gian cho phép' : (stopped && stopped.message) || 'Không tìm thấy dòng dữ liệu nào')
+        + '. Hãy thử ảnh rõ, thẳng hơn hoặc bấm “Nhập tay”.');
+    }
     const append = $('#appendChk').checked;
     if (!append){ rows = []; Object.keys(crops).forEach(k => delete crops[k]); }
     res.rows.forEach(r => { const nr = newRow(r); if (r.crop) crops[nr.id] = r.crop; delete nr.crop; rows.push(nr); });
     save(); renderTable();
     const warn = res.rows.filter(r => Object.keys(r.flags || {}).some(k => k !== 'thucOk')).length;
-    progressDone(`✅ Đọc xong ${res.rows.length} dòng${res.via ? ' (' + res.via + ')' : ''}.` + (warn ? ` ${warn} dòng có ô viền vàng cần kiểm tra.` : ''));
+    const extra = stopped === 'cancel' ? ' Đã huỷ phần còn lại.' : failed ? ` ${failed} trang không đọc được.` : '';
+    progressDone(`✅ Đọc xong ${res.rows.length} dòng${res.via ? ' (' + res.via + ')' : ''}.` + (warn ? ` ${warn} dòng có ô viền vàng cần kiểm tra.` : '') + extra);
     setTimeout(() => $('#tableCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
   } catch(e){
     console.error(e);
-    progress(1, '❌ ' + (e.message || e));
-    toast('❌ ' + (e.message || 'Không đọc được ảnh'));
+    progress(1, (e instanceof StopErr ? '⏹ ' : '❌ ') + (e.message || e));
+    if (!(e instanceof StopErr)) toast('❌ ' + (e.message || 'Không đọc được ảnh'), 4500);
   } finally {
-    busy = false; progPrefix = '';
+    busy = false; progPrefix = ''; endJob();
     ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = false);
   }
 }
@@ -881,6 +913,27 @@ async function handleImage(input){
    Nhận dạng ảnh trên máy (Tesseract.js)
    ========================================================================= */
 let workerP = null, workerProgress = null;
+/* Giới hạn thời gian để không bao giờ chờ quá lâu, kể cả khi ảnh không đọc được */
+const LIM = { worker: 45000, full: 25000, soft: 20000, hard: 35000, abs: 45000, gemini: 30000, pdf: 20000 };
+let job = null;   // { t0, cancelled, ctl }
+const elapsed = () => job ? Date.now() - job.t0 : 0;
+const late = () => elapsed() > LIM.soft;     // bỏ các bước đọc lại không bắt buộc
+const veryLate = () => elapsed() > LIM.hard; // bỏ đọc chữ viết tay cho các dòng còn lại
+class StopErr extends Error {}
+function check(){
+  if (!job) return;
+  if (job.cancelled) throw new StopErr('Đã huỷ');
+  if (elapsed() > LIM.abs) throw new StopErr('Quá thời gian đọc ảnh');
+}
+function withTimeout(p, ms, msg){
+  let t, onCancel;
+  const guard = new Promise((_, rej) => {
+    t = setTimeout(() => rej(new StopErr(msg)), Math.max(0, ms));
+    if (job){ onCancel = () => rej(new StopErr('Đã huỷ')); job.ctl.signal.addEventListener('abort', onCancel, { once: true }); }
+  });
+  return Promise.race([p, guard]).finally(() => { clearTimeout(t); if (job && onCancel) job.ctl.signal.removeEventListener('abort', onCancel); });
+}
+function killWorker(){ const p = workerP; workerP = null; if (p) p.then(w => w.terminate()).catch(() => {}); }
 function getWorker(){
   if (!workerP){
     if (!window.Tesseract) return Promise.reject(new Error('Chưa tải được bộ nhận dạng chữ (kiểm tra kết nối mạng).'));
@@ -891,10 +944,17 @@ function getWorker(){
   return workerP;
 }
 async function ocr(canvas, { psm = '6', whitelist = '' } = {}){
-  const w = await getWorker();
-  await w.setParameters({ tessedit_pageseg_mode: String(psm), tessedit_char_whitelist: whitelist, preserve_interword_spaces: '1' });
-  const { data } = await w.recognize(canvas, {}, { text: true, tsv: true, blocks: false, hocr: false });
-  return { text: data.text || '', words: parseTSV(data.tsv || '') };
+  check();
+  const w = await withTimeout(getWorker(), LIM.worker, 'Tải bộ nhận dạng quá lâu — kiểm tra mạng rồi thử lại');
+  try {
+    await w.setParameters({ tessedit_pageseg_mode: String(psm), tessedit_char_whitelist: whitelist, preserve_interword_spaces: '1' });
+    const { data } = await withTimeout(w.recognize(canvas, {}, { text: true, tsv: true, blocks: false, hocr: false }),
+      LIM.abs - elapsed(), 'Quá thời gian đọc ảnh');
+    return { text: data.text || '', words: parseTSV(data.tsv || '') };
+  } catch(e){
+    if (e instanceof StopErr) killWorker();   // bộ đọc đang kẹt: dừng hẳn, lần sau tạo lại
+    throw e;
+  }
 }
 function parseTSV(tsv){
   const out = [];
@@ -1028,10 +1088,34 @@ function analyzeGrid(gray, ink, W, H){
 }
 
 async function readSheet(blob){
+  // Gemini (nếu có key) chạy song song với đọc trên máy để tiết kiệm thời gian
+  const key = LS.get('tbxn_gkey', '');
+  const gemP = key ? geminiRead(blob, key, LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash').then(v => ({ v }), e => ({ e })) : null;
+  let local = [], localErr = null;
+  try { local = await readLocal(blob); }
+  catch(e){ if (job && job.cancelled) throw e; localErr = e; console.warn(e); }
+  let rowsOut = local, via = 'đọc trên máy';
+  if (gemP){
+    if (!localErr) progress(0.92, 'Đang chờ Gemini đọc chữ viết tay…');
+    const g = await withTimeout(gemP, LIM.gemini + 2000, 'Gemini phản hồi quá lâu').catch(e => ({ e }));
+    if (g.v){
+      rowsOut = mergeGemini(local, g.v); via = localErr ? 'Gemini' : 'Gemini + trên máy';
+      LS.set('tbxn_gok', true); refreshAiTag();
+    } else {
+      const e = g.e || {};
+      if (job && job.cancelled) throw new StopErr('Đã huỷ');
+      if (!/abort|fetch|network|lâu|huỷ/i.test(String(e.message))){ LS.set('tbxn_gok', false); refreshAiTag(); }
+      toast('Gemini lỗi: ' + (e.message || e) + (local.length ? ' — dùng kết quả đọc trên máy' : ''), 4500);
+    }
+  }
+  if (!rowsOut.length && localErr) throw localErr;
+  return { rows: rowsOut, via };
+}
+async function readLocal(blob){
   const bmp = await loadBitmap(blob);
   const iw = bmp.width, ih = bmp.height;
   let scale = iw < 1100 ? 2.5 : iw < 2000 ? 2 : iw < 3000 ? 1.3 : 1;
-  while (iw * ih * scale * scale > 14e6 && scale > 0.5) scale = Math.round((scale - 0.1) * 10) / 10;
+  while (iw * ih * scale * scale > 9e6 && scale > 0.5) scale = Math.round((scale - 0.1) * 10) / 10;
   // Ảnh chụp bằng điện thoại thường hơi nghiêng: ước lượng góc rồi xoay thẳng
   const ang = estimateSkew(bmp);
   const rad = ang * Math.PI / 180, cs = Math.abs(Math.cos(rad)), sn = Math.abs(Math.sin(rad));
@@ -1062,6 +1146,9 @@ async function readSheet(blob){
   for (let i = 0, p = 0; i < W * H; i++, p += 4){ if (!ink[i]){ const bgv = bgOf(i); d[p] = Math.min(255, d[p] * 255 / bgv); d[p + 1] = Math.min(255, d[p + 1] * 255 / bgv); d[p + 2] = Math.min(255, d[p + 2] * 255 / bgv); } }
   sctx.putImageData(img, 0, 0);
   progress(0.08, 'Đang tìm đường kẻ bảng…');
+  // Ảnh quá tối / nhiễu (không phải phiếu in nền sáng) -> báo ngay, khỏi chờ
+  let darkN = 0; for (let i = 0; i < W * H; i += 7) if (gray[i] < 128) darkN++;
+  if (darkN / (W * H / 7) > 0.32) throw new Error('Ảnh không giống phiếu cân (quá tối hoặc nhiễu)');
   const grid = analyzeGrid(gray, ink, W, H);
 
   // Ảnh sạch: bỏ đường kẻ + nét bút để đọc chữ in
@@ -1082,7 +1169,8 @@ async function readSheet(blob){
     if (m.status === 'recognizing text') progress(0.15 + 0.5 * (m.progress || 0), 'Đang đọc chữ trong bảng…');
     else if (/load|initializ/i.test(m.status)) progress(0.1, 'Đang tải bộ nhận dạng tiếng Việt (chỉ lần đầu)…');
   };
-  const full = await ocr(clean, { psm: '11' });
+  const full = await withTimeout(ocr(clean, { psm: '11' }), LIM.full, 'Không đọc được trong thời gian cho phép').catch(e => { if (e instanceof StopErr) killWorker(); throw e; });
+  if (!full.words.some(w => /\d/.test(w.t))) throw new Error('Không thấy chữ số nào trong ảnh');
   workerProgress = null;
   const words = full.words;
 
@@ -1096,22 +1184,7 @@ async function readSheet(blob){
     rowsOut = await parseLoose(words, { W, H, gray, ink, isLine, src, clean, scale });
   }
 
-  let via = 'đọc trên máy';
-  const key = LS.get('tbxn_gkey', '');
-  if (key){
-    progress(0.9, 'Đang nhờ Gemini đọc chữ viết tay…');
-    try {
-      const g = await geminiRead(blob, key, LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash');
-      rowsOut = mergeGemini(rowsOut, g);
-      via = 'Gemini + trên máy';
-      LS.set('tbxn_gok', true); refreshAiTag();
-    } catch(e){
-      console.warn(e);
-      if (!/abort|fetch|network/i.test(String(e.message))){ LS.set('tbxn_gok', false); refreshAiTag(); }
-      toast('Gemini lỗi: ' + e.message + ' — dùng kết quả đọc trên máy', 4500);
-    }
-  }
-  return { rows: rowsOut, via };
+  return rowsOut;
 }
 
 const reTime = /\d{1,2}[:.;]\d{2}/;
@@ -1220,7 +1293,7 @@ async function parseGrid(grid, words, ctx){
     const nums = {};
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => nums[f] = numOf(r[f]));
     let rc = reconcile(nums);
-    if (!rc.ok){
+    if (!rc.ok && !late()){
       for (const f of ['thuc','tlh','bi','tl1','tl2']){
         const c = r._cells[f]; if (!c) continue;
         const crop = cropCanvas(ctx.clean, c.x0 + 2, b.y0 + 2, c.x1 - 2, b.y1 - 2, 2);
@@ -1235,7 +1308,7 @@ async function parseGrid(grid, words, ctx){
       if (a != null && b2 != null && h != null && Math.abs(b2 - a) !== h){ r.flags.tl1 = r.flags.tl2 = true; } }
     if (!r.khach) r.flags.khach = true;
     // giờ cân bị chữ viết tay đè -> đọc lại riêng phần trên của ô
-    if (!reTime.test(r.gio) && r._cells.gio){
+    if (!reTime.test(r.gio) && r._cells.gio && !late()){
       const c = r._cells.gio, crop = cropCanvas(ctx.clean, c.x0 + 2, b.y0 + 2, c.x1 - 2, b.y0 + (b.y1 - b.y0) * 0.62, 1.5);
       const o = await ocr(crop, { psm: '7', whitelist: '0123456789:' });
       const tm = o.text.match(/(\d{1,2}):?(\d{2}):?(\d{2})/);
@@ -1259,7 +1332,7 @@ async function parseGrid(grid, words, ctx){
       } else if (nextBand){
         yEnd = nextBand.y1;
       } else yEnd = Math.min(ctx.H - 1, b.y1 + (b.y1 - b.y0));
-      const hw = await readHandwriting(ctx, gc.x0 + 2, tBot + 3, gc.x1 - 2, yEnd, tTop);
+      const hw = veryLate() ? null : await readHandwriting(ctx, gc.x0 + 2, tBot + 3, gc.x1 - 2, yEnd, tTop);
       applyHW(r, hw);
     }
     delete r._band; delete r._cells;
@@ -1346,7 +1419,7 @@ async function readHandwriting(ctx, x0, y0, x1, y1, tTop){
   const crop = v2.toDataURL('image/png');
   let o = await ocr(bin, { psm: '7', whitelist: '0123456789XxNn-., ' });
   let p = parseXN(o.text);
-  if (!p || p.weak){ const o2 = await ocr(bin, { psm: '6', whitelist: '0123456789XxNn-., ' }); const p2 = parseXN(o2.text); if (p2 && (!p || !p2.weak)){ o = o2; p = p2; } }
+  if ((!p || p.weak) && !late()){ const o2 = await ocr(bin, { psm: '6', whitelist: '0123456789XxNn-., ' }); const p2 = parseXN(o2.text); if (p2 && (!p || !p2.weak)){ o = o2; p = p2; } }
   const cw = o.words.filter(w => /\d/.test(w.t));
   const conf = cw.length ? Math.min(...cw.map(w => w.conf)) : 0;
   return { crop, text: o.text.trim(), parsed: p, conf };
@@ -1383,7 +1456,7 @@ async function parseLoose(words, ctx){
   const thucH = words.find(w => /th.?c/.test(norm(w.t)) && w !== hdr);
   const dates = words.filter(w => reDate.test(w.t)).map(w => ({ y: w.cy, d: fixDate(w.t.match(reDate)) }));
   const out = [];
-  for (let k = 0; k < times.length; k++){
+  for (let k = 0; k < Math.min(times.length, 60); k++){
     const t = times[k], same = words.filter(w => Math.abs(w.cy - t.cy) < medH * 0.9);
     const nums = same.filter(w => w.x1 < t.x0 && /^[\d.,]+$/.test(cleanNum(w.t)) && /\d/.test(w.t)).sort((a, b) => a.x0 - b.x0);
     const big = nums.filter(w => numOf(w.t) != null);
@@ -1400,7 +1473,7 @@ async function parseLoose(words, ctx){
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = rc.vals[f] != null ? fmtKg(rc.vals[f]) : '');
     if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
     const next = times[k + 1];
-    const hw = await readHandwriting(ctx, t.x0 - medH * 2, t.y1 + 3, t.x1 + medH * 3, next ? next.y0 - 3 : t.y1 + medH * 3, t.y0);
+    const hw = veryLate() ? null : await readHandwriting(ctx, t.x0 - medH * 2, t.y1 + 3, t.x1 + medH * 3, next ? next.y0 - 3 : t.y1 + medH * 3, t.y0);
     applyHW(r, hw);
     out.push(r);
   }
@@ -1419,7 +1492,8 @@ Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"), theo đúng 
 {"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null}]}
 Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi là số (có thể có phần thập phân), null nếu không có chữ viết tay. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 60000);
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), LIM.gemini);
+  if (job) job.ctl.signal.addEventListener('abort', () => ctl.abort(), { once: true });
   const r = await fetch(url, {
     method: 'POST', signal: ctl.signal,
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
@@ -1427,7 +1501,8 @@ Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân c�
       contents: [{ parts: [{ inline_data: { mime_type: blob.type || 'image/png', data: b64 } }, { text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0 }
     })
-  }).finally(() => clearTimeout(to));
+  }).catch(e => { throw new Error(job && job.cancelled ? 'Đã huỷ' : e.name === 'AbortError' ? 'phản hồi quá lâu' : 'không kết nối được tới Google'); })
+    .finally(() => clearTimeout(to));
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
   const txt = (((j.candidates || [])[0] || {}).content || {}).parts?.map(p => p.text || '').join('') || '';
