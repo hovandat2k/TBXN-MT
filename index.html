@@ -524,7 +524,8 @@ function cellText(r, f, i){
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
   return [v];
 }
-async function makeCanvas(){
+async function makeCanvas(mono = false){
+  const F = c => mono ? '#fff' : c, T = c => mono ? '#000' : c;   // mono: bản in trắng đen
   try { if (document.fonts){ await Promise.race([Promise.all([document.fonts.load('800 22px "Be Vietnam Pro"'), document.fonts.load('600 15px "Be Vietnam Pro"')]), new Promise(r => setTimeout(r, 1500))]); } } catch(e){}
   const logo = await getLogo();
   const cols = sheetCols(), gs = groups(), A = agg(rows);
@@ -557,12 +558,12 @@ async function makeCanvas(){
   g.fillStyle = '#fff'; g.fillRect(0, 0, Wc, Hc);
   g.textBaseline = 'middle';
   // tiêu đề
-  if (logo){ g.save(); roundRect(g, M, 20, 54, 54, 13); g.clip(); g.drawImage(logo, M, 20, 54, 54); g.restore(); }
+  if (logo){ g.save(); roundRect(g, M, 20, 54, 54, 13); g.clip(); if (mono) g.filter = 'grayscale(1)'; g.drawImage(logo, M, 20, 54, 54); g.restore(); }
   const dates = gs.map(x => x.date).filter(Boolean);
   const range = dates.length ? (dates.length > 1 ? `${dates[0]} – ${dates[dates.length - 1]}` : dates[0]) : '';
-  g.fillStyle = '#1b5f8c'; g.font = `800 26px ${SANS}`; g.textAlign = 'left';
+  g.fillStyle = T('#1b5f8c'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
   g.fillText('Phiếu báo cáo cà tươi', M + 68, 38);
-  g.fillStyle = '#5a7d93'; g.font = `600 15.5px ${SANS}`;
+  g.fillStyle = T('#5a7d93'); g.font = `600 15.5px ${SANS}`;
   g.fillText([range ? 'Ngày cân ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), M + 68, 63);
   // bảng
   const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
@@ -573,8 +574,8 @@ async function makeCanvas(){
   const txt = (t, x, yy, align = 'center', w = 400, sz = FS, color = '#000') => { g.font = `${w} ${sz}px ${SERIF}`; g.fillStyle = color; g.textAlign = align; g.fillText(t, x, yy); };
   const cellX = (k, align) => align === 'right' ? xs[k + 1] - PADX : align === 'left' ? xs[k] + PADX : (xs[k] + xs[k + 1]) / 2;
   // header
-  nxFill(y, H_HEAD, '#dcefFB'.toLowerCase());
-  cols.forEach(([f, t], k) => txt(t, cellX(k), y + H_HEAD / 2 + 1, 'center', isNX(f) ? 700 : 400, FS, isNX(f) ? '#0f4c75' : '#000'));
+  nxFill(y, H_HEAD, F('#dceffb'));
+  cols.forEach(([f, t], k) => txt(t, cellX(k), y + H_HEAD / 2 + 1, 'center', isNX(f) ? 700 : 400, FS, T(isNX(f) ? '#0f4c75' : '#000')));
   line(X0, y, XE, y); xs.forEach(x => line(x, y, x, y + H_HEAD));
   y += H_HEAD;
   gs.forEach(gr => {
@@ -584,12 +585,12 @@ async function makeCanvas(){
     y += H_DATE;
     gr.rows.forEach((r, i) => {
       line(X0, y, XE, y);
-      nxFill(y + 0.8, H_ROW - 1.6, '#eef7fd');
+      nxFill(y + 0.8, H_ROW - 1.6, F('#eef7fd'));
       cols.forEach(([f], k) => {
         const ls = cellText(r, f, i);
         const al = f === 'thuc' ? 'right' : 'center';
         const bad = (isNX(f) && !ls[0]);
-        if (bad){ txt('–', cellX(k), y + H_ROW / 2 + 1, 'center', 400, FS, '#9ab'); return; }
+        if (bad){ txt('–', cellX(k), y + H_ROW / 2 + 1, 'center', 400, FS, T('#9ab')); return; }
         ls.forEach((l, j) => txt(l, cellX(k, al), y + H_ROW / 2 + 1 + (j - (ls.length - 1) / 2) * LH, al));
       });
       xs.forEach(x => line(x, y, x, y + H_ROW));
@@ -598,21 +599,21 @@ async function makeCanvas(){
     // tổng ngày
     const a = agg(gr.rows);
     line(X0, y, XE, y);
-    nxFill(y + 0.8, H_TOT - 1.6, '#dcefFB'.toLowerCase());
+    nxFill(y + 0.8, H_TOT - 1.6, F('#dceffb'));
     txt('Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
     txt(fmtKg(a.tl), cellX(iThuc, 'right'), y + H_TOT / 2 + 1, 'right', 700);
-    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(a.x), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, '#0f4c75'); if (f === 'noi') txt(fmtPct(a.n), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, '#0f4c75'); });
+    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(a.x), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#0f4c75')); if (f === 'noi') txt(fmtPct(a.n), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#0f4c75')); });
     line(X0, y, X0, y + H_TOT); line(XE, y, XE, y + H_TOT);
     cols.forEach(([f], k) => { if (isNX(f)){ line(xs[k], y, xs[k], y + H_TOT); } });
     y += H_TOT;
   });
   if (gs.length > 1){
     line(X0, y, XE, y);
-    g.fillStyle = '#d7eefc'; g.fillRect(X0, y, XE - X0, H_GRAND);
-    nxFill(y, H_GRAND, '#c2e2f7');
+    g.fillStyle = F('#d7eefc'); g.fillRect(X0, y, XE - X0, H_GRAND);
+    nxFill(y, H_GRAND, F('#c2e2f7'));
     txt('TỔNG CỘNG TẤT CẢ :', xs[iThuc] - 30, y + H_GRAND / 2 + 1, 'right', 800);
     txt(fmtKg(A.tl), cellX(iThuc, 'right'), y + H_GRAND / 2 + 1, 'right', 800, FS + 1);
-    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(A.x), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, '#0f4c75'); if (f === 'noi') txt(fmtPct(A.n), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, '#0f4c75'); });
+    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(A.x), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#0f4c75')); if (f === 'noi') txt(fmtPct(A.n), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#0f4c75')); });
     line(X0, y, X0, y + H_GRAND); line(XE, y, XE, y + H_GRAND);
     cols.forEach(([f], k) => { if (isNX(f)) line(xs[k], y, xs[k], y + H_GRAND); });
     y += H_GRAND;
@@ -624,11 +625,11 @@ async function makeCanvas(){
   const gap = 12, bw = (XE - X0 - gap * 2) / 3;
   boxes.forEach(([l, v, bg, fg], k) => {
     const bx = X0 + k * (bw + gap);
-    g.fillStyle = bg; roundRect(g, bx, y, bw, 70, 14); g.fill();
-    g.textAlign = 'left'; g.fillStyle = '#4c7590'; g.font = `700 14.5px ${SANS}`; g.fillText(l, bx + 16, y + 22);
-    g.fillStyle = fg; g.font = `800 ${bw < 200 ? 22 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
+    g.fillStyle = F(bg); roundRect(g, bx, y, bw, 70, 14); g.fill(); if (mono){ g.lineWidth = 1.4; g.strokeStyle = '#000'; g.stroke(); }
+    g.textAlign = 'left'; g.fillStyle = T('#4c7590'); g.font = `700 14.5px ${SANS}`; g.fillText(l, bx + 16, y + 22);
+    g.fillStyle = T(fg); g.font = `800 ${bw < 200 ? 22 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
   });
-  g.textAlign = 'left'; g.fillStyle = '#7b98aa'; g.font = `500 12.5px ${SANS}`;
+  g.textAlign = 'left'; g.fillStyle = T('#7b98aa'); g.font = `500 12.5px ${SANS}`;
   g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
   return cv;
 }
@@ -649,9 +650,9 @@ async function renderExport(){
     const old = $('#prev').src; $('#prev').src = url; if (old.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(old), 1000);
   } catch(e){ console.error(e); }
 }
-async function freshBlob(){
+async function freshBlob(mono = false){
   clearTimeout(expTimer);
-  const c = await makeCanvas();
+  const c = await makeCanvas(mono);
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
 function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `phieu-ca-tuoi_${d}.png`; }
@@ -705,7 +706,7 @@ function summaryText(){
 // In phiếu: đặt ảnh phiếu vào vùng in riêng rồi mở hộp thoại in
 $('#printBtn').addEventListener('click', async () => {
   try {
-    const blob = await freshBlob(), url = URL.createObjectURL(blob);
+    const blob = await freshBlob(true), url = URL.createObjectURL(blob);   // in trắng đen
     const img = $('#printImg');
     await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
     window.print();
