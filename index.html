@@ -592,7 +592,7 @@ function sheetCols(){
   const c = expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']];
   // gộp nhiều ngày: ngày cân ghi ngay dưới giờ cân (cùng ô); phiếu rút gọn không có cột giờ thì thêm cột Ngày cân
   if (!(isMerged() && multiDay()) || c.some(x => x[0] === 'gio')) return c;
-  return c.flatMap(x => x[0] === 'stt' ? [x, ['date','Ngày cân']] : [x]);
+  return c.flatMap(x => x[0] === 'stt' ? [x, ['date','Giờ / Ngày cân']] : [x]);
 }
 function cellText(r, f, i){
   let v = r[f] ?? '';
@@ -601,6 +601,7 @@ function cellText(r, f, i){
   else if (f === 'stt' && (isMerged() || !String(v).trim())) v = String(i + 1);   // gộp ngày: đánh số liên tục
   v = String(v).trim();
   if (f === 'gio' && isMerged() && multiDay() && r.date) return v ? [v, r.date] : [r.date];
+  if (f === 'date'){ const t = String(r.gio ?? '').trim(); return t && v ? [t, v] : [t || v]; }   // phiếu rút gọn: giờ cân trên, ngày cân dưới
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
   return [v];
 }
