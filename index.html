@@ -112,7 +112,7 @@ button:disabled{opacity:.5;cursor:default}
 .ghead input{width:130px;font-weight:800}
 .ghead .gsum{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600;text-align:right}
 .ghead .gsum b{color:var(--ink)}
-.rhead,.row{display:grid;grid-template-columns:30px minmax(0,1fr) 118px 78px 78px 34px;gap:6px;align-items:start}
+.rhead,.row{display:grid;grid-template-columns:30px minmax(0,1fr) 112px 70px 70px 70px 34px;gap:6px;align-items:start}
 .rhead{font-size:12px;font-weight:700;color:var(--muted);padding:0 2px 4px}
 .rhead span:nth-child(n+3){text-align:center}
 .row{padding:4px 2px;border-bottom:1px solid var(--line)}
@@ -125,6 +125,8 @@ button:disabled{opacity:.5;cursor:default}
 .fld:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 .fld.num{text-align:right;font-variant-numeric:tabular-nums}
 .fld.pct{text-align:center;font-variant-numeric:tabular-nums}
+.fld.pct.auto::placeholder{color:var(--brand);opacity:.85;font-style:italic;font-weight:700}
+.fld.pct.bad{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 7%,var(--field))}
 .fld.warn{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 9%,var(--field))}
 .fld.okv{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
 .cl{display:block;font-size:11px;font-weight:700;color:var(--muted);margin:0 0 2px 2px;display:none}
@@ -138,7 +140,7 @@ button:disabled{opacity:.5;cursor:default}
 
 /* full-column table */
 .full{overflow-x:auto;border:1px solid var(--line);border-radius:12px;-webkit-overflow-scrolling:touch}
-.full table{border-collapse:collapse;min-width:1080px;width:100%;font-size:13.5px}
+.full table{border-collapse:collapse;min-width:1150px;width:100%;font-size:13.5px}
 .full th{background:var(--soft);font-weight:700;font-size:12.5px;padding:7px 5px;white-space:nowrap;text-align:center;color:var(--muted)}
 .full td{padding:4px;border-top:1px solid var(--line);vertical-align:middle}
 .full td.gtd{background:color-mix(in srgb,var(--brand) 8%,transparent);font-weight:800;padding:7px 10px}
@@ -146,7 +148,7 @@ button:disabled{opacity:.5;cursor:default}
 .full td.c{text-align:center;color:var(--muted);font-weight:700}
 
 /* ===== Summary ===== */
-.stats{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px}
+.stats{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:10px}
 .stat{background:var(--soft);border-radius:16px;padding:12px 14px;min-width:0}
 .stat .l{font-size:12.5px;color:var(--muted);font-weight:700}
 .stat .v{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -198,13 +200,16 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
   .card{padding:13px;border-radius:18px}
   h1{font-size:18px}
   .rhead{display:none}
-  .row{grid-template-columns:24px repeat(3,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh d" ". tl x no .";row-gap:4px;padding:6px 0}
+  .row{grid-template-columns:24px minmax(0,1.3fr) repeat(3,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh kh d" ". tl x no c .";row-gap:4px;padding:6px 0}
   .row .n{grid-area:n;padding-top:8px}
-  .row .ckh{grid-area:kh}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .del{grid-area:d;width:30px}
+  .row .ckh{grid-area:kh}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .cc{grid-area:c}.row .del{grid-area:d;width:30px}
   .cl{display:block}
-  .stats{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr 1fr;gap:8px}
   .stat.main{grid-column:1 / -1}
-  .stat .v{font-size:24px}
+  .stat{padding:10px 11px}
+  .stat .v{font-size:21px}
+  .stat.main .v{font-size:24px}
+  .stat .v small{font-size:12px;margin-left:2px}
   .ghead{flex-wrap:wrap}
   .ghead .gsum{margin-left:0;width:100%;text-align:left}
   .pbtns button{font-size:13.5px;padding:9px 8px}
@@ -259,6 +264,7 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
       <div class="stat main"><div class="l">Tổng khối lượng</div><div class="v"><span id="sTL">0</span><small>kg</small></div></div>
       <div class="stat"><div class="l">TB Xanh</div><div class="v"><span id="sX">–</span><small>%</small></div></div>
       <div class="stat"><div class="l">TB Nổi</div><div class="v"><span id="sN">–</span><small>%</small></div></div>
+      <div class="stat"><div class="l">TB Chín</div><div class="v"><span id="sC">–</span><small>%</small></div></div>
     </div>
     <div id="missNote"></div>
   </section>
@@ -340,10 +346,21 @@ const fmtPctIn = n => n == null || isNaN(n) ? '' : String(Math.round(n * 100) / 
 /* =========================================================================
    Trạng thái
    ========================================================================= */
-const FIELDS = ['stt','soxe','hang','khach','tl1','tl2','tlh','bi','thuc','gio','xanh','noi'];
+const FIELDS = ['stt','soxe','hang','khach','tl1','tl2','tlh','bi','thuc','gio','xanh','noi','chin'];
+const PF = ['xanh','noi','chin'], isPF = f => PF.includes(f);
+const PF_LABEL = { xanh: 'Xanh', noi: 'Nổi', chin: 'Chín' };
+// Xanh + Nổi + Chín = 100%: nhập 2 trong 3, phần còn lại tự tính
+function pcts(r){
+  const v = PF.map(f => parsePct(r[f]));
+  const have = v.filter(x => x != null).length;
+  let auto = null;
+  if (have === 2){ const i = v.findIndex(x => x == null); v[i] = Math.round((100 - v.reduce((a, b) => a + (b || 0), 0)) * 100) / 100; auto = PF[i]; }
+  const bad = have >= 2 && (Math.abs(v.reduce((a, b) => a + b, 0) - 100) > 0.01 || v.some(x => x < 0));
+  return { x: v[0], n: v[1], c: v[2], auto, bad, have, v: { xanh: v[0], noi: v[1], chin: v[2] } };
+}
 const COLS_FULL = [
   ['stt','STT'],['soxe','Số xe'],['hang','Hàng hóa'],['khach','Khách hàng'],['tl1','TL Lần 1'],['tl2','TL Lần 2'],
-  ['tlh','TL Hàng'],['bi','TL Bì'],['thuc','TL Thực'],['gio','Giờ cân'],['xanh','Xanh (%)'],['noi','Nổi (%)']
+  ['tlh','TL Hàng'],['bi','TL Bì'],['thuc','TL Thực'],['gio','Giờ cân'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']
 ];
 const NUMF = new Set(['tl1','tl2','tlh','bi','thuc']);
 let rows = LS.get('tbxn_rows', []);
@@ -372,16 +389,18 @@ function groups(){
   return g;
 }
 function agg(list){
-  let tl = 0, wx = 0, sx = 0, wn = 0, sn = 0, miss = 0;
+  let tl = 0, miss = 0, bad = 0;
+  const w = { x: 0, n: 0, c: 0 }, sw = { x: 0, n: 0, c: 0 };
   list.forEach(r => {
     const t = parseKg(r.thuc); if (t == null) return;
     tl += t;
-    const x = parsePct(r.xanh), n = parsePct(r.noi);
-    if (x != null){ wx += t * x; sx += t; }
-    if (n != null){ wn += t * n; sn += t; }
-    if (x == null || n == null) miss++;
+    const p = pcts(r);
+    ['x','n','c'].forEach(k => { if (p[k] != null){ w[k] += t * p[k]; sw[k] += t; } });
+    if (p.have < 2) miss++;
+    if (p.bad) bad++;
   });
-  return { tl, x: sx ? wx / sx : null, n: sn ? wn / sn : null, miss };
+  const avg = k => sw[k] ? w[k] / sw[k] : null;
+  return { tl, x: avg('x'), n: avg('n'), c: avg('c'), miss, bad };
 }
 
 /* =========================================================================
@@ -402,9 +421,9 @@ function renderTable(){
       h += `<tr><td class="gtd" colspan="${COLS_FULL.length + 1}">Ngày cân : <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" style="width:130px;display:inline-block;font-weight:800"></td></tr>`;
       g.rows.forEach(r => {
         h += `<tr data-id="${r.id}">` + COLS_FULL.map(([f]) => {
-          const cls = NUMF.has(f) ? 'num' : (f === 'xanh' || f === 'noi') ? 'pct' : '';
-          const w = { stt: 46, soxe: 110, hang: 150, khach: 170, gio: 92, xanh: 66, noi: 66 }[f] || 88;
-          return `<td><input class="fld ${cls} ${r.flags[f] ? 'warn' : ''}" data-f="${f}" value="${esc(r[f])}" style="width:${w}px" ${NUMF.has(f) || f === 'xanh' || f === 'noi' ? 'inputmode="decimal"' : ''}></td>`;
+          const cls = NUMF.has(f) ? 'num' : isPF(f) ? 'pct' : '';
+          const w = { stt: 46, soxe: 110, hang: 150, khach: 170, gio: 92, xanh: 62, noi: 62, chin: 62 }[f] || 88;
+          return `<td><input class="fld ${cls} ${r.flags[f] ? 'warn' : ''}" data-f="${f}" value="${esc(r[f] ?? '')}" style="width:${w}px" ${NUMF.has(f) || isPF(f) ? 'inputmode="decimal"' : ''}></td>`;
         }).join('') + `<td class="c"><button class="del" data-del="${r.id}" title="Xoá dòng" style="width:30px;height:32px;min-height:0;padding:0">✕</button></td></tr>`;
       });
     });
@@ -413,7 +432,7 @@ function renderTable(){
     box.innerHTML = gs.map((g, gi) => `
       <div class="grp">
         <div class="ghead">📅 Ngày cân <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" placeholder="dd/mm/yyyy"><span class="gsum" data-gs="${gi}"></span></div>
-        <div class="rhead"><span>#</span><span>Khách hàng</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span></span></div>
+        <div class="rhead"><span>#</span><span>Khách hàng</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span>Chín %</span><span></span></div>
         ${g.rows.map((r, i) => rowHTML(r, i + 1)).join('')}
         <button type="button" class="addrow" data-add="${gi}">＋ Thêm dòng</button>
       </div>`).join('');
@@ -430,24 +449,42 @@ function rowHTML(r, n){
       ${meta ? `<div class="meta">${esc(meta)}</div>` : ''}${hw}</div>
     <div class="ctl"><span class="cl">TL thực (kg)</span><input class="fld num ${r.flags.thuc ? 'warn' : r.flags.thucOk ? 'okv' : ''}" data-f="thuc" value="${esc(r.thuc)}" inputmode="decimal" placeholder="0"
       title="${r.flags.thuc ? 'Không khớp TL Hàng − TL Bì, hãy kiểm tra' : r.flags.thucOk ? 'Đã khớp TL Hàng − TL Bì' : ''}"></div>
-    <div class="cx"><span class="cl">Xanh %</span><input class="fld pct ${r.flags.xanh ? 'warn' : ''}" data-f="xanh" value="${esc(r.xanh)}" inputmode="decimal" placeholder="–"></div>
-    <div class="cn"><span class="cl">Nổi %</span><input class="fld pct ${r.flags.noi ? 'warn' : ''}" data-f="noi" value="${esc(r.noi)}" inputmode="decimal" placeholder="–"></div>
+    <div class="cx"><span class="cl">Xanh %</span><input class="fld pct ${r.flags.xanh ? 'warn' : ''}" data-f="xanh" value="${esc(r.xanh ?? '')}" inputmode="decimal" placeholder="–"></div>
+    <div class="cn"><span class="cl">Nổi %</span><input class="fld pct ${r.flags.noi ? 'warn' : ''}" data-f="noi" value="${esc(r.noi ?? '')}" inputmode="decimal" placeholder="–"></div>
+    <div class="cc"><span class="cl">Chín %</span><input class="fld pct ${r.flags.chin ? 'warn' : ''}" data-f="chin" value="${esc(r.chin ?? '')}" inputmode="decimal" placeholder="–"></div>
     <button type="button" class="del" data-del="${r.id}" title="Xoá dòng" aria-label="Xoá dòng">✕</button>
   </div>`;
 }
 
+// Ô còn trống được tự tính (= 100 − 2 ô kia): hiện mờ trong ô; tổng ≠ 100 thì viền đỏ
+function showAuto(host, r){
+  const p = pcts(r);
+  PF.forEach(f => {
+    const inp = host.querySelector(`input[data-f="${f}"]`); if (!inp) return;
+    const isAuto = p.auto === f;
+    inp.placeholder = isAuto ? fmtPct(p.v[f]) : '–';
+    inp.classList.toggle('auto', isAuto);
+    inp.classList.toggle('bad', p.bad);
+    inp.title = p.bad ? 'Xanh + Nổi + Chín phải bằng 100%' : isAuto ? `Tự tính = 100 − ${PF.filter(x => x !== f).map(x => PF_LABEL[x]).join(' − ')}` : '';
+  });
+}
 function updateNumbers(){
   const gs = groups();
   gs.forEach((g, gi) => {
     const a = agg(g.rows), el = document.querySelector(`[data-gs="${gi}"]`);
-    if (el) el.innerHTML = `<b>${fmtKg(a.tl)}</b> kg · X <b>${fmtPct(a.x)}</b>% · N <b>${fmtPct(a.n)}</b>%`;
+    if (el) el.innerHTML = `<b>${fmtKg(a.tl)}</b> kg · X <b>${fmtPct(a.x)}</b>% · N <b>${fmtPct(a.n)}</b>% · C <b>${fmtPct(a.c)}</b>%`;
   });
+  document.querySelectorAll('#tbl [data-id]').forEach(host => { const r = rows.find(x => x.id === +host.dataset.id); if (r) showAuto(host, r); });
   const a = agg(rows);
   $('#sTL').textContent = fmtKg(a.tl) || '0';
   $('#sX').textContent = fmtPct(a.x);
   $('#sN').textContent = fmtPct(a.n);
+  $('#sC').textContent = fmtPct(a.c);
   $('#sumTag').textContent = rows.length ? `${rows.length} xe · ${gs.length} ngày` : '';
-  $('#missNote').textContent = a.miss ? `⚠️ ${a.miss} dòng chưa đủ số xanh/nổi — dòng đó không được tính vào trung bình tương ứng.` : '';
+  $('#missNote').textContent = [
+    a.bad ? `⚠️ ${a.bad} dòng có Xanh + Nổi + Chín khác 100% — hãy kiểm tra ô viền đỏ.` : '',
+    a.miss ? `⚠️ ${a.miss} dòng chưa đủ 2 trong 3 số xanh/nổi/chín.` : ''
+  ].filter(Boolean).join(' ');
   scheduleExport();
 }
 
@@ -464,6 +501,9 @@ $('#tbl').addEventListener('input', e => {
   const r = rows.find(x => x.id === +host.dataset.id); if (!r) return;
   r[inp.dataset.f] = inp.value;
   if (r.flags[inp.dataset.f]){ delete r.flags[inp.dataset.f]; inp.classList.remove('warn'); }
+  if (isPF(inp.dataset.f) && pcts(r).have >= 2) PF.forEach(f => {   // đủ 2/3: ô còn lại tự tính, bỏ viền vàng
+    if (!String(r[f] ?? '').trim() && r.flags[f]){ delete r.flags[f]; const o = host.querySelector(`input[data-f="${f}"]`); if (o) o.classList.remove('warn'); }
+  });
   if (inp.dataset.f === 'thuc'){ delete r.flags.thucOk; inp.classList.remove('okv'); }
   save(); updateNumbers();
 });
@@ -531,12 +571,12 @@ function getLogo(){
   return logoImg;
 }
 function sheetCols(){
-  return expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)']];
+  return expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']];
 }
 function cellText(r, f, i){
   let v = r[f] ?? '';
   if (NUMF.has(f)){ const n = parseKg(v); v = n == null ? String(v) : fmtKg(n); }
-  else if (f === 'xanh' || f === 'noi'){ const n = parsePct(v); v = n == null ? '' : fmtPct(n); }
+  else if (isPF(f)){ const n = pcts(r).v[f]; v = n == null ? '' : fmtPct(n); }
   else if (f === 'stt' && !String(v).trim()) v = String(i + 1);
   v = String(v).trim();
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
@@ -552,7 +592,7 @@ async function makeCanvas(mono = false){
   const m = mkCanvas(10, 10).getContext('2d');
   const tw = (t, w = 400, sz = FS) => { m.font = `${w} ${sz}px ${SERIF}`; return m.measureText(t).width; };
   // độ rộng cột
-  const isNX = f => f === 'xanh' || f === 'noi';
+  const isNX = isPF;
   const widths = cols.map(([f, t]) => {
     let w = tw(t, isNX(f) ? 700 : 400);
     rows.forEach((r, i) => cellText(r, f, i).forEach(l => { w = Math.max(w, tw(l)); }));
@@ -624,7 +664,7 @@ async function makeCanvas(mono = false){
     nxFill(y + 0.8, H_TOT - 1.6, F('#dceffb'));
     txt('Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
     txt(fmtKg(a.tl), cellX(iThuc, 'right'), y + H_TOT / 2 + 1, 'right', 700);
-    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(a.x), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#0f4c75')); if (f === 'noi') txt(fmtPct(a.n), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#0f4c75')); });
+    cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(a[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#0f4c75')); });
     line(X0, y, X0, y + H_TOT); line(XE, y, XE, y + H_TOT);
     cols.forEach(([f], k) => { if (isNX(f)){ line(xs[k], y, xs[k], y + H_TOT); } });
     y += H_TOT;
@@ -635,7 +675,7 @@ async function makeCanvas(mono = false){
     nxFill(y, H_GRAND, F('#c2e2f7'));
     txt('TỔNG CỘNG TẤT CẢ :', xs[iThuc] - 30, y + H_GRAND / 2 + 1, 'right', 800);
     txt(fmtKg(A.tl), cellX(iThuc, 'right'), y + H_GRAND / 2 + 1, 'right', 800, FS + 1);
-    cols.forEach(([f], k) => { if (f === 'xanh') txt(fmtPct(A.x), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#0f4c75')); if (f === 'noi') txt(fmtPct(A.n), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#0f4c75')); });
+    cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(A[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#0f4c75')); });
     line(X0, y, X0, y + H_GRAND); line(XE, y, XE, y + H_GRAND);
     cols.forEach(([f], k) => { if (isNX(f)) line(xs[k], y, xs[k], y + H_GRAND); });
     y += H_GRAND;
@@ -643,13 +683,13 @@ async function makeCanvas(mono = false){
   line(X0, y, XE, y);
   // ô tổng kết
   y += 20;
-  const boxes = [['Tổng khối lượng', fmtKg(A.tl) + ' kg', '#d7eefc', '#164a6e'], ['TB Xanh', fmtPct(A.x) + ' %', '#eef7fd', '#0f4c75'], ['TB Nổi', fmtPct(A.n) + ' %', '#eef7fd', '#0f4c75']];
-  const gap = 12, bw = (XE - X0 - gap * 2) / 3;
+  const boxes = [['Tổng khối lượng', fmtKg(A.tl) + ' kg', '#d7eefc', '#164a6e'], ['TB Xanh', fmtPct(A.x) + ' %', '#eef7fd', '#0f4c75'], ['TB Nổi', fmtPct(A.n) + ' %', '#eef7fd', '#0f4c75'], ['TB Chín', fmtPct(A.c) + ' %', '#eef7fd', '#0f4c75']];
+  const gap = 12, bw = (XE - X0 - gap * (boxes.length - 1)) / boxes.length;
   boxes.forEach(([l, v, bg, fg], k) => {
     const bx = X0 + k * (bw + gap);
     g.fillStyle = F(bg); roundRect(g, bx, y, bw, 70, 14); g.fill(); if (mono){ g.lineWidth = 1.4; g.strokeStyle = '#000'; g.stroke(); }
     g.textAlign = 'left'; g.fillStyle = T('#4c7590'); g.font = `700 14.5px ${SANS}`; g.fillText(l, bx + 16, y + 22);
-    g.fillStyle = T(fg); g.font = `800 ${bw < 200 ? 22 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
+    g.fillStyle = T(fg); g.font = `800 ${bw < 170 ? 20 : bw < 220 ? 23 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
   });
   g.textAlign = 'left'; g.fillStyle = T('#7b98aa'); g.font = `500 12.5px ${SANS}`;
   g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
@@ -724,12 +764,12 @@ function summaryText(){
   const out = [];
   groups().forEach(g => {
     out.push(`📅 Ngày cân ${g.date || ''}`.trim());
-    g.rows.forEach((r, i) => out.push(`${i + 1}. ${r.khach || '?'} — ${fmtKg(parseKg(r.thuc)) || '?'} kg — Xanh ${fmtPct(parsePct(r.xanh))}% · Nổi ${fmtPct(parsePct(r.noi))}%`));
+    g.rows.forEach((r, i) => out.push(`${i + 1}. ${r.khach || '?'} — ${fmtKg(parseKg(r.thuc)) || '?'} kg — Xanh ${fmtPct(pcts(r).x)}% · Nổi ${fmtPct(pcts(r).n)}% · Chín ${fmtPct(pcts(r).c)}%`));
     const a = agg(g.rows);
-    out.push(`   Tổng: ${fmtKg(a.tl)} kg · Xanh ${fmtPct(a.x)}% · Nổi ${fmtPct(a.n)}%`, '');
+    out.push(`   Tổng: ${fmtKg(a.tl)} kg · Xanh ${fmtPct(a.x)}% · Nổi ${fmtPct(a.n)}% · Chín ${fmtPct(a.c)}%`, '');
   });
   const A = agg(rows);
-  out.push(`➡️ TỔNG KL: ${fmtKg(A.tl)} kg`, `➡️ TB Xanh: ${fmtPct(A.x)}%`, `➡️ TB Nổi: ${fmtPct(A.n)}%`);
+  out.push(`➡️ TỔNG KL: ${fmtKg(A.tl)} kg`, `➡️ TB Xanh: ${fmtPct(A.x)}%`, `➡️ TB Nổi: ${fmtPct(A.n)}%`, `➡️ TB Chín: ${fmtPct(A.c)}%`);
   return out.join('\n');
 }
 // In phiếu: đặt ảnh phiếu vào vùng in riêng rồi mở hộp thoại in
@@ -1418,34 +1458,40 @@ async function readHandwriting(ctx, x0, y0, x1, y1, tTop){
   const vs = Math.min(1, 90 / h);
   const v2 = mkCanvas(w * vs, h * vs); v2.getContext('2d').drawImage(view, 0, 0, v2.width, v2.height);
   const crop = v2.toDataURL('image/png');
-  let o = await ocr(bin, { psm: '7', whitelist: '0123456789XxNn-., ' });
+  let o = await ocr(bin, { psm: '7', whitelist: '0123456789XxNnCc-., ' });
   let p = parseXN(o.text);
-  if ((!p || p.weak) && !late()){ const o2 = await ocr(bin, { psm: '6', whitelist: '0123456789XxNn-., ' }); const p2 = parseXN(o2.text); if (p2 && (!p || !p2.weak)){ o = o2; p = p2; } }
+  if ((!p || p.weak) && !late()){ const o2 = await ocr(bin, { psm: '6', whitelist: '0123456789XxNnCc-., ' }); const p2 = parseXN(o2.text); if (p2 && (!p || !p2.weak)){ o = o2; p = p2; } }
   const cw = o.words.filter(w => /\d/.test(w.t));
   const conf = cw.length ? Math.min(...cw.map(w => w.conf)) : 0;
   return { crop, text: o.text.trim(), parsed: p, conf };
 }
+// "17X - 20N", "17X-78C", "20N 63C 17X"... : số + chữ X (xanh) / N (nổi) / C (chín)
 function parseXN(t){
-  const s = String(t || '').replace(/\s+/g, '').replace(/,/g, '.');
-  let m = s.match(/(\d{1,3}(?:\.\d+)?)[xX×K%]+[-–—~.]*(\d{1,3}(?:\.\d+)?)[nNHM]?/);
-  let x, n;
-  if (m){ x = m[1]; n = m[2]; }
-  else {
-    const nums = s.match(/\d+(?:\.\d+)?/g) || [];
-    if (nums.length < 2) return nums.length === 1 ? { x: nums[0], n: null, weak: true } : null;
-    x = nums[0]; n = nums[1];
-  }
-  const fix = v => { if (v == null) return null; let f = +v; if (f > 100 && /^\d{3}$/.test(v)) f = +(v.slice(0, 2) + '.' + v.slice(2)); return f; };
-  return { x: fix(x), n: fix(n), weak: !m };
+  const s = String(t || '').replace(/\s+/g, ' ').replace(/(\d)\s*[.,]\s*(\d)/g, '$1.$2').trim();
+  const fix = v => { let f = +v; if (f > 100 && /^\d{3}$/.test(v)) f = +(v.slice(0, 2) + '.' + v.slice(2)); return f; };
+  const key = { x: 'x', k: 'x', '×': 'x', n: 'n', h: 'n', m: 'n', c: 'c', g: 'c', '(': 'c' };
+  const re = /(\d{1,3}(?:\.\d+)?) ?([xk×nhmcg(])/gi;
+  const out = { x: null, n: null, c: null, weak: false };
+  let m, found = 0;
+  while ((m = re.exec(s))){ const k = key[m[2].toLowerCase()]; if (out[k] == null){ out[k] = fix(m[1]); found++; } }
+  if (found >= 2) return out;
+  // số không kèm chữ: xếp lần lượt vào Xanh, Nổi, Chín còn trống
+  const free = s.replace(re, ' ').match(/\d+(?:\.\d+)?/g) || [];
+  if (!found && !free.length) return null;
+  ['x','n','c'].forEach(k => { if (out[k] == null && free.length) out[k] = fix(free.shift()); });
+  out.weak = true;
+  return out;
 }
 function applyHW(r, hw){
-  if (!hw){ r.flags.xanh = r.flags.noi = true; return; }
+  if (!hw){ PF.forEach(f => r.flags[f] = true); return; }
   r.crop = hw.crop; r.hwText = hw.text;
   const p = hw.parsed;
   const unsure = !p || p.weak || hw.conf < 80;   // độ tin cậy thấp -> viền vàng để người dùng xem lại
-  if (p && p.x != null && p.x <= 100){ r.xanh = fmtPctIn(p.x); if (unsure) r.flags.xanh = true; } else r.flags.xanh = true;
-  if (p && p.n != null && p.n <= 100){ r.noi = fmtPctIn(p.n); if (unsure) r.flags.noi = true; } else r.flags.noi = true;
-  // chữ viết tay luôn nên được người dùng nhìn lại => viền vàng nhẹ nếu không chắc
+  let got = 0;
+  [['xanh','x'],['noi','n'],['chin','c']].forEach(([f, k]) => {
+    if (p && p[k] != null && p[k] <= 100){ r[f] = fmtPctIn(p[k]); got++; if (unsure) r.flags[f] = true; }
+  });
+  if (got < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });   // chưa đủ 2 trong 3
 }
 
 // Dự phòng khi không có lưới: dùng giờ cân làm mốc từng dòng
@@ -1488,10 +1534,10 @@ async function parseLoose(words, ctx){
 function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
 async function geminiRead(blob, key, model){
   const b64 = await blobToB64(blob);
-  const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" theo dạng "aX - bN" (a = % xanh, b = % nổi; ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20).
+  const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
 Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"), theo đúng thứ tự từ trên xuống. Trả về JSON:
-{"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null}]}
-Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi là số (có thể có phần thập phân), null nếu không có chữ viết tay. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
+{"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null}]}
+Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi/chin là số (có thể có phần thập phân), null nếu không ghi. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), LIM.gemini);
   if (job) job.ctl.signal.addEventListener('abort', () => ctl.abort(), { once: true });
@@ -1512,7 +1558,7 @@ Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân c�
   return (data.rows || []).map(x => ({
     date: x.ngay || '', stt: String(x.stt ?? ''), soxe: x.so_xe || '', hang: x.hang_hoa || '', khach: x.khach_hang || '',
     tl1: num(x.tl_lan1), tl2: num(x.tl_lan2), tlh: num(x.tl_hang), bi: num(x.tl_bi), thuc: num(x.tl_thuc), gio: x.gio_can || '',
-    xanh: x.xanh == null || x.xanh === '' ? null : +String(x.xanh).replace(',', '.'), noi: x.noi == null || x.noi === '' ? null : +String(x.noi).replace(',', '.')
+    xanh: x.xanh == null || x.xanh === '' ? null : +String(x.xanh).replace(',', '.'), noi: x.noi == null || x.noi === '' ? null : +String(x.noi).replace(',', '.'), chin: x.chin == null || x.chin === '' ? null : +String(x.chin).replace(',', '.')
   }));
   function num(v){ if (v == null || v === '') return null; return typeof v === 'number' ? v : parseKg(String(v)); }
 }
@@ -1522,8 +1568,8 @@ function mergeGemini(local, gem){
     const r = { date: g.date, stt: g.stt, soxe: g.soxe, hang: g.hang, khach: g.khach, gio: g.gio, flags: {} };
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = rc.vals[f] != null ? fmtKg(rc.vals[f]) : '');
     if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
-    r.xanh = g.xanh != null && !isNaN(g.xanh) ? fmtPctIn(g.xanh) : ''; if (!r.xanh) r.flags.xanh = true;
-    r.noi = g.noi != null && !isNaN(g.noi) ? fmtPctIn(g.noi) : ''; if (!r.noi) r.flags.noi = true;
+    PF.forEach(f => r[f] = g[f] != null && !isNaN(g[f]) ? fmtPctIn(g[f]) : '');
+    if (PF.filter(f => r[f]).length < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });
     return r;
   };
   if (!gem.length) return local;
@@ -1531,7 +1577,7 @@ function mergeGemini(local, gem){
   return local.map((L, i) => {
     const G = toRow(gem[i]), r = Object.assign({}, L, { flags: Object.assign({}, L.flags) });
     // chữ viết tay: ưu tiên Gemini; nếu hai bên khác nhau thì đánh dấu để kiểm tra
-    ['xanh','noi'].forEach(f => {
+    PF.forEach(f => {
       if (G[f] !== ''){
         const same = L[f] !== '' && Math.abs(parsePct(L[f]) - parsePct(G[f])) < 0.01;
         r[f] = G[f];
@@ -1539,6 +1585,7 @@ function mergeGemini(local, gem){
         if (L[f] === '') delete r.flags[f];
       }
     });
+    if (PF.filter(f => r[f]).length >= 2) PF.forEach(f => { if (!r[f]) delete r.flags[f]; });
     if (G.khach && (!L.khach || L.flags.khach)){ r.khach = G.khach; delete r.flags.khach; }
     else if (G.khach && norm(G.khach) === norm(L.khach)) r.khach = G.khach;   // lấy bản có dấu chuẩn
     if (!L.date && G.date) r.date = G.date;
