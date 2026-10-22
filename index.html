@@ -627,17 +627,21 @@ async function makeCanvas(mono = false){
   const H_HEAD = 58, H_DATE = 50, H_ROW = hasWrap ? 73 : 54, H_TOT = 48, H_GRAND = 56;
   // Ghi chú: ô gộp ngay dưới Xanh/Nổi/Chín của dòng đó
   const iP0 = cols.findIndex(c => isPF(c[0])), iP1 = cols.length - 1 - [...cols].reverse().findIndex(c => isPF(c[0]));
-  const NOTE_FS = 19, NOTE_LH = 23, TOP_H = 46;
+  const NOTE_FS = 22, NOTE_LH = 28, TOP_H = 48, NOTE_LBL = 'Ghi chú: ';
   const noteW = iP0 < 0 ? 0 : widths.slice(iP0, iP1 + 1).reduce((a, b) => a + b, 0) - PADX * 2;
   const wrapNote = t => {
-    m.font = `italic 400 ${NOTE_FS}px ${SERIF}`;
+    m.font = `700 ${NOTE_FS}px ${SERIF}`; const lblW = m.measureText(NOTE_LBL).width;
+    m.font = `400 ${NOTE_FS}px ${SERIF}`;
     const out = []; let cur = '';
-    String(t).split(/\s+/).filter(Boolean).forEach(wd => { const tt = cur ? cur + ' ' + wd : wd; if (m.measureText(tt).width <= noteW || !cur) cur = tt; else { out.push(cur); cur = wd; } });
+    String(t).split(/\s+/).filter(Boolean).forEach(wd => {
+      const tt = cur ? cur + ' ' + wd : wd, extra = out.length ? 0 : lblW;   // dòng đầu có nhãn "Ghi chú:"
+      if (m.measureText(tt).width + extra <= noteW || !cur) cur = tt; else { out.push(cur); cur = wd; }
+    });
     if (cur) out.push(cur);
     if (out.length > 3){ out.length = 3; out[2] = out[2].replace(/\s*\S*$/, '') + '…'; }
     return out;
   };
-  const noteOf = new Map(), rowH = r => { const n = noteOf.get(r); return n && n.length ? Math.max(H_ROW, TOP_H + n.length * NOTE_LH + 12) : H_ROW; };
+  const noteOf = new Map(), rowH = r => { const n = noteOf.get(r); return n && n.length ? Math.max(H_ROW, TOP_H + n.length * NOTE_LH + 16) : H_ROW; };
   rows.forEach(r => { const t = String(r.ghichu ?? '').trim(); noteOf.set(r, t && iP0 >= 0 ? wrapNote(t) : []); });
   // nhãn "Tổng cộng" cần đủ chỗ
   const labW = tw('TỔNG CỘNG TẤT CẢ :', 800, FS) + 40;
@@ -698,9 +702,19 @@ async function makeCanvas(mono = false){
       });
       xs.forEach((x, k) => line(x, y, x, y + (note.length && k > iP0 && k <= iP1 ? pfH : h)));
       if (note.length){
+        // ô ghi chú: nền vàng nhạt, chữ to rõ, có nhãn "Ghi chú:"
+        g.fillStyle = F('#fff6d9'); g.fillRect(xs[iP0] + 0.8, y + pfH, xs[iP1 + 1] - xs[iP0] - 1.6, h - pfH - 0.8);
         line(xs[iP0], y + pfH, xs[iP1 + 1], y + pfH);
         const cx = (xs[iP0] + xs[iP1 + 1]) / 2, ny = y + pfH + (h - pfH) / 2 + 1;
-        note.forEach((l, j) => { g.font = `italic 400 ${NOTE_FS}px ${SERIF}`; g.fillStyle = T('#24425a'); g.textAlign = 'center'; g.fillText(l, cx, ny + (j - (note.length - 1) / 2) * NOTE_LH); });
+        g.textAlign = 'left';
+        note.forEach((l, j) => {
+          const yy = ny + (j - (note.length - 1) / 2) * NOTE_LH;
+          g.font = `700 ${NOTE_FS}px ${SERIF}`; const lw = j === 0 ? g.measureText(NOTE_LBL).width : 0;
+          g.font = `400 ${NOTE_FS}px ${SERIF}`; const tw2 = g.measureText(l).width;
+          const x0 = cx - (lw + tw2) / 2;
+          if (j === 0){ g.font = `700 ${NOTE_FS}px ${SERIF}`; g.fillStyle = T('#8a5a00'); g.fillText(NOTE_LBL, x0, yy); }
+          g.font = `400 ${NOTE_FS}px ${SERIF}`; g.fillStyle = T('#111'); g.fillText(l, x0 + lw, yy);
+        });
       }
       y += h; brk.push(y);
     });
@@ -1494,7 +1508,7 @@ async function parseGrid(grid, words, ctx){
     const xs1 = Math.max(...PF.filter(f => map[f] != null && colX[map[f]]).map(f => colX[map[f]].x1));
     const topY = used.size ? Math.max(...[...used].map(w => w.y1)) : b.y0;
     const note = ws.filter(w => !used.has(w) && w.cx >= xs0 && w.cx <= xs1 && w.cy > topY && !isDash(w.t));
-    if (note.length) r.ghichu = cleanText(joinWords(note));
+    if (note.length) r.ghichu = cleanText(joinWords(note)).replace(/^\s*gh?[il1]\s*ch\S*\s*:?\s*/i, '');
     r._printed = true;
   }
   for (let i = hdrIdx + 1; i < bands.length; i++){
