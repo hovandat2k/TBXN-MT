@@ -168,6 +168,7 @@ button:disabled{opacity:.5;cursor:default}
   background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px;background-repeat:no-repeat}
 .sortbar .seg button:disabled{opacity:.45}
 .sortbar{align-items:flex-start;justify-content:space-between}
+.sortbox[hidden]{display:none}
 .sortbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0;flex:1}
 #sortLevels{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;flex:1 1 220px;font-size:13px}
 .schip{display:inline-flex;align-items:center;gap:4px;background:var(--soft);border-radius:999px;padding:3px 10px;font-weight:700;font-size:12.5px;color:var(--ink)}
@@ -852,7 +853,8 @@ function fillSortOpts(){
   box.innerHTML = sortLv.length
     ? sortLv.map((l, i) => `${i ? '<span class="sthen">rồi</span>' : ''}<span class="schip"><b>${i + 1}</b>${esc(colLabel(l.key))} ${l.dir === 'desc' ? '↓' : '↑'}</span>`).join('') +
       ' <button type="button" class="ghost" id="sortClear">✕ Bỏ sắp xếp</button>'
-    : `<span class="shint">${$('#prevWrap').hidden ? 'Mở phiếu rồi bấm' : 'Bấm'} nút ▾ ở tiêu đề cột trên phiếu để sắp xếp</span>`;
+    : '';
+  box.closest('.sortbox').hidden = !sortLv.length;   // chưa sắp xếp: ẩn hẳn, không cần chú thích
   document.querySelectorAll('#grpSeg button').forEach(b => b.classList.toggle('on', b.dataset.g === grpMode));
 }
 let lastHdr = null;
