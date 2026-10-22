@@ -1118,7 +1118,7 @@ let workerP = null, workerProgress = null;
 /* Giới hạn thời gian để không bao giờ chờ quá lâu, kể cả khi ảnh không đọc được */
 const LIM = { worker: 45000, full: 25000, soft: 20000, hard: 35000, abs: 45000, gemini: 30000, pdf: 20000 };
 let job = null;   // { t0, cancelled, ctl }
-const elapsed = () => job ? Date.now() - job.t0 : 0;
+const elapsed = () => job ? Date.now() - job.t0 - (job.extra || 0) : 0;   // ảnh lớn được cộng thêm thời gian
 const late = () => elapsed() > LIM.soft;     // bỏ các bước đọc lại không bắt buộc
 const veryLate = () => elapsed() > LIM.hard; // bỏ đọc chữ viết tay cho các dòng còn lại
 class StopErr extends Error {}
@@ -1226,10 +1226,10 @@ function dilate(m, W, H, r){
   return o;
 }
 // Nền giấy theo từng vùng (lấy giá trị sáng nhất lân cận) -> hàm tra theo chỉ số điểm ảnh
-function background(d, W, H){
+function background(d, W, H, ch = -1){   // ch = -1: độ sáng; 0/1/2: riêng kênh R/G/B (nền có màu nhạt -> trắng)
   const B = 32, bw = Math.ceil(W / B), bh = Math.ceil(H / B), m = new Float32Array(bw * bh);
   for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2){
-    const p = (y * W + x) * 4, v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000, k = ((y / B) | 0) * bw + ((x / B) | 0);
+    const p = (y * W + x) * 4, v = ch < 0 ? (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 : d[p + ch], k = ((y / B) | 0) * bw + ((x / B) | 0);
     if (v > m[k]) m[k] = v;
   }
   const m2 = new Float32Array(bw * bh);
@@ -1253,12 +1253,16 @@ function analyzeGrid(gray, ink, W, H){
   const dark = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i++) dark[i] = gray[i] < 150 && !ink[i] ? 1 : 0;
   // đường ngang
-  const hy = [];
+  const hy = [], bestRun = new Int32Array(H);
   for (let y = 0; y < H; y++){
     let run = 0, best = 0, o = y * W;
     for (let x = 0, gap = 0; x < W; x++){ if (dark[o + x]){ run++; gap = 0; if (run > best) best = run; } else if (++gap > 3){ run = 0; } }
-    if (best >= W * 0.3) hy.push(y);
+    bestRun[y] = best;
   }
+  // đường kẻ hàng phải dài gần bằng bề ngang bảng (đường kẻ ngắn dưới riêng vài cột, vd. ô ghi chú, không tách hàng)
+  let maxRun = 0; for (let y = 0; y < H; y++) if (bestRun[y] > maxRun) maxRun = bestRun[y];
+  const need = Math.max(W * 0.3, maxRun * 0.75);
+  for (let y = 0; y < H; y++) if (bestRun[y] >= need) hy.push(y);
   const hLines = [];
   hy.forEach(y => { const L = hLines[hLines.length - 1]; if (L && y - L.y1 <= 2) L.y1 = y; else hLines.push({ y0: y, y1: y }); });
   // các dải giữa 2 đường ngang
@@ -1331,17 +1335,21 @@ async function readLocal(blob){
   const gray = new Uint8Array(W * H), ink = new Uint8Array(W * H);
   const bgOf = background(d, W, H);   // nền giấy (ảnh chụp có bóng, ố vàng) -> chuẩn hoá về trắng
   // Mực bút màu: sắc xanh (b vượt r,g) hoặc đỏ/tím (r vượt g), làm mượt để khử viền màu giả do nén JPEG
-  const chB = new Float32Array(W * H), chR = new Float32Array(W * H);
+  // sắc màu tính sau khi đưa nền (kể cả nền tô màu nhạt như cột Xanh/Nổi/Chín) về trắng theo từng kênh
+  const bgR = background(d, W, H, 0), bgG = background(d, W, H, 1), bgB = background(d, W, H, 2);
+  const chB = new Float32Array(W * H), chR = new Float32Array(W * H), chBG = new Float32Array(W * H);
   for (let i = 0, p = 0; i < W * H; i++, p += 4){
     const r = d[p], g = d[p + 1], b = d[p + 2];
     gray[i] = Math.min(255, ((r * 299 + g * 587 + b * 114) / 1000) * 255 / bgOf(i));
-    chB[i] = b - (r + g) / 2; chR[i] = r - g;
+    const rn = Math.min(255, r * 255 / bgR(i)), gn = Math.min(255, g * 255 / bgG(i)), bn = Math.min(255, b * 255 / bgB(i));
+    chB[i] = bn - (rn + gn) / 2; chR[i] = rn - gn; chBG[i] = bn - gn;
   }
   const dk = new Float32Array(W * H); for (let i = 0; i < W * H; i++) dk[i] = 255 - gray[i];
-  const rr = Math.max(2, Math.round(2 * scale)), sB = boxBlur(chB, W, H, rr), sR = boxBlur(chR, W, H, rr), sD = boxBlur(dk, W, H, rr);
+  const rr = Math.max(2, Math.round(2 * scale)), sB = boxBlur(chB, W, H, rr), sR = boxBlur(chR, W, H, rr), sD = boxBlur(dk, W, H, rr), sBG = boxBlur(chBG, W, H, rr);
   // điểm phải tự có màu VÀ vùng quanh nó "đậm sắc" so với độ tối: viền màu khử răng cưa / JPEG quanh chữ đen bị loại
   for (let i = 0; i < W * H; i++){
-    const blue = chB[i] > 25 && sB[i] > 22 && sB[i] > 0.4 * sD[i];
+    // mực bút xanh: lam vượt hẳn cả đỏ lẫn lục; chữ in xanh đậm (navy, lam ≈ lục) không bị coi là mực bút
+    const blue = chB[i] > 25 && sB[i] > 22 && sB[i] > 0.4 * sD[i] && sBG[i] > 0.3 * sD[i];
     const red = chR[i] > 40 && sR[i] > 35 && sR[i] > 0.45 * sD[i];
     ink[i] = gray[i] < 225 && (blue || red) ? 1 : 0;
   }
@@ -1371,7 +1379,8 @@ async function readLocal(blob){
     if (m.status === 'recognizing text') progress(0.15 + 0.5 * (m.progress || 0), 'Đang đọc chữ trong bảng…');
     else if (/load|initializ/i.test(m.status)) progress(0.1, 'Đang tải bộ nhận dạng tiếng Việt (chỉ lần đầu)…');
   };
-  const full = await withTimeout(ocr(clean, { psm: '11' }), LIM.full, 'Không đọc được trong thời gian cho phép').catch(e => { if (e instanceof StopErr) killWorker(); throw e; });
+  if (job) job.extra = Math.min(35000, Math.max(0, (W * H / 1e6 - 3) * 5000));   // phiếu lớn / nhiều dòng: cho thêm thời gian
+  const full = await withTimeout(ocr(clean, { psm: '11' }), LIM.full + (job ? job.extra : 0), 'Không đọc được trong thời gian cho phép').catch(e => { if (e instanceof StopErr) killWorker(); throw e; });
   if (!full.words.some(w => /\d/.test(w.t))) throw new Error('Không thấy chữ số nào trong ảnh');
   workerProgress = null;
   const words = full.words;
@@ -1415,17 +1424,28 @@ function mapHeader(cellTexts){
   const map = {};
   cellTexts.forEach((t, i) => {
     const n = norm(t).replace(/\s+/g, ' ');
-    if (/stt/.test(n)) map.stt = i;
+    if (/xanh/.test(n)) map.xanh = i;                       // phiếu đã có cột Xanh / Nổi / Chín in sẵn
+    else if (/^\W*n.i\b|^\W*noi/.test(n) && !/ng.y/.test(n)) map.noi = i;
+    else if (/ch.n\b|chin/.test(n) && !/kh/.test(n)) map.chin = i;
+    else if (/ghi\s*ch/.test(n)) map.ghichu = i;
+    else if (/stt/.test(n)) map.stt = i;
     else if (/so\s*xe|xe$/.test(n)) map.soxe = i;
     else if (/kh.?ch/.test(n)) map.khach = i;
     else if (/l.n\s*1|lan1/.test(n)) map.tl1 = i;
     else if (/l.n\s*2|lan2/.test(n)) map.tl2 = i;
-    else if (/th.?c/.test(n) && /tl|th/.test(n)) map.thuc = i;
-    else if (/gi.\s*c|gio|can$/.test(n) && !/ngay/.test(n)) map.gio = i;
+    else if (/tl\s*th|th.?c/.test(n) && /tl|th/.test(n)) map.thuc = i;
+    else if (/gi.\s*c|gio|can$/.test(n) && (!/ngay/.test(n) || /gio/.test(n))) map.gio = i;   // "Giờ / Ngày cân" vẫn là cột giờ
+    else if (/ngay/.test(n)) map.date = i;
     else if (/\bbi\b|tl\s*b/.test(n)) map.bi = i;
     else if (/tl\s*h/.test(n)) map.tlh = i;
     else if (/h.ng\s*h|hoa/.test(n)) map.hang = i;
   });
+  // cột sau TL Thực / Giờ cân có "(%)" mà chưa nhận ra -> lần lượt Xanh, Nổi, Chín
+  const last = Math.max(map.thuc ?? -1, map.gio ?? -1);
+  if (last >= 0){
+    const miss = PF.filter(f => map[f] == null);
+    cellTexts.forEach((t, i) => { if (i > last && miss.length && /[%(°]|\(.\)/.test(t) && !Object.values(map).includes(i)) map[miss.shift()] = i; });
+  }
   return map;
 }
 const DEFAULT_MAP = { stt: 0, soxe: 1, hang: 2, khach: 3, tl1: 4, tl2: 5, tlh: 6, bi: 7, thuc: 8, gio: 9 };
@@ -1459,6 +1479,24 @@ async function parseGrid(grid, words, ctx){
   const out = [];
   let date = '';
   const dataIdx = [];
+  // Phiếu kết quả (do trang này xuất) có sẵn cột Xanh/Nổi/Chín: lấy số in sẵn, ghi chú nằm ngay dưới các cột đó
+  const hasPF = !!colX && PF.some(f => map[f] != null && colX[map[f]]);
+  const isVal = t => /^\d{1,3}(?:[.,]\d{1,2})?$/.test(t);
+  const isDash = t => /^[–—\-~_.]+$/.test(t);
+  function readPrintedPF(r, b){
+    const ws = wIn(b), used = new Set();
+    PF.forEach(f => {
+      const ref = map[f] != null && colX[map[f]]; if (!ref) return;
+      const cand = ws.filter(w => w.cx >= ref.x0 && w.cx <= ref.x1 && isVal(w.t)).sort((a, b2) => a.cy - b2.cy)[0];
+      if (cand){ r[f] = String(+cand.t.replace(',', '.')); used.add(cand); }
+    });
+    const xs0 = Math.min(...PF.filter(f => map[f] != null && colX[map[f]]).map(f => colX[map[f]].x0));
+    const xs1 = Math.max(...PF.filter(f => map[f] != null && colX[map[f]]).map(f => colX[map[f]].x1));
+    const topY = used.size ? Math.max(...[...used].map(w => w.y1)) : b.y0;
+    const note = ws.filter(w => !used.has(w) && w.cx >= xs0 && w.cx <= xs1 && w.cy > topY && !isDash(w.t));
+    if (note.length) r.ghichu = cleanText(joinWords(note));
+    r._printed = true;
+  }
   for (let i = hdrIdx + 1; i < bands.length; i++){
     const b = bands[i];
     const txt = joinWords(wIn(b));
@@ -1469,6 +1507,8 @@ async function parseGrid(grid, words, ctx){
       continue;
     }
     if (/t.ng\s*c.ng/.test(norm(txt))) continue;
+    // dòng tổng / dòng ngày (không có đường kẻ sau cột STT) -> bỏ qua
+    if (hdrIdx >= 0 && map.stt != null && colX && colX[map.stt] && !b.cells.some(c => Math.abs(c.x1 - colX[map.stt].x1) < 10 * ctx.scale)) continue;
     // ánh xạ ô theo toạ độ cột tiêu đề (an toàn khi số ô lệch)
     const cellOf = k => {
       const ref = colX && colX[map[k]]; if (!ref) return b.cells[map[k]];
@@ -1481,6 +1521,9 @@ async function parseGrid(grid, words, ctx){
     const r = { date, flags: {}, _band: i, _cells: {} };
     ['stt','soxe','hang','khach','tl1','tl2','tlh','bi','thuc','gio'].forEach(k => { r[k] = get(k); if (map[k] != null) r._cells[k] = cellOf(k); });
     if (!/\d/.test(r.thuc) && !/\d/.test(r.tlh) && !reTime.test(r.gio)) continue;   // dòng tiêu đề / dòng rác
+    // phiếu gộp ngày: ngày cân ghi trong ô giờ hoặc cột Ngày cân
+    { const dm2 = (r.gio + ' ' + get('date')).match(reDate); if (dm2) r.date = fixDate(dm2); }
+    if (hasPF) readPrintedPF(r, b);
     r.khach = cleanText(r.khach); r.hang = cleanText(r.hang); r.soxe = cleanText(r.soxe);
     r.stt = (r.stt.match(/\d+/) || [''])[0];
     const tm = r.gio.match(/(\d{1,2})[:.;](\d{2})(?:[:.;](\d{2}))?/);
@@ -1505,7 +1548,8 @@ async function parseGrid(grid, words, ctx){
       rc = reconcile(nums);
     }
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => { if (rc.vals[f] != null) r[f] = fmtKg(rc.vals[f]); });
-    if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
+    if (rc.ok) r.flags.thucOk = true;
+    else if (!(nums.thuc != null && map.tlh == null && map.bi == null)) r.flags.thuc = true;   // phiếu không có cột để đối chiếu: không tô vàng
     { const a = parseKg(r.tl1), b2 = parseKg(r.tl2), h = parseKg(r.tlh);
       if (a != null && b2 != null && h != null && Math.abs(b2 - a) !== h){ r.flags.tl1 = r.flags.tl2 = true; } }
     if (!r.khach) r.flags.khach = true;
@@ -1516,8 +1560,40 @@ async function parseGrid(grid, words, ctx){
       const tm = o.text.match(/(\d{1,2}):?(\d{2}):?(\d{2})/);
       r.gio = tm ? [tm[1].padStart(2, '0'), tm[2], tm[3]].join(':') : r.gio;
     }
-    // chữ viết tay dưới giờ cân
-    const gc = r._cells.gio;
+    // chữ viết tay dưới giờ cân (bỏ qua khi phiếu đã in sẵn Xanh/Nổi/Chín)
+    const gc = r._printed ? null : r._cells.gio;
+    if (r._printed){
+      // thiếu số hoặc Xanh + Nổi + Chín ≠ 100: đọc lại riêng từng ô (chỉ chữ số)
+      let pc = pcts(r);
+      if ((pc.have < 2 || pc.bad) && !late()){
+        const yEnd = r.ghichu ? b.y0 + (b.y1 - b.y0) * 0.5 : b.y1;
+        const cand = {};   // mỗi ô: các cách đọc khác nhau
+        for (const f of PF){
+          cand[f] = r[f] ? [r[f]] : [];
+          const ref = map[f] != null && colX[map[f]]; if (!ref) continue;
+          for (const [up, bw] of [[2, true], [1, true], [3, false]]){
+            if (late() && up !== 2) break;
+            const crop = cropCanvas(ctx.clean, ref.x0 + 2, b.y0 + 2, ref.x1 - 2, yEnd - 2, up);
+            if (bw) binarize(crop, 150);   // đen trắng hẳn: đọc chữ số in nhỏ chắc hơn
+            const o = await ocr(crop, { psm: '7', whitelist: '0123456789.,' });
+            const m = o.text.replace(/\s+/g, '').match(/^\d{1,3}(?:[.,]\d{1,2})?$/);
+            if (m && +m[0].replace(',', '.') <= 100){ const v = String(+m[0].replace(',', '.')); if (!cand[f].includes(v)) cand[f].push(v); }
+          }
+        }
+        // ưu tiên tổ hợp có tổng đúng 100 (hoặc đủ 2 ô để tự tính ô còn lại)
+        const opts = f => cand[f].length ? cand[f] : [''];
+        let best = null;
+        for (const x of opts('xanh')) for (const n of opts('noi')) for (const c of opts('chin')){
+          const t = { xanh: x, noi: n, chin: c }, q = pcts(t);
+          const score = (q.have >= 2 && !q.bad ? 10 : 0) + q.have;
+          if (!best || score > best.score) best = { t, score };
+        }
+        if (best) PF.forEach(f => r[f] = best.t[f]);
+        pc = pcts(r);
+      }
+      if (pc.have < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });
+      else if (pc.bad) PF.forEach(f => r.flags[f] = true);
+    }
     if (gc){
       const tws = wIn(b, gc).filter(w => reTime.test(w.t) || /^\d+$/.test(w.t));
       let tTop, tBot;
@@ -1537,7 +1613,7 @@ async function parseGrid(grid, words, ctx){
       const hw = veryLate() ? null : await readHandwriting(ctx, gc.x0 + 2, tBot + 3, gc.x1 - 2, yEnd, tTop);
       applyHW(r, hw);
     }
-    delete r._band; delete r._cells;
+    delete r._band; delete r._cells; delete r._printed;
   }
   return out;
 }
@@ -1575,6 +1651,11 @@ function cropCanvas(c, x0, y0, x1, y1, up = 1){
   return o;
 }
 
+function binarize(c, th){
+  const g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), d = im.data;
+  for (let p = 0; p < d.length; p += 4){ const v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 < th ? 0 : 255; d[p] = d[p + 1] = d[p + 2] = v; }
+  g.putImageData(im, 0, 0); return c;
+}
 // Đọc chữ viết tay trong vùng (dưới giờ cân)
 async function readHandwriting(ctx, x0, y0, x1, y1, tTop){
   const { W, H, gray, ink, isLine, src } = ctx;
@@ -1696,8 +1777,9 @@ function blobToB64(blob){ return new Promise((res, rej) => { const fr = new File
 async function geminiRead(blob, key, model){
   const b64 = await blobToB64(blob);
   const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
-Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"), theo đúng thứ tự từ trên xuống. Trả về JSON:
-{"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null}]}
+Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô.
+Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"/"TỔNG CỘNG TẤT CẢ" và các ô tổng kết bên dưới bảng), theo đúng thứ tự từ trên xuống. Trả về JSON:
+{"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null,"ghi_chu":""}]}
 Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi/chin là số (có thể có phần thập phân), null nếu không ghi. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), LIM.gemini);
@@ -1719,7 +1801,7 @@ Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân c�
   return (data.rows || []).map(x => ({
     date: x.ngay || '', stt: String(x.stt ?? ''), soxe: x.so_xe || '', hang: x.hang_hoa || '', khach: x.khach_hang || '',
     tl1: num(x.tl_lan1), tl2: num(x.tl_lan2), tlh: num(x.tl_hang), bi: num(x.tl_bi), thuc: num(x.tl_thuc), gio: x.gio_can || '',
-    xanh: x.xanh == null || x.xanh === '' ? null : +String(x.xanh).replace(',', '.'), noi: x.noi == null || x.noi === '' ? null : +String(x.noi).replace(',', '.'), chin: x.chin == null || x.chin === '' ? null : +String(x.chin).replace(',', '.')
+    xanh: x.xanh == null || x.xanh === '' ? null : +String(x.xanh).replace(',', '.'), ghichu: x.ghi_chu || '', noi: x.noi == null || x.noi === '' ? null : +String(x.noi).replace(',', '.'), chin: x.chin == null || x.chin === '' ? null : +String(x.chin).replace(',', '.')
   }));
   function num(v){ if (v == null || v === '') return null; return typeof v === 'number' ? v : parseKg(String(v)); }
 }
@@ -1730,6 +1812,7 @@ function mergeGemini(local, gem){
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = rc.vals[f] != null ? fmtKg(rc.vals[f]) : '');
     if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
     PF.forEach(f => r[f] = g[f] != null && !isNaN(g[f]) ? fmtPctIn(g[f]) : '');
+    r.ghichu = g.ghichu || '';
     if (PF.filter(f => r[f]).length < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });
     return r;
   };
@@ -1751,7 +1834,7 @@ function mergeGemini(local, gem){
     else if (G.khach && norm(G.khach) === norm(L.khach)) r.khach = G.khach;   // lấy bản có dấu chuẩn
     if (!L.date && G.date) r.date = G.date;
     if (L.flags.thuc && G.flags.thucOk){ ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = G[f]); delete r.flags.thuc; r.flags.thucOk = true; }
-    ['soxe','hang','gio','stt'].forEach(f => { if (!r[f] && G[f]) r[f] = G[f]; });
+    ['soxe','hang','gio','stt','ghichu'].forEach(f => { if (!r[f] && G[f]) r[f] = G[f]; });
     return r;
   });
 }
