@@ -219,7 +219,7 @@ function danhSach(b, role) {
   // tài khoản Thu hồi: các xe để chọn tên mẫu + đầy đủ mẫu đã lưu để xem lại / sửa
   return {
     ok: true,
-    rows: rows.map(r => ({ batch: r.batch, rid: r.rid, date: r.date, gio: r.gio, soxe: r.soxe, khach: r.khach, thuc: r.thuc })),
+    rows: rows.map(r => ({ batch: r.batch, rid: r.rid, date: r.date, gio: r.gio, soxe: r.soxe, khach: r.khach, thuc: r.thuc, xanh: r.xanh, noi: r.noi, chin: r.chin })),
     samples: samples
   };
 }

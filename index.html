@@ -2776,7 +2776,11 @@ var APP = (() => {
     const left = [['', f2(res.kl), ''], ['+', f2(res.klq / 2), 'sum'], ['', f2(res.tong), ''], ['', '', '']];
     const rich = res.lines.map(l => wrapRich(l, Wd - P * 2 - leftW - 14, FS));
     const rowH = rich.map(ls => Math.max(46, ls.length * LH + 24));
-    const headH = 38 + (sub ? 20 : 0), klH = klT ? 44 : 0;
+    // Xanh – Nổi – Chín của xe (lấy từ phiếu cà tươi)
+    const pc = row ? pcts(row) : null, hasPc = pc && pc.have >= 2;
+    const pcItems = hasPc ? [['Xanh', pc.x], ['Nổi', pc.n], ['Chín', pc.c]] : [];
+    const boxH = (klT ? 34 : 0) + (hasPc ? (klT ? 32 : 34) : 0);
+    const headH = 38 + (sub ? 20 : 0), klH = boxH ? boxH + 10 : 0;
     const H = P + headH + 12 + klH + rowH.reduce((a, b) => a + b, 0) + 14 + 60 + P;
     const cv = mkCanvas(Wd * S, H * S), g = cv.getContext('2d'); g.scale(S, S);
     g.fillStyle = '#fff'; g.fillRect(0, 0, Wd, H); g.textBaseline = 'middle';
@@ -2791,10 +2795,26 @@ var APP = (() => {
     y += headH;
     g.fillStyle = C.line; g.fillRect(P, y, Wd - P * 2, 2); y += 12;
     // khối lượng cà tươi của xe
-    if (klT){
-      g.fillStyle = C.kl; rr(P, y, Wd - P * 2, 34, 10); g.fill(); if (mono){ g.lineWidth = 1.5; g.strokeStyle = '#000'; g.stroke(); }
-      g.textAlign = 'left'; g.font = `600 15px ${SANS}`; g.fillStyle = C.soft; g.fillText('KL cà tươi', P + 14, y + 17.5);
-      g.textAlign = 'right'; g.font = `800 18px ${SANS}`; g.fillStyle = C.ink; g.fillText(klT, Wd - P - 14, y + 17.5);
+    if (boxH){
+      g.fillStyle = C.kl; rr(P, y, Wd - P * 2, boxH, 10); g.fill(); if (mono){ g.lineWidth = 1.5; g.strokeStyle = '#000'; g.stroke(); }
+      let yy = y;
+      if (klT){
+        g.textAlign = 'left'; g.font = `600 15px ${SANS}`; g.fillStyle = C.soft; g.fillText('KL cà tươi', P + 14, yy + 17.5);
+        g.textAlign = 'right'; g.font = `800 18px ${SANS}`; g.fillStyle = C.ink; g.fillText(klT, Wd - P - 14, yy + 17.5);
+        yy += 34;
+        if (hasPc){ g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + 12, yy - 1, Wd - P * 2 - 24, 1); }
+      }
+      if (hasPc){
+        const cw = (Wd - P * 2) / 3, cy = yy + (klT ? 15 : 17);
+        pcItems.forEach(([l, v], i) => {
+          const cx = P + cw * i + cw / 2, val = `${fmtPct(v)} %`;
+          g.font = `600 14px ${SANS}`; const lw = g.measureText(l + '  ').width;
+          g.font = `800 16px ${SANS}`; const vw = g.measureText(val).width, x0 = cx - (lw + vw) / 2;
+          g.textAlign = 'left'; g.font = `600 14px ${SANS}`; g.fillStyle = C.soft; g.fillText(l, x0, cy);
+          g.font = `800 16px ${SANS}`; g.fillStyle = C.ink; g.fillText(val, x0 + lw, cy);
+          if (i){ g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + cw * i, yy + 6, 1, (klT ? 32 : 34) - 12); }
+        });
+      }
       y += klH;
     }
     // 4 dòng tính
