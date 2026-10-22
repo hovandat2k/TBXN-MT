@@ -1,12 +1,20 @@
 {
-  "name": "Trung bình Xanh – Nổi",
-  "short_name": "Xanh – Nổi",
+  "name": "MẪU CÀ TƯƠI NHƯ TÙNG",
+  "short_name": "Mẫu cà tươi",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f4fbf6",
   "theme_color": "#c9efd5",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }

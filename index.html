@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#c9efd5">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>TB Xanh – Nổi</title>
-<meta property="og:title" content="TB Xanh – Nổi">
+<title>MẪU CÀ TƯƠI NHƯ TÙNG</title>
+<meta property="og:title" content="MẪU CÀ TƯƠI NHƯ TÙNG">
 <meta property="og:type" content="website">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -39,6 +39,24 @@ header{padding:calc(18px + env(safe-area-inset-top)) 0 12px;display:flex;align-i
 .logo{width:44px;height:44px;border-radius:12px;box-shadow:var(--shadow);flex:none;display:block}
 h1{font-size:20px;margin:0;font-weight:800;letter-spacing:-.01em;line-height:1.2}
 .sub{margin:0;color:var(--muted);font-size:12.5px}
+.ic{width:18px;height:18px;flex:none;display:block}
+.hbtn{display:inline-grid;place-items:center}
+.hbtn .ic{width:21px;height:21px;color:var(--brand)}
+.tabs button .ic{width:18px;height:18px;margin-right:2px}
+.tabs button.on .ic{color:var(--brand)}
+#drop .big .ic{width:42px;height:42px;color:var(--brand);margin:0 auto;stroke-width:1.6}
+.actions button .i{display:grid;place-items:center;height:24px}
+.actions button .i .ic{width:22px;height:22px}
+.actions .ghost .i{color:var(--brand)}
+.actions .ghost.danger .i{color:var(--warn)}
+.dsec{display:flex;align-items:center;gap:7px}
+.dsec .ic{color:var(--brand)}
+#detBody h4{display:flex;align-items:center;gap:7px}
+#detBody h4 .ic{color:var(--brand)}
+.acn{display:inline-flex;align-items:center;gap:7px}
+.acn .ic{color:var(--brand)}
+.thedit .ic{display:inline-block;vertical-align:-3px;width:16px;height:16px}
+.empty b .ic{width:34px;height:34px;margin:0 auto 6px;color:var(--muted)}
 .hbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink);width:44px;height:44px;min-height:0;padding:0;border-radius:14px;font-size:18px;flex:none;position:relative}
 #setBtn[data-ai]::after{content:"";position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;border:2px solid var(--surface)}
 #setBtn[data-ai="ok"]::after{background:#2fa36b}
@@ -428,15 +446,15 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
   <header>
     <img class="logo" src="icons/icon-192.png" alt="">
     <div>
-      <h1>Trung bình Xanh – Nổi</h1>
+      <h1>MẪU CÀ TƯƠI NHƯ TÙNG</h1>
     </div>
-    <button class="hbtn" id="setBtn" aria-label="Cài đặt" title="Cài đặt (AI đọc ảnh, Google Drive)">⚙️</button>
-    <button class="hbtn" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối">🌓</button>
+    <button class="hbtn" id="setBtn" aria-label="Cài đặt" title="Cài đặt"><i data-ic="settings"></i></button>
+    <button class="hbtn" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối"><i data-ic="theme"></i></button>
   </header>
   <nav class="tabs" id="tabs" role="tablist">
-    <button type="button" role="tab" data-tab="tuoi" class="on">🌱 Cà tươi</button>
-    <button type="button" role="tab" data-tab="th">⚖️ Thu hồi<span class="badge" id="thBadge" hidden></span></button>
-    <button type="button" role="tab" data-tab="ls">📚 Tổng hợp mẫu</button>
+    <button type="button" role="tab" data-tab="tuoi" class="on"><i data-ic="sprout"></i>Cà tươi</button>
+    <button type="button" role="tab" data-tab="th"><i data-ic="scale"></i>Thu hồi<span class="badge" id="thBadge" hidden></span></button>
+    <button type="button" role="tab" data-tab="ls"><i data-ic="list"></i>Tổng hợp mẫu</button>
   </nav>
   <button type="button" class="sync" id="syncSt" hidden></button>
 
@@ -444,19 +462,19 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
   <!-- 1. Nhập ảnh -->
   <section class="card">
     <div id="drop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh / PDF phiếu cân">
-      <div class="big">🖼️</div>
+      <div class="big"><i data-ic="image"></i></div>
       <div class="t">Nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> để dán ảnh</div>
     </div>
     <input type="file" id="file" accept="image/*,application/pdf,.pdf" hidden>
     <div class="pbtns">
-      <button type="button" class="primary" id="pasteBtn">📋 Dán ảnh</button>
-      <button type="button" class="ghost" id="pickBtn">📁 Chọn ảnh/PDF</button>
-      <button type="button" class="ghost" id="manualBtn">✏️ Nhập tay</button>
+      <button type="button" class="primary" id="pasteBtn"><i data-ic="paste"></i>Dán ảnh</button>
+      <button type="button" class="ghost" id="pickBtn"><i data-ic="folder"></i>Chọn ảnh/PDF</button>
+      <button type="button" class="ghost" id="manualBtn"><i data-ic="pencil"></i>Nhập tay</button>
     </div>
     <div class="opt">
       <label class="switch"><input type="checkbox" id="appendChk"> Ghép thêm vào bảng hiện có</label>
     </div>
-    <div id="prog"><div class="bar"><i id="progBar"></i></div><div class="progrow"><div id="progTxt"></div><button type="button" class="ghost small" id="cancelBtn" hidden>✕ Huỷ</button></div></div>
+    <div id="prog"><div class="bar"><i id="progBar"></i></div><div class="progrow"><div id="progTxt"></div><button type="button" class="ghost small" id="cancelBtn" hidden><i data-ic="x"></i>Huỷ</button></div></div>
     <details id="srcBox"><summary>Xem ảnh gốc</summary><img id="srcImg" alt="Ảnh đã dán"></details>
   </section>
 
@@ -466,7 +484,7 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
       <h2 style="margin:0">Bảng dữ liệu</h2>
       <span class="sp"></span>
       <div class="seg" id="viewSeg"><button type="button" data-v="short" class="on">Rút gọn</button><button type="button" data-v="full">Tất cả cột</button></div>
-      <button type="button" class="ghost small" id="clearBtn" title="Xoá toàn bộ bảng">🗑️ Xoá</button>
+      <button type="button" class="ghost small" id="clearBtn" title="Xoá toàn bộ bảng"><i data-ic="trash"></i>Xoá</button>
     </div>
     <div id="tbl"></div>
   </section>
@@ -495,12 +513,12 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
       <div class="seg" id="grpSeg"><button type="button" data-g="all" class="on">Gộp các đêm</button><button type="button" data-g="day">Tách theo đêm</button></div></div>
     <div id="prevWrap" hidden><div class="pvbox"><img id="prev" alt="Phiếu kết quả"><div class="hot" id="hot"></div></div></div>
     <div class="actions">
-      <button type="button" class="primary" id="saveSheet"><span class="i">💾</span><span class="t">Lưu</span></button>
-      <button type="button" class="ghost" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
-      <button type="button" class="ghost" id="shareImg"><span class="i">📤</span>Chia sẻ</button>
-      <button type="button" class="ghost" id="dlImg"><span class="i">⬇️</span>Tải PDF</button>
-      <button type="button" class="ghost" id="printBtn"><span class="i">🖨️</span>In phiếu</button>
-      <button type="button" class="ghost danger" id="resetBtn"><span class="i">🗑️</span>Xoá</button>
+      <button type="button" class="primary" id="saveSheet"><span class="i"><i data-ic="save"></i></span><span class="t">Lưu</span></button>
+      <button type="button" class="ghost" id="copyImg"><span class="i"><i data-ic="copy"></i></span>Sao chép ảnh</button>
+      <button type="button" class="ghost" id="shareImg"><span class="i"><i data-ic="share"></i></span>Chia sẻ</button>
+      <button type="button" class="ghost" id="dlImg"><span class="i"><i data-ic="pdf"></i></span>Tải PDF</button>
+      <button type="button" class="ghost" id="printBtn"><span class="i"><i data-ic="print"></i></span>In phiếu</button>
+      <button type="button" class="ghost danger" id="resetBtn"><span class="i"><i data-ic="trash"></i></span>Xoá</button>
     </div>
   </section>
   </div>
@@ -528,10 +546,10 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
     <section class="card" id="thOut" hidden>
       <div class="thprev"><img id="thPrev" alt="Phiếu thu hồi"></div>
       <div class="actions a4">
-        <button type="button" class="primary" id="thSave"><span class="i">💾</span><span class="t">Lưu</span></button>
-        <button type="button" class="ghost" id="thCopy"><span class="i">📋</span>Sao chép</button>
-        <button type="button" class="ghost" id="thShare"><span class="i">📤</span>Chia sẻ</button>
-        <button type="button" class="ghost" id="thNew"><span class="i">🔄</span>Mẫu mới</button>
+        <button type="button" class="primary" id="thSave"><span class="i"><i data-ic="save"></i></span><span class="t">Lưu</span></button>
+        <button type="button" class="ghost" id="thCopy"><span class="i"><i data-ic="copy"></i></span>Sao chép</button>
+        <button type="button" class="ghost" id="thShare"><span class="i"><i data-ic="share"></i></span>Chia sẻ</button>
+        <button type="button" class="ghost" id="thNew"><span class="i"><i data-ic="new"></i></span>Mẫu mới</button>
       </div>
     </section>
     <section class="card" id="thSavedCard">
@@ -550,7 +568,7 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
         <h2 style="margin:0">Tổng hợp mẫu</h2>
         <span class="sp"></span>
         <div class="seg" id="lsSeg"><button type="button" data-m="day" class="on">Theo đêm</button><button type="button" data-m="cus">Theo khách hàng</button><button type="button" data-m="opt">Tùy chọn</button></div>
-        <button type="button" class="ghost small" id="lsRefresh" title="Tải lại từ Google Drive">⟳</button>
+        <button type="button" class="ghost small" id="lsRefresh" title="Tải lại từ Google Drive"><i data-ic="refresh"></i></button>
       </div>
       <div class="lsctl" id="lsCtl"></div>
       <div id="lsSheet" hidden>
@@ -564,11 +582,11 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
           <div class="seg" id="lsGrpSeg"><button type="button" data-g="all" class="on">Gộp các đêm</button><button type="button" data-g="day">Tách theo đêm</button></div></div>
         <div id="lsPv" class="pvwrap"><div class="pvbox" data-sheet="ls"><img id="lsPrev" alt="Phiếu tổng hợp mẫu" title="Bấm vào dòng xe để xem chi tiết"><div class="hot" id="lsHot"></div></div></div>
         <div class="actions a5">
-          <button type="button" class="ghost" id="lsCopy"><span class="i">📋</span>Sao chép ảnh</button>
-          <button type="button" class="ghost" id="lsShare"><span class="i">📤</span>Chia sẻ</button>
-          <button type="button" class="ghost" id="lsPdf"><span class="i">⬇️</span>Tải PDF</button>
-          <button type="button" class="ghost" id="lsPrint"><span class="i">🖨️</span>In phiếu</button>
-          <button type="button" class="ghost" id="lsEdit"><span class="i">✏️</span>Sửa</button>
+          <button type="button" class="ghost" id="lsCopy"><span class="i"><i data-ic="copy"></i></span>Sao chép ảnh</button>
+          <button type="button" class="ghost" id="lsShare"><span class="i"><i data-ic="share"></i></span>Chia sẻ</button>
+          <button type="button" class="ghost" id="lsPdf"><span class="i"><i data-ic="pdf"></i></span>Tải PDF</button>
+          <button type="button" class="ghost" id="lsPrint"><span class="i"><i data-ic="print"></i></span>In phiếu</button>
+          <button type="button" class="ghost" id="lsEdit"><span class="i"><i data-ic="pencil"></i></span>Sửa</button>
         </div>
       </div>
       <div id="lsBody"></div>
@@ -579,7 +597,7 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
 <div class="login" id="login" hidden>
   <form class="lgbox" id="lgForm" autocomplete="on">
     <img src="icons/icon-192.png" alt="" class="lglogo">
-    <h2>Cà tươi + Thu hồi</h2>
+    <h2>MẪU CÀ TƯƠI NHƯ TÙNG</h2>
     <p class="lgsub">Đăng nhập để tiếp tục</p>
     <label for="lgUser">Tên đăng nhập</label>
     <input class="fld" id="lgUser" autocomplete="username" autocapitalize="none" spellcheck="false" required>
@@ -600,10 +618,10 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
 <dialog id="setDlg">
   <form method="dialog" class="dlg">
     <h3>Cài đặt</h3>
-    <h4 class="dsec">👤 Tài khoản</h4>
+    <h4 class="dsec"><i data-ic="user"></i>Tài khoản</h4>
     <div class="acct" id="acctBox"></div>
     <div id="aiSec">
-    <h4 class="dsec">🤖 Đọc ảnh bằng AI</h4>
+    <h4 class="dsec"><i data-ic="sparkles"></i>Đọc ảnh bằng AI</h4>
     <p>Nhập khoá <b>Google Gemini API</b> (miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>) để ảnh được đọc bằng AI của Google.</p>
     <label for="gKey">Gemini API key</label>
     <input class="fld" id="gKey" type="password" autocomplete="off" placeholder="AIza…">
@@ -612,7 +630,7 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
     <datalist id="gModels"><option value="gemini-3.8-flash"><option value="gemini-3.6-flash"><option value="gemini-3.5-flash-lite"><option value="gemini-flash-latest"></datalist>
     <div class="gstat" id="gStat"></div>
     <div class="row2">
-      <button type="button" class="ghost test" id="gTest">🔍 Kiểm tra</button>
+      <button type="button" class="ghost test" id="gTest"><i data-ic="search"></i>Kiểm tra</button>
       <button type="button" class="primary" id="setSave">Lưu khoá</button>
     </div>
     </div>
@@ -621,12 +639,41 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
 </dialog>
 
 <dialog id="detDlg" class="detdlg"><div class="dlg">
-  <div class="dethead"><h3 id="detTitle"></h3><button type="button" class="ghost small" id="detClose" aria-label="Đóng">✕</button></div>
+  <div class="dethead"><h3 id="detTitle"></h3><button type="button" class="ghost small" id="detClose" aria-label="Đóng"><i data-ic="x"></i></button></div>
   <div id="detBody"></div>
   <div class="detbtns" id="detBtns"></div>
 </div></dialog>
 <dialog id="zoomDlg"><form method="dialog" class="dlg"><img id="zoomImg" alt=""><div class="row2"><button class="ghost" value="close">Đóng</button></div></form></dialog>
 
+<script>
+/* Bộ biểu tượng nét mảnh (kiểu Lucide), màu theo chữ */
+const ICP = {
+  settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  theme: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
+  sprout: '<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>',
+  scale: '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+  list: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+  paste: '<path d="M15 2H9a1 1 0 0 0-1 1v2c0 .6.4 1 1 1h6c.6 0 1-.4 1-1V3c0-.6-.4-1-1-1Z"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M16 4h2a2 2 0 0 1 2 2v2M11 14h10"/><path d="m17 10 4 4-4 4"/>',
+  folder: '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+  pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+  save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+  check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/>',
+  pdf: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
+  print: '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
+  new: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  sparkles: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.13 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
+};
+const IC = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-n="${n}">${ICP[n] || ''}</svg>`;
+document.querySelectorAll('i[data-ic]').forEach(e => { e.outerHTML = IC(e.dataset.ic); });
+</script>
 <script>
 'use strict';
 /* =========================================================================
@@ -730,7 +777,7 @@ function renderTable(){
   const box = $('#tbl');
   document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
   if (!rows.length){
-    box.innerHTML = `<div class="empty"><b>📄</b>Chưa có dữ liệu. Dán ảnh phiếu cân ở trên, hoặc bấm “Nhập tay”.</div>`;
+    box.innerHTML = `<div class="empty"><b>${IC('image')}</b>Chưa có dữ liệu. Dán ảnh phiếu cân ở trên, hoặc bấm “Nhập tay”.</div>`;
     updateNumbers();
     return;
   }
@@ -2496,7 +2543,7 @@ var APP = (() => {
     const ok = rows.length && batchId && LS.get('tbxn_savedsig', '') === batchId + sig();
     b.classList.toggle('saved', !!ok);
     b.querySelector('.t').textContent = ok ? 'Đã lưu' : 'Lưu';
-    b.querySelector('.i').textContent = ok ? '✅' : '💾';
+    b.querySelector('.i').innerHTML = IC(ok ? 'check' : 'save');
   }
   async function saveSheet(){
     if (!isAdmin()){ toast('Tài khoản không có quyền lưu phiếu cà tươi'); return; }
@@ -2661,7 +2708,7 @@ var APP = (() => {
     $('#thKl').value = sp.kl ?? ''; $('#thKlq').value = +sp.klq ? sp.klq : ''; $('#thAm').value = sp.am ?? '';
     selChanged(false);
     const e = $('#thEdit'); e.hidden = false;
-    e.innerHTML = `<span>✏️ Đang sửa mẫu lưu lúc <b>${esc(sp.savedAt || '')}</b>${sp.savedBy ? ' · ' + esc(sp.savedBy) : ''}</span><span class="sp"></span><button type="button" class="ghost" id="thEditCancel">Huỷ sửa</button>`;
+    e.innerHTML = `<span>${IC('pencil')} Đang sửa mẫu lưu lúc <b>${esc(sp.savedAt || '')}</b>${sp.savedBy ? ' · ' + esc(sp.savedBy) : ''}</span><span class="sp"></span><button type="button" class="ghost" id="thEditCancel">Huỷ sửa</button>`;
     if (thCalc(false)) setTimeout(() => $('#thForm').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     setTimeout(() => $('#thKl').focus(), 300);
   }
@@ -2779,7 +2826,7 @@ var APP = (() => {
   function thSaveUI(){
     const b = $('#thSave'), r = lastTH && lastTH.row;
     const done = r && DB.samples.some(s => String(s.rid) === String(r.rid) && Math.abs(+s.thuhoi - r2(lastTH.res.E)) < 0.005);
-    b.classList.toggle('saved', !!done); b.querySelector('.t').textContent = done ? 'Đã lưu' : editSample && $('#thSel').value === '__edit' ? 'Cập nhật' : 'Lưu'; b.querySelector('.i').textContent = done ? '✅' : '💾';
+    b.classList.toggle('saved', !!done); b.querySelector('.t').textContent = done ? 'Đã lưu' : editSample && $('#thSel').value === '__edit' ? 'Cập nhật' : 'Lưu'; b.querySelector('.i').innerHTML = IC(done ? 'check' : 'save');
   }
   $('#thCopy').addEventListener('click', async () => {
     if (!lastTH) return;
@@ -3034,7 +3081,7 @@ var APP = (() => {
     $('#detTitle').textContent = (r && r.khach) || (sp && sp.khach) || 'Chi tiết';
     let h = '';
     if (r){
-      h += `<h4>🌱 Thông tin cân</h4>` + kv([
+      h += `<h4>${IC('sprout')}Thông tin cân</h4>` + kv([
         ['Đêm', esc(rNight(r))], ['Ngày cân', esc(r.date || '')], ['Giờ cân', esc(r.gio || '')], ['Số xe', esc(r.soxe || '')], ['Hàng hóa', esc(r.hang || '')],
         ['TL Lần 1', kg(r.tl1)], ['TL Lần 2', kg(r.tl2)], ['TL Hàng', kg(r.tlh)], ['TL Bì', kg(r.bi)],
         ['TL thực', kg(r.thuc) ? kg(r.thuc) + ' kg' : '', true],
@@ -3042,7 +3089,7 @@ var APP = (() => {
         ['Ghi chú', esc(r.ghichu || '')], ['Lô lưu lúc', esc(r.savedAt || '')]
       ]);
     }
-    h += `<h4>⚖️ Thu hồi</h4>`;
+    h += `<h4>${IC('scale')}Thu hồi</h4>`;
     if (sp){
       h += kv([['Loại mẫu', esc(sp.mau || '')], ['KL', sp.kl !== '' ? esc(String(sp.kl)) + ' g' : ''], ['KL quả', sp.klq !== '' ? esc(String(sp.klq)) + ' g' : ''],
         ['Độ ẩm', sp.am !== '' && sp.am != null ? degree(+sp.am) : ''], ['Thu hồi', f2(+sp.thuhoi) + ' kg', true], ['Lưu lúc', esc(sp.savedAt || '')]]) +
@@ -3050,10 +3097,10 @@ var APP = (() => {
     } else h += `<div class="lsempty" style="padding:12px">Xe này chưa làm thu hồi.</div>`;
     $('#detBody').innerHTML = h;
     $('#detBtns').innerHTML = sp
-      ? `<button type="button" class="ghost" data-d="copy">📋 Sao chép phiếu</button><button type="button" class="ghost" data-d="share">📤 Chia sẻ</button>` +
-        (canTH() ? `<button type="button" class="primary" data-d="edit">✏️ Sửa mẫu</button>` : '') +
-        (isAdmin() ? `<button type="button" class="ghost danger" data-d="del">🗑 Làm lại mẫu</button>` : '')
-      : (r && canTH() ? `<button type="button" class="primary" data-d="do">⚖️ Làm thu hồi xe này</button>` : '');
+      ? `<button type="button" class="ghost" data-d="copy">${IC('copy')}Sao chép phiếu</button><button type="button" class="ghost" data-d="share">${IC('share')}Chia sẻ</button>` +
+        (canTH() ? `<button type="button" class="primary" data-d="edit">${IC('pencil')}Sửa mẫu</button>` : '') +
+        (isAdmin() ? `<button type="button" class="ghost danger" data-d="del">${IC('trash')}Làm lại mẫu</button>` : '')
+      : (r && canTH() ? `<button type="button" class="primary" data-d="do">${IC('scale')}Làm thu hồi xe này</button>` : '');
     $('#detDlg').showModal();
     if (sp){
       const kl = +sp.kl, klq = +sp.klq || 0, am = +sp.am;
@@ -3102,7 +3149,7 @@ var APP = (() => {
   /* ---------------- Tài khoản, cài đặt ---------------- */
   function showAcct(){
     if (!AUTH) return;
-    $('#acctBox').innerHTML = `<span>👤 <b>${esc(AUTH.name)}</b></span><span class="sp"></span><button type="button" class="ghost" id="logoutBtn">Đăng xuất</button>`;
+    $('#acctBox').innerHTML = `<span class="acn">${IC('user')}<b>${esc(AUTH.name)}</b></span><span class="sp"></span><button type="button" class="ghost" id="logoutBtn">Đăng xuất</button>`;
   }
   $('#setBtn').addEventListener('click', showAcct);
   $('#acctBox').addEventListener('click', e => { if (e.target.id === 'logoutBtn'){ $('#setDlg').close(); logout(false); } });
