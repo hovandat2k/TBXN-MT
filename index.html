@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#cfe8f8">
+<meta name="theme-color" content="#c9efd5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>TB Xanh – Nổi</title>
 <meta property="og:title" content="TB Xanh – Nổi">
@@ -16,19 +16,19 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
 :root{
-  --bg:#f3f9fd; --surface:#ffffff; --ink:#1f3a4d; --muted:#6a8799; --line:#d8e9f4;
-  --brand:#4ea8de; --brand-2:#8cc8ee; --accent:#5bb2e6; --btn:#cfe8f8; --btn-ink:#1b5f8c; --ok:#2c7a5a; --warn:#c0492f; --amber:#d99a1c;
-  --field:#fff; --soft:#eef6fc; --shadow:0 6px 20px rgba(60,140,200,.10);
+  --bg:#f4fbf6; --surface:#ffffff; --ink:#24402d; --muted:#6b8a73; --line:#dcefe2;
+  --brand:#5cbf7f; --brand-2:#8fd6a5; --accent:#6fcb8e; --btn:#c9efd5; --btn-ink:#1f6b3d; --ok:#2c7a5a; --warn:#c0492f; --amber:#d99a1c;
+  --field:#fff; --soft:#eef8f1; --shadow:0 6px 20px rgba(76,170,110,.10);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0e1820; --surface:#15232e; --ink:#e2f0f9; --muted:#8fb0c4; --line:#24394a;
-    --brand:#7cc3ef; --brand-2:#4f9fcf; --accent:#7cc3ef; --btn:#7cc3ef; --btn-ink:#0e1820; --field:#112029; --soft:#182a37; --shadow:0 6px 24px rgba(0,0,0,.35);
+    --bg:#0f1912; --surface:#16241a; --ink:#e3f3e6; --muted:#93b39b; --line:#25402c;
+    --brand:#7fd39a; --brand-2:#5cb878; --accent:#7fd39a; --btn:#7fd39a; --btn-ink:#0f1912; --field:#122016; --soft:#1b2c20; --shadow:0 6px 24px rgba(0,0,0,.35);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0e1820; --surface:#15232e; --ink:#e2f0f9; --muted:#8fb0c4; --line:#24394a;
-  --brand:#7cc3ef; --brand-2:#4f9fcf; --accent:#7cc3ef; --btn:#7cc3ef; --btn-ink:#0e1820; --field:#112029; --soft:#182a37; --shadow:0 6px 24px rgba(0,0,0,.35);
+  --bg:#0f1912; --surface:#16241a; --ink:#e3f3e6; --muted:#93b39b; --line:#25402c;
+  --brand:#7fd39a; --brand-2:#5cb878; --accent:#7fd39a; --btn:#7fd39a; --btn-ink:#0f1912; --field:#122016; --soft:#1b2c20; --shadow:0 6px 24px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);min-height:100%}
@@ -59,8 +59,8 @@ button:active{transform:scale(.97)}
 button:disabled{opacity:.5;cursor:default}
 .primary{background:var(--btn);color:var(--btn-ink)}
 .ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
-:root[data-theme="dark"] .primary{color:#0e1820}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .primary{color:#0e1820}}
+:root[data-theme="dark"] .primary{color:#0f1912}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .primary{color:#0f1912}}
 
 /* ===== Paste zone ===== */
 #drop{border:2px dashed color-mix(in srgb,var(--brand) 55%,transparent);border-radius:16px;padding:20px 14px;text-align:center;
@@ -153,8 +153,8 @@ button:disabled{opacity:.5;cursor:default}
 .stat .l{font-size:12.5px;color:var(--muted);font-weight:700}
 .stat .v{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stat .v small{font-size:14px;font-weight:700;color:var(--muted);margin-left:3px}
-.stat.main{background:linear-gradient(135deg,#d7eefc,#b3dcf5);color:#164a6e}
-.stat.main .l,.stat.main .v small{color:#2c6a94}
+.stat.main{background:linear-gradient(135deg,#d6f3df,#b4e6c4);color:#1f6b3d}
+.stat.main .l,.stat.main .v small{color:#2e7d4a}
 .formula{font-size:12px;color:var(--muted);margin-top:10px}
 #missNote{font-size:12.5px;color:var(--amber);font-weight:600;margin-top:8px}
 #missNote:empty{display:none}
@@ -178,12 +178,12 @@ button:disabled{opacity:.5;cursor:default}
 #sortClear{min-height:28px;padding:2px 9px;font-size:12px;border-radius:9px}
 .pvbox{position:relative;line-height:0}
 .hot{position:absolute;inset:0;pointer-events:none}
-.hot .cellhl{position:absolute;background:rgba(78,168,222,.16);pointer-events:none}
+.hot .cellhl{position:absolute;background:rgba(92,191,127,.16);pointer-events:none}
 /* nút ▾ kiểu Excel ở góc dưới phải mỗi ô tiêu đề */
-.hot .dd{position:absolute;pointer-events:auto;min-height:0;padding:0;border-radius:3px;border:1px solid #9fb3c2;background:#f4f7f9;color:#33485a;
+.hot .dd{position:absolute;pointer-events:auto;min-height:0;padding:0;border-radius:3px;border:1px solid #a3c2ad;background:#f4f9f5;color:#33503c;
   display:grid;place-items:center;font:700 10px/1 system-ui,sans-serif;box-shadow:0 1px 1px rgba(0,0,0,.12);cursor:pointer}
-.hot .dd:hover,.hot .dd.open{background:#dcecf8;border-color:#4ea8de}
-.hot .dd.on{background:#1b6fa6;border-color:#1b6fa6;color:#fff}
+.hot .dd:hover,.hot .dd.open{background:#dcf2e3;border-color:#5cbf7f}
+.hot .dd.on{background:#2e8b53;border-color:#2e8b53;color:#fff}
 .hot .dd svg{width:62%;height:62%;display:block}
 .hot .dd .n{position:absolute;top:-7px;right:-5px;min-width:13px;height:13px;border-radius:7px;background:#e05a2a;color:#fff;font:800 9px/13px system-ui,sans-serif;padding:0 2px}
 .smenu{position:absolute;z-index:5;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);
@@ -214,7 +214,7 @@ button:disabled{opacity:.5;cursor:default}
 .actions button{flex-direction:column;gap:2px;min-height:0;padding:8px 2px;font-size:12px;font-weight:700;border-radius:12px;line-height:1.15}
 .actions button .i{font-size:18px;line-height:1}
 
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#1d4f70;color:#fff;
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#2e5a3c;color:#fff;
   padding:12px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:20;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
@@ -289,9 +289,38 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .guide ol{padding-left:20px;margin:8px 0 0;color:var(--muted)}
 .guide li{margin-bottom:6px}
 .guide code{background:var(--soft);padding:1px 5px;border-radius:5px}
+/* lịch sử: ô tổng quan, dòng bấm được, chi tiết */
+.lscards{display:grid;grid-template-columns:1.3fr repeat(4,1fr);gap:8px;margin:0 0 12px}
+.lscard{background:var(--soft);border-radius:14px;padding:10px 12px;min-width:0}
+.lscard.main{background:linear-gradient(135deg,#d6f3df,#b4e6c4);color:#1f6b3d}
+.lscard .l{font-size:12px;font-weight:700;color:var(--muted)}
+.lscard.main .l,.lscard.main .s{color:#2e7d4a}
+.lscard .v{font-size:21px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lscard .v small{font-size:12px;font-weight:700;color:var(--muted)}
+.lscard .s{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px}
+.lscards:has(.lscard:nth-child(3):last-child){grid-template-columns:1.3fr 1fr 1fr}
+.lstbl tr.clk{cursor:pointer}
+.lstbl tr.clk:hover td{background:color-mix(in srgb,var(--brand) 8%,transparent)}
+.lstbl td.go{color:var(--muted);font-size:18px;font-weight:700;width:24px}
+.lstbl td.note{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.lsctl input.fld{flex:1 1 220px;max-width:360px}
+.detdlg{max-width:min(620px,calc(100% - 20px))}
+.dethead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.dethead h3{margin:0;flex:1;font-size:18px}
+.dethead button{width:36px;height:36px;min-height:0;padding:0}
+#detBody h4{margin:14px 0 6px;font-size:14px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;background:var(--soft);border-radius:12px;padding:10px 12px}
+.kv .k{color:var(--muted);font-weight:600}
+.kv .v{font-weight:600;font-variant-numeric:tabular-nums;word-break:break-word}
+.kv .v.b{font-weight:800;color:var(--btn-ink);font-size:15.5px}
+.detimg{margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.detimg img{display:block;width:100%;height:auto}
+.detbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
+.detbtns button{min-height:38px;font-size:13.5px}
+.detbtns .danger{color:var(--warn)}
 /* dialogs */
 dialog{border:0;border-radius:20px;padding:0;max-height:calc(100dvh - 24px);overflow:auto;max-width:min(520px,calc(100% - 24px));width:100%;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.3)}
-dialog::backdrop{background:rgba(10,30,45,.45)}
+dialog::backdrop{background:rgba(12,35,20,.45)}
 .dlg{padding:18px}
 .dlg h3{margin:0 0 6px;font-size:17px}
 .dlg p{margin:0 0 12px;font-size:13.5px;color:var(--muted)}
@@ -303,6 +332,10 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
 #zoomDlg .dlg{padding:8px}
 
 @media (max-width:640px){
+  .lscards,.lscards:has(.lscard:nth-child(3):last-child){grid-template-columns:repeat(2,1fr)}
+  .lscard.main{grid-column:1 / -1}
+  .lscard .v{font-size:18px}
+  #lsSeg button{padding:4px 8px;font-size:12.5px}
   .actions{grid-template-columns:repeat(3,1fr)}
   .actions.a4{grid-template-columns:repeat(4,1fr)}
   .tabs button{font-size:13px;min-height:40px;gap:4px}
@@ -452,7 +485,7 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
       <div class="tbar">
         <h2 style="margin:0">Lịch sử</h2>
         <span class="sp"></span>
-        <div class="seg" id="lsSeg"><button type="button" data-m="day" class="on">Theo ngày</button><button type="button" data-m="cus">Theo khách hàng</button></div>
+        <div class="seg" id="lsSeg"><button type="button" data-m="day" class="on">Theo ngày</button><button type="button" data-m="cus">Theo khách hàng</button><button type="button" data-m="mau">Theo mẫu</button></div>
         <button type="button" class="ghost small" id="lsRefresh" title="Tải lại từ Google Drive">⟳</button>
       </div>
       <div class="lsctl" id="lsCtl"></div>
@@ -504,6 +537,11 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
   </form>
 </dialog>
 
+<dialog id="detDlg" class="detdlg"><div class="dlg">
+  <div class="dethead"><h3 id="detTitle"></h3><button type="button" class="ghost small" id="detClose" aria-label="Đóng">✕</button></div>
+  <div id="detBody"></div>
+  <div class="detbtns" id="detBtns"></div>
+</div></dialog>
 <dialog id="zoomDlg"><form method="dialog" class="dlg"><img id="zoomImg" alt=""><div class="row2"><button class="ghost" value="close">Đóng</button></div></form></dialog>
 
 <script>
@@ -853,9 +891,9 @@ async function makeCanvas(mono = false){
   if (logo){ g.save(); roundRect(g, gx, 20, 54, 54, 13); g.clip(); if (mono) g.filter = 'grayscale(1)'; g.drawImage(logo, gx, 20, 54, 54); g.restore(); }
   const dates = groups().map(x => x.date).filter(Boolean);
   const range = dates.length ? (dates.length > 1 ? `${dates[0]} – ${dates[dates.length - 1]}` : dates[0]) : '';
-  g.fillStyle = T('#1b5f8c'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
+  g.fillStyle = T('#1f6b3d'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
   g.fillText(TITLE, tx, 37);
-  g.fillStyle = T('#5a7d93'); g.font = `600 15.5px ${SANS}`;
+  g.fillStyle = T('#5b7d64'); g.font = `600 15.5px ${SANS}`;
   g.textAlign = 'center'; g.fillText([range ? 'Ngày ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
   // bảng
   const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
@@ -866,8 +904,8 @@ async function makeCanvas(mono = false){
   const txt = (t, x, yy, align = 'center', w = 400, sz = FS, color = '#000') => { g.font = `${w} ${sz}px ${SERIF}`; g.fillStyle = color; g.textAlign = align; g.fillText(t, x, yy); };
   const cellX = (k, align) => align === 'right' ? xs[k + 1] - PADX : align === 'left' ? xs[k] + PADX : (xs[k] + xs[k + 1]) / 2;
   // header
-  nxFill(y, H_HEAD, F('#dceffb'));
-  cols.forEach(([f, t], k) => txt(t, cellX(k), y + H_HEAD / 2 + 1, 'center', isNX(f) ? 700 : 400, FS, T(isNX(f) ? '#0f4c75' : '#000')));
+  nxFill(y, H_HEAD, F('#dcf2e3'));
+  cols.forEach(([f, t], k) => txt(t, cellX(k), y + H_HEAD / 2 + 1, 'center', isNX(f) ? 700 : 400, FS, T(isNX(f) ? '#1f5e37' : '#000')));
   line(X0, y, XE, y); xs.forEach(x => line(x, y, x, y + H_HEAD));
   y += H_HEAD; brk.push(y);
   gs.forEach(gr => {
@@ -880,12 +918,12 @@ async function makeCanvas(mono = false){
     gr.rows.forEach((r, i) => {
       const note = noteOf.get(r) || [], h = rowH(r), pfH = valH(r);
       line(X0, y, XE, y);
-      nxFill(y + 0.8, pfH - 1.6, F('#eef7fd'));
+      nxFill(y + 0.8, pfH - 1.6, F('#eef8f1'));
       cols.forEach(([f], k) => {
         const ls = cellText(r, f, i);
         const al = f === 'thuc' ? 'right' : 'center';
         const cy = y + (isNX(f) ? pfH : h) / 2 + 1;
-        if (isNX(f) && !ls[0]){ txt('–', cellX(k), cy, 'center', 400, FS, T('#9ab')); return; }
+        if (isNX(f) && !ls[0]){ txt('–', cellX(k), cy, 'center', 400, FS, T('#9b9')); return; }
         ls.forEach((l, j) => txt(l, cellX(k, al), cy + (j - (ls.length - 1) / 2) * LH, al));
       });
       xs.forEach((x, k) => line(x, y, x, y + (note.length && k > iP0 && k <= iP1 ? pfH : h)));
@@ -899,21 +937,21 @@ async function makeCanvas(mono = false){
     // tổng ngày
     const a = agg(gr.rows);
     line(X0, y, XE, y);
-    nxFill(y + 0.8, H_TOT - 1.6, F('#dceffb'));
+    nxFill(y + 0.8, H_TOT - 1.6, F('#dcf2e3'));
     txt('Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
     txt(fmtKg(a.tl), cellX(iThuc, 'right'), y + H_TOT / 2 + 1, 'right', 700);
-    cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(a[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#0f4c75')); });
+    cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(a[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#1f5e37')); });
     line(X0, y, X0, y + H_TOT); line(XE, y, XE, y + H_TOT);
     cols.forEach(([f], k) => { if (isNX(f)){ line(xs[k], y, xs[k], y + H_TOT); } });
     y += H_TOT; brk.push(y);
   });
   if (gs.length > 1){
     line(X0, y, XE, y);
-    g.fillStyle = F('#d7eefc'); g.fillRect(X0, y, XE - X0, H_GRAND);
-    nxFill(y, H_GRAND, F('#c2e2f7'));
+    g.fillStyle = F('#d6f3df'); g.fillRect(X0, y, XE - X0, H_GRAND);
+    nxFill(y, H_GRAND, F('#bfe6cb'));
     txt('TỔNG CỘNG TẤT CẢ :', xs[iThuc] - 30, y + H_GRAND / 2 + 1, 'right', 800);
     txt(fmtKg(A.tl), cellX(iThuc, 'right'), y + H_GRAND / 2 + 1, 'right', 800, FS + 1);
-    cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(A[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#0f4c75')); });
+    cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(A[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#1f5e37')); });
     line(X0, y, X0, y + H_GRAND); line(XE, y, XE, y + H_GRAND);
     cols.forEach(([f], k) => { if (isNX(f)) line(xs[k], y, xs[k], y + H_GRAND); });
     y += H_GRAND; brk.push(y);
@@ -921,15 +959,15 @@ async function makeCanvas(mono = false){
   line(X0, y, XE, y);
   // ô tổng kết
   y += 20;
-  const boxes = [['Tổng khối lượng', fmtKg(A.tl) + ' kg', '#d7eefc', '#164a6e'], ['TB Xanh', fmtPct(A.x) + ' %', '#eef7fd', '#0f4c75'], ['TB Nổi', fmtPct(A.n) + ' %', '#eef7fd', '#0f4c75'], ['TB Chín', fmtPct(A.c) + ' %', '#eef7fd', '#0f4c75']];
+  const boxes = [['Tổng khối lượng', fmtKg(A.tl) + ' kg', '#d6f3df', '#1f6b3d'], ['TB Xanh', fmtPct(A.x) + ' %', '#eef8f1', '#1f5e37'], ['TB Nổi', fmtPct(A.n) + ' %', '#eef8f1', '#1f5e37'], ['TB Chín', fmtPct(A.c) + ' %', '#eef8f1', '#1f5e37']];
   const gap = 12, bw = (XE - X0 - gap * (boxes.length - 1)) / boxes.length;
   boxes.forEach(([l, v, bg, fg], k) => {
     const bx = X0 + k * (bw + gap);
     g.fillStyle = F(bg); roundRect(g, bx, y, bw, 70, 14); g.fill(); if (mono){ g.lineWidth = 1.4; g.strokeStyle = '#000'; g.stroke(); }
-    g.textAlign = 'left'; g.fillStyle = T('#4c7590'); g.font = `700 14.5px ${SANS}`; g.fillText(l, bx + 16, y + 22);
+    g.textAlign = 'left'; g.fillStyle = T('#4f7a5c'); g.font = `700 14.5px ${SANS}`; g.fillText(l, bx + 16, y + 22);
     g.fillStyle = T(fg); g.font = `800 ${bw < 170 ? 20 : bw < 220 ? 23 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
   });
-  g.textAlign = 'left'; g.fillStyle = T('#7b98aa'); g.font = `500 12.5px ${SANS}`;
+  g.textAlign = 'left'; g.fillStyle = T('#7c9a84'); g.font = `500 12.5px ${SANS}`;
   g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
   cv.hdr = { cols: cols.map(c => c[0]), xs: xs.slice(), top: TOP, h: H_HEAD, W: Wc, H: Hc };
   cv.breaks = brk; cv.head = [TOP, TOP + H_HEAD]; cv.cssW = Wc; cv.cssH = Hc; cv.S = S;   // ranh giới dòng + dòng tiêu đề để chia trang A4
@@ -2451,7 +2489,7 @@ var APP = (() => {
   function drawTH(t, mono){
     const { res, row, name } = t, S = 2, Wd = 560, P = 20;
     const C = mono ? { name: '#000', ink: '#000', soft: '#000', line: '#000', tagBg: '#fff', tagFg: '#000', boxBg: '#fff', boxFg: '#000', b: '#000', kl: '#fff' }
-                   : { name: '#1b5f8c', ink: '#1f3a4d', soft: '#5a7d93', line: '#8cc8ee', tagBg: '#e3f1fb', tagFg: '#1b5f8c', boxBg: '#d4ecfb', boxFg: '#164a6e', b: '#1b6fa6', kl: '#eef7fd' };
+                   : { name: '#1f6b3d', ink: '#24402d', soft: '#5b7d64', line: '#8fd6a5', tagBg: '#e3f6e9', tagFg: '#1f6b3d', boxBg: '#d6f3df', boxFg: '#1f6b3d', b: '#2e8b53', kl: '#eef8f1' };
     const SANS = '"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
     const m = mkCanvas(10, 10).getContext('2d');
     const segs = html => html.split(/(<b>.*?<\/b>)/).filter(Boolean).map(p => ({ t: p.replace(/<\/?b>/g, ''), b: /^<b>/.test(p) }));
@@ -2586,26 +2624,45 @@ var APP = (() => {
     $('#amTbl').innerHTML = h;
   }
 
-  /* ---------------- Lịch sử ---------------- */
-  let lsMode = LS.get('tbxn_lsmode', 'day'), lsDate = '', lsCus = '';
+  /* ---------------- Lịch sử: theo ngày / theo khách hàng / theo mẫu + xem chi tiết ---------------- */
+  let lsMode = LS.get('tbxn_lsmode', 'day'), lsDate = '', lsCus = '', lsQ = '', lsMauDate = '';
   const sampleOf = rid => DB.samples.find(s => rid && String(s.rid) === String(rid));
-  function lsTable(list, withDate){
-    let tl = 0, w = { x: 0, n: 0, c: 0 }, sw = { x: 0, n: 0, c: 0 }, thw = 0, ths = 0, done = 0;
-    const body = list.map((r, i) => {
-      const t = numv(r.thuc), s = sampleOf(r.rid);
+  const rowOf = rid => DB.rows.find(r => String(r.rid) === String(rid));
+  const kg = v => numv(v) != null ? fmtKg(numv(v)) : '';
+  function statsOf(list){
+    let tl = 0, thw = 0, ths = 0, done = 0; const w = { x: 0, n: 0, c: 0 }, sw = { x: 0, n: 0, c: 0 };
+    list.forEach(r => {
+      const t = numv(r.thuc), sp = sampleOf(r.rid);
       if (t != null){ tl += t; [['x', 'xanh'], ['n', 'noi'], ['c', 'chin']].forEach(([k, f]) => { const v = numv(r[f]); if (v != null){ w[k] += t * v; sw[k] += t; } }); }
-      if (s){ done++; if (t != null && s.thuhoi !== ''){ thw += t * +s.thuhoi; ths += t; } }
-      return `<tr>${withDate ? `<td>${esc(r.date || '')}</td>` : `<td>${i + 1}</td>`}<td>${esc(r.gio || '')}</td><td>${esc(r.soxe || '')}</td>${withDate ? '' : `<td class="l">${esc(r.khach || '')}</td>`}
-        <td class="r">${t != null ? fmtKg(t) : ''}</td><td>${fmtPct(numv(r.xanh))}</td><td>${fmtPct(numv(r.noi))}</td><td>${fmtPct(numv(r.chin))}</td>
-        <td>${s ? `<span class="thv">${f2(+s.thuhoi)}</span>` : '<span class="pend">chưa làm</span>'}</td>
-        <td class="l">${esc(r.ghichu || '')}</td>
-        <td>${s ? `<button type="button" class="del" data-delsample="${esc(s.id)}" title="Xoá mẫu thu hồi để làm lại">✕</button>` : ''}</td></tr>`;
-    }).join('');
+      if (sp){ done++; if (t != null && sp.thuhoi !== ''){ thw += t * +sp.thuhoi; ths += t; } }
+    });
     const av = k => sw[k] ? w[k] / sw[k] : null;
-    const cols = withDate ? 2 : 3;
+    return { n: list.length, tl, x: av('x'), nn: av('n'), c: av('c'), done, th: ths ? thw / ths : null };
+  }
+  const cards = items => `<div class="lscards">${items.map(([l, v, sub, main]) => `<div class="lscard${main ? ' main' : ''}"><div class="l">${l}</div><div class="v">${v}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`).join('')}</div>`;
+  const statCards = st => cards([
+    ['Tổng khối lượng', `${fmtKg(st.tl) || 0}<small> kg</small>`, `${st.n} xe`, true],
+    ['TB Xanh', `${fmtPct(st.x)}<small> %</small>`], ['TB Nổi', `${fmtPct(st.nn)}<small> %</small>`], ['TB Chín', `${fmtPct(st.c)}<small> %</small>`],
+    ['TB thu hồi', st.th != null ? `${f2(st.th)}<small> kg</small>` : '–', `${st.done}/${st.n} xe đã làm`]
+  ]);
+  function lsTable(list, withDate){
+    const st = statsOf(list);
+    const body = list.map((r, i) => {
+      const t = numv(r.thuc), sp = sampleOf(r.rid);
+      return `<tr class="clk" data-rid="${esc(r.rid)}" title="Bấm để xem chi tiết">${withDate ? `<td>${esc(r.date || '')}</td>` : `<td>${i + 1}</td>`}<td>${esc(r.gio || '')}</td><td>${esc(r.soxe || '')}</td>${withDate ? '' : `<td class="l">${esc(r.khach || '')}</td>`}
+        <td class="r">${t != null ? fmtKg(t) : ''}</td><td>${fmtPct(numv(r.xanh))}</td><td>${fmtPct(numv(r.noi))}</td><td>${fmtPct(numv(r.chin))}</td>
+        <td>${sp ? `<span class="thv">${f2(+sp.thuhoi)}</span>` : '<span class="pend">chưa làm</span>'}</td><td class="l note">${esc(r.ghichu || '')}</td><td class="go">›</td></tr>`;
+    }).join('');
+    const cols = withDate ? 3 : 4;
     return `<div class="lstbl"><table><thead><tr>${withDate ? '<th>Ngày cân</th>' : '<th>#</th>'}<th>Giờ</th><th>Số xe</th>${withDate ? '' : '<th>Khách hàng</th>'}<th>TL thực</th><th>Xanh</th><th>Nổi</th><th>Chín</th><th>Thu hồi (kg)</th><th>Ghi chú</th><th></th></tr></thead>
-      <tbody>${body}<tr class="tot"><td colspan="${cols + (withDate ? 0 : 1)}" class="r">Tổng ${list.length} xe :</td><td class="r">${fmtKg(tl)}</td><td>${fmtPct(av('x'))}</td><td>${fmtPct(av('n'))}</td><td>${fmtPct(av('c'))}</td>
-      <td>${ths ? f2(thw / ths) : '–'}</td><td class="l">${done}/${list.length} đã làm thu hồi</td><td></td></tr></tbody></table></div>`;
+      <tbody>${body}<tr class="tot"><td colspan="${cols}" class="r">Tổng ${list.length} xe :</td><td class="r">${fmtKg(st.tl)}</td><td>${fmtPct(st.x)}</td><td>${fmtPct(st.nn)}</td><td>${fmtPct(st.c)}</td>
+      <td>${st.th != null ? f2(st.th) : '–'}</td><td class="l">${st.done}/${list.length} đã làm</td><td></td></tr></tbody></table></div>`;
+  }
+  function sampleTable(list){
+    return `<div class="lstbl"><table><thead><tr><th>Ngày cân</th><th>Khách hàng</th><th>Số xe</th><th>Loại mẫu</th><th>KL (g)</th><th>KL quả (g)</th><th>Độ ẩm</th><th>KL cà tươi</th><th>Thu hồi (kg)</th><th>Lưu lúc</th><th></th></tr></thead><tbody>${
+      list.map(sp => `<tr class="clk" data-sid="${esc(sp.id)}" title="Bấm để xem phiếu thu hồi"><td>${esc(sp.date || '')}</td><td class="l">${esc(sp.khach || '')}</td><td>${esc(sp.soxe || '')}</td><td>${esc(sp.mau || '')}</td>
+        <td class="r">${esc(String(sp.kl ?? ''))}</td><td class="r">${esc(String(sp.klq ?? ''))}</td><td>${sp.am !== '' && sp.am != null ? degree(+sp.am) : ''}</td><td class="r">${kg(sp.klTuoi)}</td>
+        <td><span class="thv">${f2(+sp.thuhoi)}</span></td><td>${esc(sp.savedAt || '')}</td><td class="go">›</td></tr>`).join('')}</tbody></table></div>`;
   }
   function renderLS(){
     document.querySelectorAll('#lsSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === lsMode));
@@ -2619,34 +2676,117 @@ var APP = (() => {
       ctl.innerHTML = `<select class="fld sel" id="lsDate">${allDates.map(d => { const n = DB.rows.filter(r => (r.date || '') === d).length; return `<option value="${esc(d)}"${d === lsDate ? ' selected' : ''}>Ngày cân ${esc(d || '(không rõ)')}${n ? ` · ${n} xe` : ''}</option>`; }).join('')}</select>`;
       const dayRows = DB.rows.filter(r => (r.date || '') === lsDate);
       const lots = [...new Set(dayRows.map(r => r.batch))];
-      let h = lots.map(b => {
+      let h = dayRows.length ? statCards(statsOf(dayRows)) : '';
+      h += lots.map(b => {
         const lr = dayRows.filter(r => r.batch === b), all = DB.rows.filter(r => r.batch === b);
         return `<div class="lot"><div class="lothead"><span>Lô lưu lúc <b>${esc(lr[0].savedAt || '')}</b>${all.length !== lr.length ? ` · lô có ${all.length} xe (nhiều ngày)` : ''}</span><span class="sp"></span>
           <button type="button" class="ghost small" data-openlot="${esc(b)}">↩ Mở lại lô này</button></div>${lsTable(lr, false)}</div>`;
       }).join('');
       const free = DB.samples.filter(s => !s.rid && (s.date || '') === lsDate);
-      if (free.length) h += `<div class="lot"><div class="lothead">Mẫu thu hồi ngoài danh sách</div><div class="lstbl"><table><thead><tr><th>Tên mẫu</th><th>Loại mẫu</th><th>KL</th><th>KL quả</th><th>Độ ẩm</th><th>Thu hồi (kg)</th><th>Lưu lúc</th><th></th></tr></thead><tbody>${
-        free.map(s => `<tr><td class="l">${esc(s.khach || '')}</td><td>${esc(s.mau || '')}</td><td>${esc(String(s.kl))}</td><td>${esc(String(s.klq))}</td><td>${s.am !== '' ? degree(+s.am) : ''}</td><td class="thv">${f2(+s.thuhoi)}</td><td>${esc(s.savedAt || '')}</td><td><button type="button" class="del" data-delsample="${esc(s.id)}" title="Xoá mẫu">✕</button></td></tr>`).join('')}</tbody></table></div></div>`;
+      if (free.length) h += `<div class="lot"><div class="lothead">Mẫu thu hồi ngoài danh sách</div>${sampleTable(free)}</div>`;
       body.innerHTML = h || '<div class="lsempty">Không có dữ liệu ngày này.</div>';
-    } else {
+    } else if (lsMode === 'cus'){
       const names = [...new Set([...DB.rows.map(r => (r.khach || '').trim()), ...DB.samples.map(s => (s.khach || '').trim())].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
-      if (!lsCus || !names.some(n => norm(n) === norm(lsCus))) lsCus = lsCus && names.find(n => norm(n).includes(norm(lsCus))) || names[0] || '';
+      if (!lsCus || !names.some(n => norm(n) === norm(lsCus))) lsCus = names[0] || '';
       ctl.innerHTML = `<select class="fld sel" id="lsCus">${names.map(n => `<option${norm(n) === norm(lsCus) ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select><span class="lsnote">${names.length} khách hàng</span>`;
       const list = DB.rows.filter(r => norm(r.khach) === norm(lsCus)).sort((a, b) => dateKey(b.date) - dateKey(a.date) || String(b.gio).localeCompare(String(a.gio)));
       const free = DB.samples.filter(s => !s.rid && norm(s.khach) === norm(lsCus));
-      body.innerHTML = (list.length ? lsTable(list, true) : '') +
-        (free.length ? `<div class="lsnote">Mẫu ngoài danh sách: ${free.map(s => `${esc(s.date || '')} → <b>${f2(+s.thuhoi)} kg</b>`).join(' · ')}</div>` : '') ||
-        '<div class="lsempty">Không có dữ liệu.</div>';
+      const st = statsOf(list), days = new Set(list.map(r => r.date)).size;
+      body.innerHTML = (list.length ? statCards(st).replace(`${st.n} xe</div>`, `${st.n} xe · ${days} ngày</div>`) + lsTable(list, true) : '') +
+        (free.length ? `<div class="lot"><div class="lothead">Mẫu thu hồi ngoài danh sách</div>${sampleTable(free)}</div>` : '') || '<div class="lsempty">Không có dữ liệu.</div>';
+    } else {
+      // theo mẫu thu hồi
+      const mDates = [...new Set(DB.samples.map(s => s.date || ''))].sort((a, b) => dateKey(b) - dateKey(a));
+      if (lsMauDate && !mDates.includes(lsMauDate)) lsMauDate = '';
+      ctl.innerHTML = `<input class="fld" id="lsQ" type="search" placeholder="🔍 Tìm khách hàng / số xe" value="${esc(lsQ)}" autocomplete="off">
+        <select class="fld sel" id="lsMauDate"><option value="">Tất cả ngày</option>${mDates.map(d => `<option value="${esc(d)}"${d === lsMauDate ? ' selected' : ''}>Ngày cân ${esc(d || '(không rõ)')}</option>`).join('')}</select>`;
+      const q = norm(lsQ.trim());
+      const list = DB.samples.filter(sp => (!lsMauDate || (sp.date || '') === lsMauDate) && (!q || norm(sp.khach).includes(q) || norm(sp.soxe).includes(q)))
+        .sort((a, b) => dateKey(b.date) - dateKey(a.date) || String(b.savedAt).localeCompare(String(a.savedAt)));
+      let wt = 0, ws = 0, sum = 0; list.forEach(sp => { sum += +sp.thuhoi || 0; const t = numv(sp.klTuoi); if (t){ wt += t * +sp.thuhoi; ws += t; } });
+      const nr = list.filter(sp => sp.mau === 'Mẫu riêng').length;
+      body.innerHTML = list.length ? cards([
+        ['Số mẫu', `${list.length}`, `${nr} mẫu riêng · ${list.length - nr} mẫu chung`, true],
+        ['TB thu hồi', `${f2(sum / list.length)}<small> kg</small>`, 'trung bình cộng'],
+        ['TB theo KL cà tươi', ws ? `${f2(wt / ws)}<small> kg</small>` : '–', ws ? `trên ${fmtKg(ws)} kg tươi` : '']
+      ]) + sampleTable(list) : '<div class="lsempty">Không có mẫu thu hồi nào' + (q || lsMauDate ? ' khớp điều kiện lọc' : '') + '.</div>';
     }
   }
   document.querySelectorAll('#lsSeg button').forEach(b => b.addEventListener('click', () => { lsMode = b.dataset.m; LS.set('tbxn_lsmode', lsMode); renderLS(); }));
-  $('#lsCtl').addEventListener('change', e => { if (e.target.id === 'lsDate') lsDate = e.target.value; if (e.target.id === 'lsCus') lsCus = e.target.value; renderLS(); });
+  $('#lsCtl').addEventListener('change', e => {
+    if (e.target.id === 'lsDate') lsDate = e.target.value; else if (e.target.id === 'lsCus') lsCus = e.target.value; else if (e.target.id === 'lsMauDate') lsMauDate = e.target.value; else return;
+    renderLS();
+  });
+  $('#lsCtl').addEventListener('input', e => {
+    if (e.target.id !== 'lsQ') return;
+    lsQ = e.target.value; const pos = e.target.selectionStart; renderLS();
+    const el = $('#lsQ'); el.focus(); try { el.setSelectionRange(pos, pos); } catch(x){}
+  });
   $('#lsRefresh').addEventListener('click', async () => { if (!gasUrl()){ toast('Chưa cài Google Drive (⚙️)'); return; } toast('Đang tải từ Google Drive…'); await pull(true); toast(lastErr ? '⚠️ ' + lastErr : '✅ Đã cập nhật'); });
   $('#lsBody').addEventListener('click', e => {
-    const d = e.target.closest('[data-delsample]');
-    if (d){ const s = DB.samples.find(x => String(x.id) === d.dataset.delsample); if (s && confirm(`Xoá mẫu thu hồi “${s.khach}” (${f2(+s.thuhoi)} kg)? Xe này sẽ quay lại danh sách chưa làm.`)) enqueue({ action: 'deleteSample', id: String(s.id) }); return; }
-    const o = e.target.closest('[data-openlot]');
-    if (o) openLot(o.dataset.openlot);
+    const o = e.target.closest('[data-openlot]'); if (o){ openLot(o.dataset.openlot); return; }
+    const tr = e.target.closest('tr[data-rid], tr[data-sid]'); if (!tr) return;
+    if (tr.dataset.rid) openDetail({ rid: tr.dataset.rid }); else openDetail({ sid: tr.dataset.sid });
+  });
+
+  // Cửa sổ chi tiết 1 xe / 1 mẫu: thông tin cân + phiếu thu hồi
+  let detSample = null, detTH = null;
+  const kv = items => `<div class="kv">${items.filter(x => x[1] !== '' && x[1] != null).map(([k, v, b]) => `<div class="k">${k}</div><div class="v${b ? ' b' : ''}">${v}</div>`).join('')}</div>`;
+  function computeWith(mau, kl, klq, am){ const old = MAU; MAU = mau; try { return compute('', kl, klq, am); } finally { MAU = old; } }
+  async function openDetail({ rid, sid }){
+    const sp = sid ? DB.samples.find(x => String(x.id) === String(sid)) : sampleOf(rid);
+    const r = rid ? rowOf(rid) : (sp && sp.rid ? rowOf(sp.rid) : null);
+    detSample = sp || null; detTH = null; $('#detDlg').dataset.rid = r ? String(r.rid) : '';
+    $('#detTitle').textContent = (r && r.khach) || (sp && sp.khach) || 'Chi tiết';
+    let h = '';
+    if (r){
+      h += `<h4>🌱 Thông tin cân</h4>` + kv([
+        ['Ngày cân', esc(r.date || '')], ['Giờ cân', esc(r.gio || '')], ['Số xe', esc(r.soxe || '')], ['Hàng hóa', esc(r.hang || '')],
+        ['TL Lần 1', kg(r.tl1)], ['TL Lần 2', kg(r.tl2)], ['TL Hàng', kg(r.tlh)], ['TL Bì', kg(r.bi)],
+        ['TL thực', kg(r.thuc) ? kg(r.thuc) + ' kg' : '', true],
+        ['Xanh / Nổi / Chín', `${fmtPct(numv(r.xanh))} / ${fmtPct(numv(r.noi))} / ${fmtPct(numv(r.chin))} %`],
+        ['Ghi chú', esc(r.ghichu || '')], ['Lô lưu lúc', esc(r.savedAt || '')]
+      ]);
+    }
+    h += `<h4>⚖️ Thu hồi</h4>`;
+    if (sp){
+      h += kv([['Loại mẫu', esc(sp.mau || '')], ['KL', sp.kl !== '' ? esc(String(sp.kl)) + ' g' : ''], ['KL quả', sp.klq !== '' ? esc(String(sp.klq)) + ' g' : ''],
+        ['Độ ẩm', sp.am !== '' && sp.am != null ? degree(+sp.am) : ''], ['Thu hồi', f2(+sp.thuhoi) + ' kg', true], ['Lưu lúc', esc(sp.savedAt || '')]]) +
+        `<div class="detimg"><img id="detImg" alt="Phiếu thu hồi"></div>`;
+    } else h += `<div class="lsempty" style="padding:12px">Xe này chưa làm thu hồi.</div>`;
+    $('#detBody').innerHTML = h;
+    $('#detBtns').innerHTML = sp
+      ? `<button type="button" class="ghost" data-d="copy">📋 Sao chép phiếu</button><button type="button" class="ghost" data-d="share">📤 Chia sẻ</button><button type="button" class="ghost danger" data-d="del">🗑 Làm lại mẫu</button>`
+      : (r ? `<button type="button" class="primary" data-d="do">⚖️ Làm thu hồi xe này</button>` : '');
+    $('#detDlg').showModal();
+    if (sp){
+      const kl = +sp.kl, klq = +sp.klq || 0, am = +sp.am;
+      const res = kl > 0 && am > 0 ? computeWith(sp.mau === 'Mẫu chung' ? 10000 : 2000, kl, klq, am) : null;
+      if (res && !res.error){
+        detTH = { res, row: r || (sp.soxe || sp.date ? { soxe: sp.soxe, date: sp.date, thuc: sp.klTuoi } : null), name: sp.khach, mau: sp.mau === 'Mẫu chung' ? 10000 : 2000 };
+        const cv = drawTH(detTH, false); $('#detImg').src = cv.toDataURL('image/png');
+      } else $('#detImg').closest('.detimg').remove();
+    }
+  }
+  $('#detClose').addEventListener('click', () => $('#detDlg').close());
+  $('#detDlg').addEventListener('click', e => { if (e.target === $('#detDlg')) $('#detDlg').close(); });
+  $('#detBtns').addEventListener('click', async e => {
+    const b = e.target.closest('[data-d]'); if (!b) return;
+    const sp = detSample;
+    if (b.dataset.d === 'do'){
+      const rid = $('#detDlg').dataset.rid; $('#detDlg').close(); showTab('th');
+      $('#thSel').value = rid; selChanged(false); setTimeout(() => $('#thKl').focus(), 200); return;
+    }
+    if (b.dataset.d === 'del'){
+      if (sp && confirm(`Xoá mẫu thu hồi “${sp.khach}” (${f2(+sp.thuhoi)} kg)? Xe này sẽ quay lại danh sách chưa làm.`)){ enqueue({ action: 'deleteSample', id: String(sp.id) }); $('#detDlg').close(); }
+      return;
+    }
+    if (!detTH) return;
+    const blobP = new Promise(r => drawTH(detTH, true).toBlob(r, 'image/png')), name = `thu-hoi_${(sp.khach || 'mau').replace(/[^\p{L}\p{N}]+/gu, '_')}.png`;
+    try {
+      if (b.dataset.d === 'copy'){ await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobP })]); toast('✅ Đã sao chép phiếu thu hồi'); }
+      else { const f = new File([await blobP], name, { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: 'Kết quả thu hồi' }); else { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = name; document.body.appendChild(a); a.click(); a.remove(); } }
+    } catch(err){ if (err.name !== 'AbortError') toast('Không thực hiện được: ' + err.message); }
   });
   function openLot(id){
     const lr = DB.rows.filter(r => r.batch === id); if (!lr.length) return;
