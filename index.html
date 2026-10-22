@@ -179,7 +179,7 @@ button:disabled{opacity:.5;cursor:default}
   html,body{background:#fff !important;padding:0 !important}
   body > *:not(#printArea){display:none !important}
   #printArea{display:block !important}
-  #printArea img{display:block;height:auto;margin:0 auto;break-after:page;page-break-after:always}
+  #printArea img{display:block;width:auto;height:auto;max-height:96vh;margin:0 auto;break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always}
   #printArea img:last-child{break-after:auto;page-break-after:auto}
 }
 .actions button{flex-direction:column;gap:2px;min-height:0;padding:8px 2px;font-size:12px;font-weight:700;border-radius:12px;line-height:1.15}
@@ -830,14 +830,14 @@ $('#copyImg').addEventListener('click', async () => {
 });
 /* ---------- PDF: tự ghép, không cần thư viện. Ảnh phiếu (JPEG) đặt vào khổ A4, chia trang tại ranh giới dòng ---------- */
 // Chia phiếu thành các trang A4 (giống khi in): cắt tại ranh giới dòng, trang sau lặp lại dòng tiêu đề bảng
-async function sheetPages(mono = false){
+async function sheetPages(mono = false, fit = 1){
   clearTimeout(expTimer);
   const cv = await makeCanvas(mono);
   const W = cv.cssW, H = cv.cssH, S = cv.S;
   const land = W > 1100;                                   // phiếu nhiều cột: khổ ngang
   const PW = land ? 841.89 : 595.28, PH = land ? 595.28 : 841.89, MG = 22;   // A4 (pt), lề ~8mm
   const k = Math.min((PW - MG * 2) / W, 1.2);               // pt trên mỗi px
-  const maxH = (PH - MG * 2) / k;
+  const maxH = (PH - MG * 2) / k * fit;          // fit < 1: chừa chỗ cho giấy Letter / đầu-chân trang khi in
   const [h0, h1] = cv.head, hh = h1 - h0;
   const br = [...new Set([...cv.breaks, H])].sort((a, b) => a - b);
   const slices = [];
@@ -848,11 +848,13 @@ async function sheetPages(mono = false){
   }
   const pages = slices.map(([a, b], i) => {
     const head = i > 0 && a >= h1 ? hh : 0, ph = b - a + head;
-    const c = mkCanvas(W * S, ph * S), g = c.getContext('2d');
+    // lấy dư 1px mỗi đầu để đường kẻ tại chỗ cắt hiện đủ nét ở cả hai trang
+    const a2 = Math.max(0, a - 1), b2 = Math.min(H, b + 1), ph2 = b2 - a2 + head;
+    const c = mkCanvas(W * S, ph2 * S), g = c.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-    if (head) g.drawImage(cv, 0, h0 * S, W * S, hh * S, 0, 0, W * S, hh * S);
-    g.drawImage(cv, 0, a * S, W * S, (b - a) * S, 0, head * S, W * S, (b - a) * S);
-    return { canvas: c, dw: W * k, dh: ph * k };
+    if (head) g.drawImage(cv, 0, (h0 - 1) * S, W * S, (hh + 1) * S, 0, 0, W * S, (hh + 1) * S);
+    g.drawImage(cv, 0, a2 * S, W * S, (b2 - a2) * S, 0, head * S, W * S, (b2 - a2) * S);
+    return { canvas: c, dw: W * k, dh: ph2 * k };
   });
   return { cv, pages, land, PW, PH, MG };
 }
@@ -926,12 +928,12 @@ function summaryText(){
 // In phiếu: trắng đen, chia trang A4 giống hệt file PDF
 $('#printBtn').addEventListener('click', async () => {
   try {
-    const sp = await sheetPages(true), area = $('#printArea');
+    const sp = await sheetPages(true, 0.9), area = $('#printArea');
     area.querySelectorAll('img').forEach(i => { if (i.src.startsWith('blob:')) URL.revokeObjectURL(i.src); });
     area.innerHTML = '';
     for (const p of sp.pages){
       const img = new Image(); img.alt = '';
-      img.style.width = (p.dw / (sp.PW - sp.MG * 2) * 100).toFixed(2) + '%';
+      img.style.maxWidth = (p.dw / (sp.PW - sp.MG * 2) * 100).toFixed(2) + '%';
       img.src = URL.createObjectURL(await new Promise(r => p.canvas.toBlob(r, 'image/png')));
       await img.decode().catch(() => {});
       area.appendChild(img);
