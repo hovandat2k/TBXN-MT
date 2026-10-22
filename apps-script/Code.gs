@@ -20,7 +20,7 @@
 const THU_MUC = 'Cà Tươi + Thu Hồi';
 const TEN_SHEET = 'Dữ liệu Cà Tươi + Thu Hồi';
 const HAN_DANG_NHAP_NGAY = 30;              // số ngày giữ đăng nhập trên mỗi máy
-const QUYEN_TOAN = 'Toàn quyền', QUYEN_TH = 'Thu hồi';
+const QUYEN_TOAN = 'Toàn quyền', QUYEN_TH = 'Thu hồi', QUYEN_XEM = 'Chỉ xem';
 
 const COT_TUOI = [
   ['batch', 'Mã lô'], ['rid', 'Mã xe'], ['date', 'Ngày cân'], ['gio', 'Giờ cân'], ['stt', 'STT'], ['soxe', 'Số xe'],
@@ -56,7 +56,7 @@ function xuLy(p) {
       switch (p.action) {
         case 'ping': return tra({ ok: true, user: u.user, name: u.name, role: role, folderUrl: role === QUYEN_TOAN ? thuMucGoc().getUrl() : '', sheetUrl: role === QUYEN_TOAN ? b.ss.getUrl() : '' });
         case 'list': return tra(danhSach(b, role));
-        case 'saveSample': return tra(luuMau(b, p, u));
+        case 'saveSample': if (role === QUYEN_XEM) return tra(khongDuQuyen()); return tra(luuMau(b, p, u));
         case 'saveBatch': if (role !== QUYEN_TOAN) return tra(khongDuQuyen()); return tra(luuLo(b, p, u));
         case 'deleteSample': if (role !== QUYEN_TOAN) return tra(khongDuQuyen()); return tra(xoaMau(b, p));
         default: return tra({ ok: false, error: 'Thao tác không hợp lệ: ' + p.action });
@@ -83,14 +83,14 @@ function taiKhoan(b) {
   return docBang(b.user, COT_USER).map(u => ({ user: String(u.user).trim(), pass: String(u.pass), role: String(u.role).trim(), name: String(u.name || '').trim(), lock: String(u.lock || '').trim() }))
     .filter(u => u.user);
 }
-function chuanQuyen(r) { const s = String(r || '').toLowerCase(); return /thu\s*h/.test(s) ? QUYEN_TH : /to[aà]n/.test(s) ? QUYEN_TOAN : ''; }
+function chuanQuyen(r) { const s = String(r || '').toLowerCase(); return /xem/.test(s) ? QUYEN_XEM : /thu\s*h/.test(s) ? QUYEN_TH : /to[aà]n/.test(s) ? QUYEN_TOAN : ''; }
 function dangNhap(b, p) {
   const name = String(p.user || '').trim().toLowerCase(), pass = String(p.pass || '');
   const u = taiKhoan(b).find(x => x.user.toLowerCase() === name);
   if (!u || u.pass !== pass) { Utilities.sleep(800); return { ok: false, error: 'Sai tên đăng nhập hoặc mật khẩu' }; }
   if (u.lock) return { ok: false, error: 'Tài khoản đang bị khoá' };
   const role = chuanQuyen(u.role);
-  if (!role) return { ok: false, error: 'Tài khoản chưa được cấp quyền (cột Quyền: "Toàn quyền" hoặc "Thu hồi")' };
+  if (!role) return { ok: false, error: 'Tài khoản chưa được cấp quyền (cột Quyền: "Toàn quyền", "Thu hồi" hoặc "Chỉ xem")' };
   const body = b64(Utilities.newBlob(JSON.stringify({ u: u.user, f: dauVanTay(u), e: Date.now() + HAN_DANG_NHAP_NGAY * 864e5 })).getBytes());
   return { ok: true, token: body + '.' + ky(body), user: u.user, name: u.name || u.user, role: role };
 }
@@ -126,7 +126,7 @@ function bangTinh() {
   const a = trang(ss, 'Cà tươi', COT_TUOI), b = trang(ss, 'Thu hồi', COT_THUHOI), u = trang(ss, 'User', COT_USER);
   if (u.getLastRow() < 2) {                                   // tài khoản đầu tiên
     u.getRange(2, 1, 1, COT_USER.length).setValues([['admin', 'doimatkhau', QUYEN_TOAN, 'Quản trị', '']]);
-    try { u.getRange(2, 3, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList([QUYEN_TOAN, QUYEN_TH], true).build()); } catch (e) {}
+    try { u.getRange(2, 3, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList([QUYEN_TOAN, QUYEN_TH, QUYEN_XEM], true).build()); } catch (e) {}
   }
   ss.getSheets().forEach(sh => { const n = sh.getName(); if (n !== 'Cà tươi' && n !== 'Thu hồi' && n !== 'User' && sh.getLastRow() === 0 && ss.getSheets().length > 3) ss.deleteSheet(sh); });
   return { ss: ss, tuoi: a, thuhoi: b, user: u };
@@ -215,10 +215,11 @@ function xoaMau(b, p) {
 function danhSach(b, role) {
   const rows = docBang(b.tuoi, COT_TUOI), samples = docBang(b.thuhoi, COT_THUHOI);
   if (role === QUYEN_TOAN) return { ok: true, rows: rows, samples: samples, folderUrl: thuMucGoc().getUrl(), sheetUrl: b.ss.getUrl() };
-  // tài khoản Thu hồi: chỉ cần biết các xe để chọn tên mẫu và xe nào đã làm
+  if (role === QUYEN_XEM) return { ok: true, rows: rows, samples: samples };   // chỉ xem: đủ dữ liệu để xem tổng hợp, không được ghi
+  // tài khoản Thu hồi: các xe để chọn tên mẫu + đầy đủ mẫu đã lưu để xem lại / sửa
   return {
     ok: true,
     rows: rows.map(r => ({ batch: r.batch, rid: r.rid, date: r.date, gio: r.gio, soxe: r.soxe, khach: r.khach, thuc: r.thuc })),
-    samples: samples.map(s => ({ id: s.id, rid: s.rid, date: s.date, khach: s.khach, thuhoi: s.thuhoi, savedBy: s.savedBy }))
+    samples: samples
   };
 }
