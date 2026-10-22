@@ -112,7 +112,7 @@ button:disabled{opacity:.5;cursor:default}
 .ghead input{width:130px;font-weight:800}
 .ghead .gsum{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600;text-align:right}
 .ghead .gsum b{color:var(--ink)}
-.rhead,.row{display:grid;grid-template-columns:30px minmax(0,1fr) 112px 70px 70px 70px 34px;gap:6px;align-items:start}
+.rhead,.row{display:grid;grid-template-columns:30px minmax(0,1.15fr) minmax(0,1fr) 108px 66px 66px 66px 34px;gap:6px;align-items:start}
 .rhead{font-size:12px;font-weight:700;color:var(--muted);padding:0 2px 4px}
 .rhead span:nth-child(n+3){text-align:center}
 .row{padding:4px 2px;border-bottom:1px solid var(--line)}
@@ -140,7 +140,7 @@ button:disabled{opacity:.5;cursor:default}
 
 /* full-column table */
 .full{overflow-x:auto;border:1px solid var(--line);border-radius:12px;-webkit-overflow-scrolling:touch}
-.full table{border-collapse:collapse;min-width:1150px;width:100%;font-size:13.5px}
+.full table{border-collapse:collapse;min-width:1330px;width:100%;font-size:13.5px}
 .full th{background:var(--soft);font-weight:700;font-size:12.5px;padding:7px 5px;white-space:nowrap;text-align:center;color:var(--muted)}
 .full td{padding:4px;border-top:1px solid var(--line);vertical-align:middle}
 .full td.gtd{background:color-mix(in srgb,var(--brand) 8%,transparent);font-weight:800;padding:7px 10px}
@@ -161,6 +161,12 @@ button:disabled{opacity:.5;cursor:default}
 
 /* ===== Export ===== */
 #prevWrap[hidden]{display:none}
+.sortbar{display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+.sortbar .sl{font-size:13px;font-weight:700;color:var(--muted)}
+.sortbar select.fld{width:auto;min-width:150px;padding:5px 30px 5px 10px;font-size:14px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+.sortbar .seg button:disabled{opacity:.45}
 .ptog{padding:0;min-height:0;gap:10px;background:none}
 .ptog .chev{font-size:12.5px;font-weight:700;color:var(--brand);background:var(--soft);border-radius:999px;padding:4px 10px;white-space:nowrap}
 #prevWrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff;max-height:70vh}
@@ -200,9 +206,9 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
   .card{padding:13px;border-radius:18px}
   h1{font-size:18px}
   .rhead{display:none}
-  .row{grid-template-columns:24px minmax(0,1.3fr) repeat(3,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh kh d" ". tl x no c .";row-gap:4px;padding:6px 0}
+  .row{grid-template-columns:24px minmax(0,1.3fr) repeat(3,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh kh d" ". gc gc gc gc ." ". tl x no c .";row-gap:4px;padding:6px 0}
   .row .n{grid-area:n;padding-top:8px}
-  .row .ckh{grid-area:kh}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .cc{grid-area:c}.row .del{grid-area:d;width:30px}
+  .row .ckh{grid-area:kh}.row .cgc{grid-area:gc}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .cc{grid-area:c}.row .del{grid-area:d;width:30px}
   .cl{display:block}
   .stats{grid-template-columns:1fr 1fr 1fr;gap:8px}
   .stat.main{grid-column:1 / -1}
@@ -276,6 +282,8 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
       <span class="sp"></span>
       <div class="seg" id="expSeg"><button type="button" data-e="full" class="on">Đầy đủ cột</button><button type="button" data-e="short">Rút gọn</button></div>
     </div>
+    <div class="sortbar"><span class="sl">Sắp xếp</span><select class="fld" id="sortKey" aria-label="Sắp xếp theo cột"></select>
+      <div class="seg" id="sortDir"><button type="button" data-d="asc" class="on">A → Z</button><button type="button" data-d="desc">Z → A</button></div></div>
     <div id="prevWrap" hidden><img id="prev" alt="Phiếu kết quả"></div>
     <div class="actions">
       <button type="button" class="primary" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
@@ -346,7 +354,7 @@ const fmtPctIn = n => n == null || isNaN(n) ? '' : String(Math.round(n * 100) / 
 /* =========================================================================
    Trạng thái
    ========================================================================= */
-const FIELDS = ['stt','soxe','hang','khach','tl1','tl2','tlh','bi','thuc','gio','xanh','noi','chin'];
+const FIELDS = ['stt','soxe','hang','khach','ghichu','tl1','tl2','tlh','bi','thuc','gio','xanh','noi','chin'];
 const PF = ['xanh','noi','chin'], isPF = f => PF.includes(f);
 const PF_LABEL = { xanh: 'Xanh', noi: 'Nổi', chin: 'Chín' };
 // Xanh + Nổi + Chín = 100%: nhập 2 trong 3, phần còn lại tự tính
@@ -362,6 +370,8 @@ const COLS_FULL = [
   ['stt','STT'],['soxe','Số xe'],['hang','Hàng hóa'],['khach','Khách hàng'],['tl1','TL Lần 1'],['tl2','TL Lần 2'],
   ['tlh','TL Hàng'],['bi','TL Bì'],['thuc','TL Thực'],['gio','Giờ cân'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']
 ];
+// bảng sửa “Tất cả cột” có thêm Ghi chú (trên phiếu, ghi chú nằm dưới ô Xanh/Nổi/Chín)
+const COLS_EDIT = COLS_FULL.flatMap(c => c[0] === 'khach' ? [c, ['ghichu','Ghi chú']] : [c]);
 const NUMF = new Set(['tl1','tl2','tlh','bi','thuc']);
 let rows = LS.get('tbxn_rows', []);
 let view = LS.get('tbxn_view', 'short');
@@ -416,13 +426,13 @@ function renderTable(){
   }
   const gs = groups();
   if (view === 'full'){
-    let h = `<div class="full"><table><thead><tr>${COLS_FULL.map(c => `<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>`;
+    let h = `<div class="full"><table><thead><tr>${COLS_EDIT.map(c => `<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>`;
     gs.forEach((g, gi) => {
-      h += `<tr><td class="gtd" colspan="${COLS_FULL.length + 1}">Ngày cân : <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" style="width:130px;display:inline-block;font-weight:800"></td></tr>`;
+      h += `<tr><td class="gtd" colspan="${COLS_EDIT.length + 1}">Ngày cân : <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" style="width:130px;display:inline-block;font-weight:800"></td></tr>`;
       g.rows.forEach(r => {
-        h += `<tr data-id="${r.id}">` + COLS_FULL.map(([f]) => {
+        h += `<tr data-id="${r.id}">` + COLS_EDIT.map(([f]) => {
           const cls = NUMF.has(f) ? 'num' : isPF(f) ? 'pct' : '';
-          const w = { stt: 46, soxe: 110, hang: 150, khach: 170, gio: 92, xanh: 62, noi: 62, chin: 62 }[f] || 88;
+          const w = { stt: 46, soxe: 110, hang: 150, khach: 170, ghichu: 170, gio: 92, xanh: 62, noi: 62, chin: 62 }[f] || 88;
           return `<td><input class="fld ${cls} ${r.flags[f] ? 'warn' : ''}" data-f="${f}" value="${esc(r[f] ?? '')}" style="width:${w}px" ${NUMF.has(f) || isPF(f) ? 'inputmode="decimal"' : ''}></td>`;
         }).join('') + `<td class="c"><button class="del" data-del="${r.id}" title="Xoá dòng" style="width:30px;height:32px;min-height:0;padding:0">✕</button></td></tr>`;
       });
@@ -432,7 +442,7 @@ function renderTable(){
     box.innerHTML = gs.map((g, gi) => `
       <div class="grp">
         <div class="ghead">📅 Ngày cân <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" placeholder="dd/mm/yyyy"><span class="gsum" data-gs="${gi}"></span></div>
-        <div class="rhead"><span>#</span><span>Khách hàng</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span>Chín %</span><span></span></div>
+        <div class="rhead"><span>#</span><span>Khách hàng</span><span>Ghi chú</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span>Chín %</span><span></span></div>
         ${g.rows.map((r, i) => rowHTML(r, i + 1)).join('')}
         <button type="button" class="addrow" data-add="${gi}">＋ Thêm dòng</button>
       </div>`).join('');
@@ -447,6 +457,7 @@ function rowHTML(r, n){
     <div class="n">${n}</div>
     <div class="ckh"><input class="fld ${r.flags.khach ? 'warn' : ''}" data-f="khach" value="${esc(r.khach)}" placeholder="Khách hàng">
       ${meta ? `<div class="meta">${esc(meta)}</div>` : ''}${hw}</div>
+    <div class="cgc"><input class="fld" data-f="ghichu" value="${esc(r.ghichu ?? '')}" placeholder="Ghi chú"></div>
     <div class="ctl"><span class="cl">TL thực (kg)</span><input class="fld num ${r.flags.thuc ? 'warn' : r.flags.thucOk ? 'okv' : ''}" data-f="thuc" value="${esc(r.thuc)}" inputmode="decimal" placeholder="0"
       title="${r.flags.thuc ? 'Không khớp TL Hàng − TL Bì, hãy kiểm tra' : r.flags.thucOk ? 'Đã khớp TL Hàng − TL Bì' : ''}"></div>
     <div class="cx"><span class="cl">Xanh %</span><input class="fld pct ${r.flags.xanh ? 'warn' : ''}" data-f="xanh" value="${esc(r.xanh ?? '')}" inputmode="decimal" placeholder="–"></div>
@@ -586,7 +597,7 @@ async function makeCanvas(mono = false){
   const F = c => mono ? '#fff' : c, T = c => mono ? '#000' : c;   // mono: bản in trắng đen
   try { if (document.fonts){ await Promise.race([Promise.all([document.fonts.load('800 22px "Be Vietnam Pro"'), document.fonts.load('600 15px "Be Vietnam Pro"')]), new Promise(r => setTimeout(r, 1500))]); } } catch(e){}
   const logo = await getLogo();
-  const cols = sheetCols(), gs = groups(), A = agg(rows);
+  const cols = sheetCols(), gs = sheetGroups(), A = agg(rows);
   const FS = 23, PADX = 14, LH = 26;
   const S = 2;                                   // độ phân giải x2
   const m = mkCanvas(10, 10).getContext('2d');
@@ -602,13 +613,27 @@ async function makeCanvas(mono = false){
   const iThuc = cols.findIndex(c => c[0] === 'thuc');
   const hasWrap = cols.some(c => c[0] === 'hang') && rows.some((r, i) => cellText(r, 'hang', i).length > 1);
   const H_HEAD = 58, H_DATE = 50, H_ROW = hasWrap ? 73 : 54, H_TOT = 48, H_GRAND = 56;
+  // Ghi chú: ô gộp ngay dưới Xanh/Nổi/Chín của dòng đó
+  const iP0 = cols.findIndex(c => isPF(c[0])), iP1 = cols.length - 1 - [...cols].reverse().findIndex(c => isPF(c[0]));
+  const NOTE_FS = 19, NOTE_LH = 23, TOP_H = 46;
+  const noteW = iP0 < 0 ? 0 : widths.slice(iP0, iP1 + 1).reduce((a, b) => a + b, 0) - PADX * 2;
+  const wrapNote = t => {
+    m.font = `italic 400 ${NOTE_FS}px ${SERIF}`;
+    const out = []; let cur = '';
+    String(t).split(/\s+/).filter(Boolean).forEach(wd => { const tt = cur ? cur + ' ' + wd : wd; if (m.measureText(tt).width <= noteW || !cur) cur = tt; else { out.push(cur); cur = wd; } });
+    if (cur) out.push(cur);
+    if (out.length > 3){ out.length = 3; out[2] = out[2].replace(/\s*\S*$/, '') + '…'; }
+    return out;
+  };
+  const noteOf = new Map(), rowH = r => { const n = noteOf.get(r); return n && n.length ? Math.max(H_ROW, TOP_H + n.length * NOTE_LH + 12) : H_ROW; };
+  rows.forEach(r => { const t = String(r.ghichu ?? '').trim(); noteOf.set(r, t && iP0 >= 0 ? wrapNote(t) : []); });
   // nhãn "Tổng cộng" cần đủ chỗ
   const labW = tw('TỔNG CỘNG TẤT CẢ :', 800, FS) + 40;
   let leftW = widths.slice(0, iThuc).reduce((a, b) => a + b, 0);
   if (leftW < labW){ const add = Math.ceil((labW - leftW) / Math.max(1, iThuc)); for (let k = 0; k < iThuc; k++) widths[k] += add; leftW = widths.slice(0, iThuc).reduce((a, b) => a + b, 0); }
   const tableW = widths.reduce((a, b) => a + b, 0);
   const M = 24, TOP = 92;
-  let tableH = H_HEAD + gs.reduce((a, g) => a + H_DATE + g.rows.length * H_ROW + H_TOT, 0) + (gs.length > 1 ? H_GRAND : 0);
+  let tableH = H_HEAD + gs.reduce((a, g) => a + H_DATE + g.rows.reduce((s2, r) => s2 + rowH(r), 0) + H_TOT, 0) + (gs.length > 1 ? H_GRAND : 0);
   const SUMH = 96;
   const Wc = Math.max(tableW + M * 2, 640), Hc = TOP + tableH + SUMH + 34;
   const cv = mkCanvas(Wc * S, Hc * S), g = cv.getContext('2d');
@@ -646,17 +671,23 @@ async function makeCanvas(mono = false){
     txt(`Ngày cân : ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
     y += H_DATE;
     gr.rows.forEach((r, i) => {
+      const note = noteOf.get(r) || [], h = rowH(r), pfH = note.length ? TOP_H : h;
       line(X0, y, XE, y);
-      nxFill(y + 0.8, H_ROW - 1.6, F('#eef7fd'));
+      nxFill(y + 0.8, pfH - 1.6, F('#eef7fd'));
       cols.forEach(([f], k) => {
         const ls = cellText(r, f, i);
         const al = f === 'thuc' ? 'right' : 'center';
-        const bad = (isNX(f) && !ls[0]);
-        if (bad){ txt('–', cellX(k), y + H_ROW / 2 + 1, 'center', 400, FS, T('#9ab')); return; }
-        ls.forEach((l, j) => txt(l, cellX(k, al), y + H_ROW / 2 + 1 + (j - (ls.length - 1) / 2) * LH, al));
+        const cy = y + (isNX(f) ? pfH : h) / 2 + 1;
+        if (isNX(f) && !ls[0]){ txt('–', cellX(k), cy, 'center', 400, FS, T('#9ab')); return; }
+        ls.forEach((l, j) => txt(l, cellX(k, al), cy + (j - (ls.length - 1) / 2) * LH, al));
       });
-      xs.forEach(x => line(x, y, x, y + H_ROW));
-      y += H_ROW;
+      xs.forEach((x, k) => line(x, y, x, y + (note.length && k > iP0 && k <= iP1 ? pfH : h)));
+      if (note.length){
+        line(xs[iP0], y + pfH, xs[iP1 + 1], y + pfH);
+        const cx = (xs[iP0] + xs[iP1 + 1]) / 2, ny = y + pfH + (h - pfH) / 2 + 1;
+        note.forEach((l, j) => { g.font = `italic 400 ${NOTE_FS}px ${SERIF}`; g.fillStyle = T('#24425a'); g.textAlign = 'center'; g.fillText(l, cx, ny + (j - (note.length - 1) / 2) * NOTE_LH); });
+      }
+      y += h;
     });
     // tổng ngày
     const a = agg(gr.rows);
@@ -718,10 +749,38 @@ async function freshBlob(mono = false){
   const c = await makeCanvas(mono);
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
+/* Sắp xếp phiếu theo cột (trong từng ngày cân); bảng dữ liệu giữ nguyên thứ tự */
+let sortSt = LS.get('tbxn_sort', { key: '', dir: 'asc' });
+function sortVal(r, f){
+  if (NUMF.has(f)) return parseKg(r[f]);
+  if (isPF(f)) return pcts(r).v[f];
+  if (f === 'stt'){ const n = parseInt(r.stt, 10); return isNaN(n) ? null : n; }
+  const t = String(r[f] ?? '').trim(); return t || null;
+}
+function sheetGroups(){
+  const gs = groups(), k = sortSt.key;
+  if (!k) return gs;
+  const d = sortSt.dir === 'desc' ? -1 : 1;
+  return gs.map(g => ({ date: g.date, rows: [...g.rows].sort((a, b) => {
+    const va = sortVal(a, k), vb = sortVal(b, k);
+    if (va == null || vb == null) return va == null ? (vb == null ? 0 : 1) : -1;   // ô trống luôn ở cuối
+    const c = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'vi', { numeric: true, sensitivity: 'base' });
+    return c * d;
+  }) }));
+}
+function fillSortOpts(){
+  const sel = $('#sortKey'), cols = [...sheetCols(), ['ghichu','Ghi chú']];
+  if (sortSt.key && !cols.some(c => c[0] === sortSt.key)) sortSt.key = '';
+  sel.innerHTML = '<option value="">Thứ tự gốc</option>' + cols.map(([f, t]) => `<option value="${f}">${esc(t)}</option>`).join('');
+  sel.value = sortSt.key;
+  document.querySelectorAll('#sortDir button').forEach(b => { b.classList.toggle('on', b.dataset.d === sortSt.dir); b.disabled = !sortSt.key; });
+}
+$('#sortKey').addEventListener('change', e => { sortSt.key = e.target.value; LS.set('tbxn_sort', sortSt); fillSortOpts(); renderExport(); });
+document.querySelectorAll('#sortDir button').forEach(b => b.addEventListener('click', () => { sortSt.dir = b.dataset.d; LS.set('tbxn_sort', sortSt); fillSortOpts(); renderExport(); }));
 function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `phieu-ca-tuoi_${d}.png`; }
 document.querySelectorAll('#expSeg button').forEach(b => {
   b.classList.toggle('on', b.dataset.e === expMode);
-  b.addEventListener('click', () => { expMode = b.dataset.e; LS.set('tbxn_exp', expMode); document.querySelectorAll('#expSeg button').forEach(x => x.classList.toggle('on', x === b)); renderExport(); });
+  b.addEventListener('click', () => { expMode = b.dataset.e; LS.set('tbxn_exp', expMode); document.querySelectorAll('#expSeg button').forEach(x => x.classList.toggle('on', x === b)); fillSortOpts(); renderExport(); });
 });
 $('#prevTog').addEventListener('click', () => {
   const w = $('#prevWrap'), open = w.hidden;
@@ -762,9 +821,9 @@ async function download(){
 $('#dlImg').addEventListener('click', () => download().catch(e => toast('Lỗi: ' + e.message)));
 function summaryText(){
   const out = [];
-  groups().forEach(g => {
+  sheetGroups().forEach(g => {
     out.push(`📅 Ngày cân ${g.date || ''}`.trim());
-    g.rows.forEach((r, i) => out.push(`${i + 1}. ${r.khach || '?'} — ${fmtKg(parseKg(r.thuc)) || '?'} kg — Xanh ${fmtPct(pcts(r).x)}% · Nổi ${fmtPct(pcts(r).n)}% · Chín ${fmtPct(pcts(r).c)}%`));
+    g.rows.forEach((r, i) => out.push(`${i + 1}. ${r.khach || '?'} — ${fmtKg(parseKg(r.thuc)) || '?'} kg — Xanh ${fmtPct(pcts(r).x)}% · Nổi ${fmtPct(pcts(r).n)}% · Chín ${fmtPct(pcts(r).c)}%${String(r.ghichu ?? '').trim() ? ' — ' + String(r.ghichu).trim() : ''}`));
     const a = agg(g.rows);
     out.push(`   Tổng: ${fmtKg(a.tl)} kg · Xanh ${fmtPct(a.x)}% · Nổi ${fmtPct(a.n)}% · Chín ${fmtPct(a.c)}%`, '');
   });
@@ -1674,6 +1733,7 @@ $('#setSave').addEventListener('click', async () => {
 })();
 
 refreshAiTag();
+fillSortOpts();
 renderTable();
 if (!rows.length) $('#expCard').hidden = true;
 // Tải sẵn bộ nhận dạng khi rảnh để lần dán đầu nhanh hơn
