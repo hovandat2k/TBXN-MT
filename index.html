@@ -177,13 +177,22 @@ button:disabled{opacity:.5;cursor:default}
 #sortClear{min-height:28px;padding:2px 9px;font-size:12px;border-radius:9px}
 .pvbox{position:relative;line-height:0}
 .hot{position:absolute;inset:0;pointer-events:none}
-.hot button{position:absolute;pointer-events:auto;background:transparent;border:0;border-radius:0;min-height:0;padding:0;cursor:pointer;transition:background .12s}
-.hot button:hover,.hot button:focus-visible{background:rgba(78,168,222,.16);outline:none}
-.hot button.on{background:rgba(78,168,222,.18)}
-.hot .ar{position:absolute;left:50%;bottom:0;transform:translate(-50%,45%);display:flex;align-items:center;gap:1px;font:800 clamp(8px,1vw,12px)/1.15 "Be Vietnam Pro",system-ui,sans-serif;
-  background:#1b6fa6;color:#fff;border-radius:5px;padding:1px 4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:1}
-.hot .ar.idle{background:#e3f1fb;color:#1b6fa6;opacity:0;transition:opacity .12s}
-.hot button:hover .ar.idle,.hot button:focus-visible .ar.idle{opacity:1}
+.hot .cellhl{position:absolute;background:rgba(78,168,222,.16);pointer-events:none}
+/* nút ▾ kiểu Excel ở góc dưới phải mỗi ô tiêu đề */
+.hot .dd{position:absolute;pointer-events:auto;min-height:0;padding:0;border-radius:3px;border:1px solid #9fb3c2;background:#f4f7f9;color:#33485a;
+  display:grid;place-items:center;font:700 10px/1 system-ui,sans-serif;box-shadow:0 1px 1px rgba(0,0,0,.12);cursor:pointer}
+.hot .dd:hover,.hot .dd.open{background:#dcecf8;border-color:#4ea8de}
+.hot .dd.on{background:#1b6fa6;border-color:#1b6fa6;color:#fff}
+.hot .dd svg{width:62%;height:62%;display:block}
+.hot .dd .n{position:absolute;top:-7px;right:-5px;min-width:13px;height:13px;border-radius:7px;background:#e05a2a;color:#fff;font:800 9px/13px system-ui,sans-serif;padding:0 2px}
+.smenu{position:absolute;z-index:5;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);
+  padding:5px;min-width:170px;line-height:1.3;font-size:14px}
+.smenu button{display:flex;width:100%;justify-content:flex-start;gap:10px;min-height:36px;padding:7px 10px;border-radius:7px;font-weight:600;font-size:14px;text-align:left}
+.smenu button:hover{background:var(--soft)}
+.smenu button.cur{color:var(--brand)}
+.smenu button small{color:var(--muted);font-weight:500;margin-left:auto;font-size:12px}
+.smenu .ic{width:34px;flex:none;font-weight:800;color:var(--brand);font-size:12.5px;letter-spacing:-.02em}
+.smenu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
 .schip,.sthen,#sortClear,.shint{white-space:nowrap}
 .shint{white-space:normal}
 .ptog{padding:0;min-height:0;gap:10px;background:none}
@@ -842,28 +851,64 @@ function fillSortOpts(){
   box.innerHTML = sortLv.length
     ? sortLv.map((l, i) => `${i ? '<span class="sthen">rồi</span>' : ''}<span class="schip"><b>${i + 1}</b>${esc(colLabel(l.key))} ${l.dir === 'desc' ? '↓' : '↑'}</span>`).join('') +
       ' <button type="button" class="ghost" id="sortClear">✕ Bỏ sắp xếp</button>'
-    : `<span class="shint">${$('#prevWrap').hidden ? 'Mở phiếu rồi bấm' : 'Bấm'} vào tiêu đề cột trên phiếu để sắp xếp</span>`;
+    : `<span class="shint">${$('#prevWrap').hidden ? 'Mở phiếu rồi bấm' : 'Bấm'} nút ▾ ở tiêu đề cột trên phiếu để sắp xếp</span>`;
   document.querySelectorAll('#grpSeg button').forEach(b => b.classList.toggle('on', b.dataset.g === grpMode));
 }
+let lastHdr = null;
+const SVG_DOWN = '<svg viewBox="0 0 10 10"><path d="M1.5 3.2h7L5 7.6z" fill="currentColor"/></svg>';
+const SVG_ASC = '<svg viewBox="0 0 10 10"><path d="M5 1.2v7.6M2.6 3.6 5 1.2l2.4 2.4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const SVG_DESC = '<svg viewBox="0 0 10 10"><path d="M5 8.8V1.2M2.6 6.4 5 8.8l2.4-2.4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function drawHot(h){
-  const box = $('#hot'); if (!box || !h) return;
-  box.innerHTML = h.cols.map((f, k) => {
+  const box = $('#hot'); if (!box || !(h = h || lastHdr)) return;
+  lastHdr = h; closeSortMenu();
+  const img = $('#prev'), k = (img.clientWidth || h.W) / h.W;              // tỉ lệ ảnh đang hiển thị
+  const sz = Math.round(Math.max(12, Math.min(18, h.h * k * 0.3)));   // nhỏ, nằm sát góc dưới để không che chữ tiêu đề
+  const pct = (v, t) => (v / t * 100).toFixed(3) + '%';
+  box.innerHTML = h.cols.map((f, c) => {
     const i = sortLv.findIndex(l => l.key === f), l = sortLv[i];
-    const ar = l ? `<span class="ar">${l.dir === 'desc' ? '▼' : '▲'}${sortLv.length > 1 ? i + 1 : ''}</span>` : '<span class="ar idle">⇅</span>';
-    const st = `left:${(h.xs[k] / h.W * 100).toFixed(3)}%;width:${((h.xs[k + 1] - h.xs[k]) / h.W * 100).toFixed(3)}%;top:${(h.top / h.H * 100).toFixed(3)}%;height:${(h.h / h.H * 100).toFixed(3)}%`;
-    const tip = !l ? `Sắp xếp theo ${colLabel(f)} (tăng dần)` : l.dir !== 'desc' ? `Đổi ${colLabel(f)} sang giảm dần` : `Bỏ sắp xếp theo ${colLabel(f)}`;
-    return `<button type="button" data-sort="${f}" class="${l ? 'on' : ''}" style="${st}" title="${esc(tip)}" aria-label="Sắp xếp theo ${esc(colLabel(f))}">${ar}</button>`;
+    const x0 = h.xs[c], x1 = h.xs[c + 1];
+    const hl = l ? `<div class="cellhl" style="left:${pct(x0, h.W)};width:${pct(x1 - x0, h.W)};top:${pct(h.top, h.H)};height:${pct(h.h, h.H)}"></div>` : '';
+    const icon = l ? (l.dir === 'desc' ? SVG_DESC : SVG_ASC) : SVG_DOWN;
+    return hl + `<button type="button" class="dd${l ? ' on' : ''}" data-col="${f}" title="Sắp xếp theo ${esc(colLabel(f))}" aria-haspopup="menu"
+      style="width:${sz}px;height:${sz}px;left:calc(${pct(x1, h.W)} - ${sz + 2}px);top:calc(${pct(h.top + h.h, h.H)} - ${sz + 2}px)">${icon}${l && sortLv.length > 1 ? `<span class="n">${i + 1}</span>` : ''}</button>`;
   }).join('');
 }
-$('#hot').addEventListener('click', e => {
-  const b = e.target.closest('[data-sort]'); if (!b) return;
-  e.stopPropagation();
-  const f = b.dataset.sort, i = sortLv.findIndex(l => l.key === f);
-  if (i < 0) sortLv.push({ key: f, dir: 'asc' });
-  else if (sortLv[i].dir !== 'desc') sortLv[i].dir = 'desc';
-  else sortLv.splice(i, 1);
-  saveSort(); fillSortOpts(); renderExport();
-});
+function closeSortMenu(){ const m = document.querySelector('.smenu'); if (m) m.remove(); document.querySelectorAll('.hot .dd.open').forEach(b => b.classList.remove('open')); }
+function openSortMenu(btn){
+  closeSortMenu();
+  const f = btn.dataset.col, l = sortLv.find(x => x.key === f);
+  const sub = NUMF.has(f) || isPF(f) || f === 'stt' ? ['nhỏ → lớn', 'lớn → nhỏ'] : (f === 'gio' || f === 'date') ? ['cũ → mới', 'mới → cũ'] : ['', ''];
+  const m = document.createElement('div'); m.className = 'smenu'; m.setAttribute('role', 'menu');
+  m.innerHTML = `<button type="button" role="menuitem" data-dir="asc" class="${l && l.dir !== 'desc' ? 'cur' : ''}"><span class="ic">A↓Z</span>Sắp xếp A → Z<small>${sub[0]}</small></button>
+    <button type="button" role="menuitem" data-dir="desc" class="${l && l.dir === 'desc' ? 'cur' : ''}"><span class="ic">Z↓A</span>Sắp xếp Z → A<small>${sub[1]}</small></button>
+    ${l ? '<hr><button type="button" role="menuitem" data-dir="off"><span class="ic">✕</span>Bỏ sắp xếp cột này</button>' : ''}`;
+  m.dataset.col = f;
+  const box = $('#prevWrap .pvbox'); box.appendChild(m);
+  const bx = btn.offsetLeft, by = btn.offsetTop + btn.offsetHeight + 4, bw = box.clientWidth;
+  m.style.left = Math.max(4, Math.min(bx + btn.offsetWidth - m.offsetWidth, bw - m.offsetWidth - 4)) + 'px';
+  m.style.top = by + 'px';
+  btn.classList.add('open');
+  m.querySelector('button').focus({ preventScroll: true });
+}
+$('#prevWrap').addEventListener('click', e => {
+  const btn = e.target.closest('.hot .dd');
+  if (btn){ e.stopPropagation(); if (btn.classList.contains('open')) closeSortMenu(); else openSortMenu(btn); return; }
+  const it = e.target.closest('.smenu [data-dir]');
+  if (it){
+    e.stopPropagation();
+    const f = it.closest('.smenu').dataset.col, d = it.dataset.dir, i = sortLv.findIndex(l => l.key === f);
+    if (d === 'off'){ if (i >= 0) sortLv.splice(i, 1); }
+    else if (i >= 0) sortLv[i].dir = d;
+    else sortLv.push({ key: f, dir: d });                     // cột mới: sắp xếp tiếp sau các cột đã chọn
+    closeSortMenu(); saveSort(); fillSortOpts(); renderExport();
+    return;
+  }
+  if (e.target.closest('.smenu')) e.stopPropagation();
+  else if (document.querySelector('.smenu')){ e.stopPropagation(); closeSortMenu(); }   // bấm ra ngoài: chỉ đóng menu, không phóng to ảnh
+}, true);
+document.addEventListener('click', e => { if (!e.target.closest('.smenu') && !e.target.closest('.hot .dd')) closeSortMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSortMenu(); });
+if (window.ResizeObserver) new ResizeObserver(() => { if (!$('#prevWrap').hidden) drawHot(); }).observe($('#prev'));
 document.querySelectorAll('#grpSeg button').forEach(b => b.addEventListener('click', () => { grpMode = b.dataset.g; LS.set('tbxn_grp', grpMode); fillSortOpts(); renderExport(); }));
 $('#sortLevels').addEventListener('click', e => { if (e.target.closest('#sortClear')){ sortLv = []; saveSort(); fillSortOpts(); renderExport(); } });
 function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `phieu-ca-tuoi_${d}.png`; }
