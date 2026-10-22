@@ -318,6 +318,26 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .detbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
 .detbtns button{min-height:38px;font-size:13.5px}
 .detbtns .danger{color:var(--warn)}
+/* đăng nhập */
+.login{position:fixed;inset:0;z-index:30;background:var(--bg);display:grid;place-items:center;padding:20px;overflow:auto}
+.login[hidden]{display:none}
+.lgbox{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.lglogo{width:64px;height:64px;border-radius:16px;align-self:center;box-shadow:var(--shadow)}
+.lgbox h2{margin:12px 0 2px;text-align:center;font-size:20px}
+.lgsub{margin:0 0 14px;text-align:center;color:var(--muted);font-size:13.5px}
+.lgbox label{font-size:13px;font-weight:700;margin:10px 0 4px 2px}
+.lgbox .fld{font-size:16px;padding:11px 12px}
+.lgerr{color:var(--warn);font-weight:600;font-size:13px;margin-top:10px}
+.lgerr:empty{display:none}
+.lgbox button{margin-top:16px;min-height:46px;font-size:16px}
+.acct{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px}
+.acct b{font-size:15px}
+.acct .role{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--btn);color:var(--btn-ink)}
+.acct .sp{flex:1}
+.acct button{min-height:34px;padding:4px 12px;font-size:13px}
+body.role-th #aiSec,body.role-th [data-tab=tuoi],body.role-th [data-tab=ls]{display:none!important}
+body.role-th .tabs{grid-template-columns:1fr}
+.wrap[hidden]{display:none}
 /* dialogs */
 dialog{border:0;border-radius:20px;padding:0;max-height:calc(100dvh - 24px);overflow:auto;max-width:min(520px,calc(100% - 24px));width:100%;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 dialog::backdrop{background:rgba(12,35,20,.45)}
@@ -494,6 +514,23 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
   </div>
 </div>
 
+<div class="login" id="login" hidden>
+  <form class="lgbox" id="lgForm" autocomplete="on">
+    <img src="icons/icon-192.png" alt="" class="lglogo">
+    <h2>Cà tươi + Thu hồi</h2>
+    <p class="lgsub">Đăng nhập để tiếp tục</p>
+    <label for="lgUser">Tên đăng nhập</label>
+    <input class="fld" id="lgUser" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="lgPass">Mật khẩu</label>
+    <input class="fld" id="lgPass" type="password" autocomplete="current-password" required>
+    <div id="lgSrv" hidden>
+      <label for="lgUrl">Địa chỉ máy chủ (URL Apps Script …/exec)</label>
+      <input class="fld" id="lgUrl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+    </div>
+    <div class="lgerr" id="lgErr"></div>
+    <button type="submit" class="primary" id="lgBtn">Đăng nhập</button>
+  </form>
+</div>
 <div class="toast" id="toast"></div>
 <div id="printArea"></div>
 <style id="printPage"></style>
@@ -501,6 +538,9 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
 <dialog id="setDlg">
   <form method="dialog" class="dlg">
     <h3>Cài đặt</h3>
+    <h4 class="dsec">👤 Tài khoản</h4>
+    <div class="acct" id="acctBox"></div>
+    <div id="aiSec">
     <h4 class="dsec">🤖 Đọc ảnh bằng AI</h4>
     <p>Nhập khoá <b>Google Gemini API</b> (miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>) để ảnh được đọc bằng AI của Google.</p>
     <label for="gKey">Gemini API key</label>
@@ -513,26 +553,20 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
       <button type="button" class="ghost test" id="gTest">🔍 Kiểm tra</button>
       <button type="button" class="primary" id="setSave">Lưu khoá</button>
     </div>
-    <h4 class="dsec">☁️ Lưu vào Google Drive</h4>
-    <p>Dữ liệu cà tươi và thu hồi được lưu vào thư mục <b>“Cà Tươi + Thu Hồi”</b> trên Drive của bạn qua Google Apps Script.</p>
-    <label for="gasUrl">URL Apps Script (…/exec)</label>
-    <input class="fld" id="gasUrl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
-    <label for="gasKey">Mã bảo vệ (nếu đã đặt trong mã)</label>
-    <input class="fld" id="gasKey" type="password" autocomplete="off">
+    <h4 class="dsec">☁️ Google Drive</h4>
+    <p>Dữ liệu được lưu thẳng vào thư mục <b>“Cà Tươi + Thu Hồi”</b>. Tài khoản đăng nhập quản lý ở tab <b>User</b> của Google Sheet.</p>
     <div class="gstat" id="gasStat"></div>
     <div class="row2">
       <button type="button" class="ghost test" id="gasCopy">📋 Sao chép mã Apps Script</button>
-      <button type="button" class="primary" id="gasSave">Kiểm tra &amp; lưu</button>
     </div>
-    <details class="guide"><summary>Hướng dẫn cài (làm 1 lần)</summary>
+    <details class="guide"><summary>Cập nhật mã Apps Script</summary>
       <ol>
-        <li>Bấm <b>📋 Sao chép mã Apps Script</b> ở trên.</li>
-        <li>Mở <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> (đăng nhập Google của bạn) → dự án mới, xoá nội dung có sẵn, dán mã vào, bấm 💾.</li>
-        <li><b>Triển khai → Tùy chọn triển khai mới</b> → loại <b>Ứng dụng web</b>; Thực thi dưới dạng: <b>Tôi</b>; Người có quyền truy cập: <b>Bất kỳ ai</b> → Triển khai → cấp quyền.</li>
-        <li>Sao chép <b>URL ứng dụng web</b> (đuôi <code>/exec</code>), dán vào ô trên rồi bấm <b>Kiểm tra &amp; lưu</b>.</li>
-        <li>Làm tương tự (chỉ dán URL) trên các máy / điện thoại khác để dùng chung dữ liệu.</li>
+        <li>Bấm <b>📋 Sao chép mã Apps Script</b>.</li>
+        <li>Mở dự án trên <a href="https://script.google.com/home" target="_blank" rel="noopener">script.google.com</a>, xoá nội dung cũ, dán mã mới, bấm 💾.</li>
+        <li><b>Triển khai → Quản lý các tùy chọn triển khai</b> → ✏️ → Phiên bản: <b>Phiên bản mới</b> → <b>Triển khai</b> (URL giữ nguyên).</li>
       </ol>
     </details>
+    </div>
     <div class="row2"><button value="cancel" class="ghost">Đóng</button></div>
   </form>
 </dialog>
@@ -1270,6 +1304,7 @@ $('#resetBtn').addEventListener('click', () => {
    ========================================================================= */
 let busy = false;
 document.addEventListener('paste', e => {
+  if (window.APP && !APP.isAdmin()) return;                // tài khoản Thu hồi không dán ảnh phiếu cân
   const items = [...(e.clipboardData ? e.clipboardData.items : [])];
   const it = items.find(i => i.type.startsWith('image/') || i.type === 'application/pdf');
   if (!it) return;                              // dán chữ vào ô nhập vẫn hoạt động bình thường
@@ -2239,7 +2274,11 @@ var APP = (() => {
   const nowStr = () => { const d = new Date(); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   const dateKey = s => { const m = String(s || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : 0; };
   const numv = v => v === '' || v == null ? null : typeof v === 'number' ? v : parseKg(String(v));
-  const gasUrl = () => String(LS.get('tbxn_gas', '') || '').trim();
+  // URL máy chủ Apps Script gắn sẵn: người dùng chỉ cần đăng nhập. Để trống thì màn hình đăng nhập hiện ô nhập URL.
+  const GAS_URL = '';
+  const gasUrl = () => GAS_URL || String(LS.get('tbxn_gas', '') || '').trim();
+  let AUTH = LS.get('tbxn_auth', null);       // { token, user, name, role }
+  const isAdmin = () => !!AUTH && AUTH.role === 'Toàn quyền';
   const saveDB = () => LS.set(DBK, DB);
   function saveQ(){
     try { localStorage.setItem(QK, JSON.stringify(Q)); }
@@ -2261,26 +2300,27 @@ var APP = (() => {
     Q.push(op); saveQ();
     changed(); flush();
   }
-  async function api(action, payload = {}, url = gasUrl(), key = LS.get('tbxn_gaskey', '')){
-    if (!url) throw new Error('Chưa cài Google Drive');
+  async function api(action, payload = {}, url = gasUrl()){
+    if (!url) throw new Error('Chưa có địa chỉ máy chủ');
+    const key = AUTH ? AUTH.token : '';
     const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 45000);
     let r;
-    try { r = await fetch(url, { method: 'POST', body: JSON.stringify(Object.assign({}, payload, { action, key })), signal: ctl.signal, redirect: 'follow' }); }
+    try { r = await fetch(url, { method: 'POST', body: JSON.stringify(Object.assign({}, payload, { action, token: key })), signal: ctl.signal, redirect: 'follow' }); }
     catch(e){ const er = new Error(e.name === 'AbortError' ? 'Google Drive phản hồi quá lâu' : 'Không kết nối được Google Drive'); er.net = true; throw er; }
     finally { clearTimeout(to); }
-    let j; try { j = await r.json(); } catch(e){ throw new Error('URL Apps Script không đúng (không trả về dữ liệu)'); }
-    if (!j.ok) throw new Error(j.error || 'Lỗi Google Drive');
+    let j; try { j = await r.json(); } catch(e){ throw new Error('Địa chỉ máy chủ không đúng (không trả về dữ liệu)'); }
+    if (!j.ok){ const er = new Error(j.error || 'Lỗi Google Drive'); er.auth = !!j.auth; er.denied = !!j.denied; if (j.auth && action !== 'login') logout(true); throw er; }
     return j;
   }
   async function flush(){
-    if (flushing || !gasUrl() || !Q.length){ syncUI(); return; }
+    if (flushing || !gasUrl() || !AUTH || !Q.length){ syncUI(); return; }
     flushing = true; syncUI();
     try {
       while (Q.length){
         const op = Q[0];
         try { const j = await api(op.action, op); if (j.folderUrl) LS.set('tbxn_gasfolder', j.folderUrl); }
         catch(e){
-          if (e.net || /mã bảo vệ|URL Apps Script/i.test(e.message)) throw e;   // mất mạng / sai cài đặt: dừng, thử lại sau
+          if (e.net || e.auth || /máy chủ/i.test(e.message)) throw e;   // mất mạng / hết đăng nhập: dừng, gửi lại sau
           toast('⚠️ Drive từ chối 1 mục: ' + e.message, 5000);                  // lỗi dữ liệu: bỏ mục đó để không kẹt hàng đợi
         }
         Q.shift(); saveQ(); syncUI();
@@ -2290,7 +2330,7 @@ var APP = (() => {
     finally { flushing = false; syncUI(); }
   }
   async function pull(force = false){
-    if (!gasUrl() || (!force && Date.now() - lastPull < 30000)) return;
+    if (!gasUrl() || !AUTH || (!force && Date.now() - lastPull < 30000)) return;
     lastPull = Date.now();
     try {
       await flush();
@@ -2306,20 +2346,21 @@ var APP = (() => {
     const el = $('#syncSt'); if (!el) return;
     el.hidden = false;
     let t, c = '';
-    if (!gasUrl()){ t = Q.length ? `💾 ${Q.length} mục chỉ lưu trên máy — bấm để cài Google Drive` : '💾 Lưu trên máy này — bấm để cài Google Drive'; c = 'warn'; }
-    else if (flushing) t = '⏳ Đang lưu lên Google Drive…';
+    if (!AUTH){ el.hidden = true; return; }
+    if (flushing) t = '⏳ Đang lưu lên Google Drive…';
     else if (lastErr){ t = `⚠️ ${Q.length ? Q.length + ' mục chưa lưu lên Drive — ' : ''}${lastErr}`; c = 'err'; }
     else if (Q.length){ t = `📴 ${Q.length} mục chờ gửi lên Drive`; c = 'warn'; }
     else { t = '☁️ Đã lưu Google Drive'; c = 'ok'; }
-    el.textContent = t; el.className = 'sync ' + c;
+    el.textContent = `👤 ${AUTH.name} · ${t}`; el.className = 'sync ' + c;
   }
-  $('#syncSt').addEventListener('click', () => { if (!gasUrl()) { $('#setBtn').click(); setTimeout(() => $('#gasUrl').focus(), 100); } else { lastPull = 0; pull(true); } });
+  $('#syncSt').addEventListener('click', () => { lastPull = 0; pull(true); });
   window.addEventListener('online', () => flush());
   setInterval(() => { if (Q.length) flush(); }, 60000);
 
   /* ---------------- Tabs ---------------- */
   let tab = LS.get('tbxn_tab', 'tuoi');
   function showTab(t){
+    if (!isAdmin()) t = 'th';                    // tài khoản Thu hồi chỉ dùng thẻ Thu hồi
     tab = t; LS.set('tbxn_tab', t);
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     ['tuoi','th','ls'].forEach(k => $('#tab-' + k).hidden = k !== t);
@@ -2339,6 +2380,7 @@ var APP = (() => {
     b.querySelector('.i').textContent = ok ? '✅' : '💾';
   }
   async function saveSheet(){
+    if (!isAdmin()){ toast('Tài khoản không có quyền lưu phiếu cà tươi'); return; }
     if (!rows.length){ toast('Chưa có dữ liệu để lưu'); return; }
     const noW = rows.filter(r => parseKg(r.thuc) == null).length;
     if (noW && !confirm(`${noW} dòng chưa có TL thực. Vẫn lưu?`)) return;
@@ -2778,6 +2820,7 @@ var APP = (() => {
       $('#thSel').value = rid; selChanged(false); setTimeout(() => $('#thKl').focus(), 200); return;
     }
     if (b.dataset.d === 'del'){
+      if (!isAdmin()){ toast('Cần tài khoản Toàn quyền'); return; }
       if (sp && confirm(`Xoá mẫu thu hồi “${sp.khach}” (${f2(+sp.thuhoi)} kg)? Xe này sẽ quay lại danh sách chưa làm.`)){ enqueue({ action: 'deleteSample', id: String(sp.id) }); $('#detDlg').close(); }
       return;
     }
@@ -2801,26 +2844,56 @@ var APP = (() => {
     renderTable(); showTab('tuoi'); toast(`↩ Đã mở lô ${lr.length} xe — sửa xong bấm 💾 Lưu để cập nhật`, 3500);
   }
 
-  /* ---------------- Cài đặt Drive ---------------- */
+  /* ---------------- Tài khoản, cài đặt ---------------- */
   function gasStat(cls, html){ const e = $('#gasStat'); e.className = 'gstat ' + cls; e.innerHTML = html; }
-  function showGasSaved(){
-    const u = gasUrl(), f = LS.get('tbxn_gasfolder', '');
-    if (!u) gasStat('', '⚪ Chưa cài — dữ liệu chỉ lưu trên máy này');
-    else gasStat(lastErr ? 'err' : 'ok', (lastErr ? '🔴 ' + esc(lastErr) : '🟢 Đang lưu vào Google Drive') + (f ? ` · <a href="${esc(f)}" target="_blank" rel="noopener">Mở thư mục</a>` : ''));
+  function showAcct(){
+    if (!AUTH) return;
+    $('#acctBox').innerHTML = `<span>👤 <b>${esc(AUTH.name)}</b> <span style="color:var(--muted)">(${esc(AUTH.user)})</span></span><span class="role">${esc(AUTH.role)}</span><span class="sp"></span><button type="button" class="ghost" id="logoutBtn">Đăng xuất</button>`;
+    const f = LS.get('tbxn_gasfolder', ''), sh = LS.get('tbxn_gassheet', '');
+    gasStat(lastErr ? 'err' : 'ok', (lastErr ? '🔴 ' + esc(lastErr) : '🟢 Đang lưu vào Google Drive') +
+      (f ? ` · <a href="${esc(f)}" target="_blank" rel="noopener">Mở thư mục</a>` : '') + (sh ? ` · <a href="${esc(sh)}" target="_blank" rel="noopener">Mở Google Sheet</a>` : ''));
   }
-  $('#setBtn').addEventListener('click', () => { $('#gasUrl').value = gasUrl(); $('#gasKey').value = LS.get('tbxn_gaskey', ''); showGasSaved(); });
-  $('#gasSave').addEventListener('click', async () => {
-    const u = $('#gasUrl').value.trim(), k = $('#gasKey').value.trim();
-    if (!u){ LS.set('tbxn_gas', ''); LS.set('tbxn_gaskey', ''); showGasSaved(); syncUI(); toast('Đã tắt lưu Google Drive'); return; }
-    if (!/^https:\/\/\S+$/.test(u)){ gasStat('err', '❌ URL phải bắt đầu bằng https://'); return; }
-    gasStat('wait', '⏳ Đang kết nối Google Drive…'); $('#gasSave').disabled = true;
+  $('#setBtn').addEventListener('click', showAcct);
+  $('#acctBox').addEventListener('click', e => { if (e.target.id === 'logoutBtn'){ $('#setDlg').close(); logout(false); } });
+  function applyRole(){
+    document.body.classList.toggle('role-th', !!AUTH && !isAdmin());
+    $('.wrap').hidden = !AUTH;
+    $('#login').hidden = !!AUTH;
+  }
+  function showLogin(msg){
+    applyRole();
+    $('#lgSrv').hidden = !!GAS_URL;
+    $('#lgUrl').value = gasUrl();
+    $('#lgErr').textContent = msg || '';
+    setTimeout(() => ($('#lgUser').value ? $('#lgPass') : $('#lgUser')).focus(), 50);
+  }
+  function logout(expired){
+    if (!expired && Q.length && !confirm(`Còn ${Q.length} mục chưa gửi lên Google Drive. Vẫn đăng xuất? (các mục này sẽ được gửi khi đăng nhập lại)`)) return;
+    const u = AUTH && AUTH.user;
+    AUTH = null; LS.set('tbxn_auth', null);
+    $('#lgUser').value = u || ''; $('#lgPass').value = '';
+    if ($('#setDlg').open) $('#setDlg').close();
+    showLogin(expired ? 'Phiên đăng nhập đã hết hạn hoặc tài khoản đã thay đổi — hãy đăng nhập lại.' : '');
+    syncUI();
+  }
+  $('#lgForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const url = GAS_URL || $('#lgUrl').value.trim(), user = $('#lgUser').value.trim(), pass = $('#lgPass').value;
+    if (!url){ $('#lgErr').textContent = 'Nhập địa chỉ máy chủ (URL Apps Script)'; $('#lgUrl').focus(); return; }
+    if (!/^https:\/\/\S+$/.test(url)){ $('#lgErr').textContent = 'Địa chỉ máy chủ phải bắt đầu bằng https://'; return; }
+    $('#lgBtn').disabled = true; $('#lgBtn').textContent = 'Đang đăng nhập…'; $('#lgErr').textContent = '';
     try {
-      const j = await api('ping', {}, u, k);
-      LS.set('tbxn_gas', u); LS.set('tbxn_gaskey', k); if (j.folderUrl) LS.set('tbxn_gasfolder', j.folderUrl);
-      lastErr = ''; gasStat('ok', `✅ Đã kết nối · <a href="${esc(j.folderUrl)}" target="_blank" rel="noopener">Mở thư mục “Cà Tươi + Thu Hồi”</a>`);
-      toast('✅ Đã kết nối Google Drive'); await flush(); lastPull = 0; pull(true);
-    } catch(e){ gasStat('err', '❌ ' + esc(e.message)); }
-    finally { $('#gasSave').disabled = false; }
+      const j = await api('login', { user, pass }, url);
+      if (!GAS_URL) LS.set('tbxn_gas', url);
+      AUTH = { token: j.token, user: j.user, name: j.name, role: j.role }; LS.set('tbxn_auth', AUTH);
+      $('#lgPass').value = '';
+      applyRole(); lastErr = '';
+      showTab(isAdmin() ? (LS.get('tbxn_tab', 'tuoi') || 'tuoi') : 'th');
+      toast(`👋 Xin chào ${j.name}`);
+      api('ping').then(p => { if (p.folderUrl) LS.set('tbxn_gasfolder', p.folderUrl); if (p.sheetUrl) LS.set('tbxn_gassheet', p.sheetUrl); }).catch(() => {});
+      await flush(); lastPull = 0; pull(true);
+    } catch(err){ $('#lgErr').textContent = err.message; }
+    finally { $('#lgBtn').disabled = false; $('#lgBtn').textContent = 'Đăng nhập'; }
   });
   $('#gasCopy').addEventListener('click', async () => {
     try {
@@ -2839,10 +2912,12 @@ var APP = (() => {
     const s = LS.get('tbxn_thlast', null);
     renderTH();
     if (s){ $('#thSel').value = [...$('#thSel').options].some(o => o.value === s.sel) ? s.sel : ''; $('#thName').value = s.name || ''; $('#thKl').value = s.kl || ''; $('#thKlq').value = s.klq || ''; $('#thAm').value = s.am || ''; selChanged(false); thCalc(false); }
+    if (!AUTH){ showLogin(); return; }
+    applyRole();
     showTab(['tuoi','th','ls'].includes(tab) ? tab : 'tuoi');
     changed(); flush(); pull(true);
   }
-  return { init, newBatch, saveBtnUI, pending, get DB(){ return DB; }, get Q(){ return Q; }, flush, pull, showTab, compute, drawTH };
+  return { init, newBatch, saveBtnUI, pending, get DB(){ return DB; }, get Q(){ return Q; }, get AUTH(){ return AUTH; }, isAdmin, flush, pull, showTab, compute, drawTH };
 })();
 
 refreshAiTag();
@@ -2851,8 +2926,10 @@ renderTable();
 APP.init();
 if (!rows.length) $('#expCard').hidden = true;
 // Tải sẵn bộ nhận dạng khi rảnh để lần dán đầu nhanh hơn
-if ('requestIdleCallback' in window) requestIdleCallback(() => getWorker().catch(() => {}), { timeout: 4000 });
-else setTimeout(() => getWorker().catch(() => {}), 2500);
+if (APP.isAdmin()){
+  if ('requestIdleCallback' in window) requestIdleCallback(() => getWorker().catch(() => {}), { timeout: 4000 });
+  else setTimeout(() => getWorker().catch(() => {}), 2500);
+}
 </script>
 </body>
 </html>

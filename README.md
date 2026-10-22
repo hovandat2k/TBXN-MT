@@ -8,25 +8,39 @@ Trang gồm 3 thẻ:
 - **⚖️ Thu hồi** – cách tính giống trang “Tính thu hồi cà phê” cũ (mẫu riêng 2000 g / mẫu chung 10000 g, bảng trừ ẩm). **Tên mẫu** là danh sách các xe đã lưu ở phiếu cà tươi mà chưa làm thu hồi; lưu mẫu xong xe đó biến mất khỏi danh sách. Phiếu thu hồi có thêm KL cà tươi của xe.
 - **📚 Lịch sử** – xem theo **ngày** (từng lô cân, mở lại lô để sửa / in lại) hoặc theo **khách hàng**; có tổng KL, TB Xanh/Nổi/Chín, TB thu hồi (theo KL cà tươi); xoá mẫu thu hồi để làm lại.
 
-## Lưu vào Google Drive (cài 1 lần)
+## Đăng nhập & tài khoản
 
-Dữ liệu được lưu vào thư mục **“Cà Tươi + Thu Hồi”** trên Google Drive của bạn:
+Mở trang sẽ hiện màn hình **đăng nhập**. Tài khoản được quản lý trong tab **User** của Google Sheet *Dữ liệu Cà Tươi + Thu Hồi* (thư mục **“Cà Tươi + Thu Hồi”** trên Drive):
+
+| Tên đăng nhập | Mật khẩu | Quyền | Họ tên | Khoá |
+|---|---|---|---|---|
+| admin | doimatkhau | Toàn quyền | Quản trị | |
+| lan | 123456 | Thu hồi | Chị Lan | |
+
+- **Toàn quyền**: dùng mọi chức năng (Cà tươi, Thu hồi, Lịch sử, xoá / làm lại mẫu).
+- **Thu hồi**: chỉ thấy thẻ Thu hồi, chỉ lưu được mẫu thu hồi mới (không sửa phiếu cà tươi, không xoá mẫu).
+- Ghi `x` ở cột **Khoá** để tạm khoá; đổi mật khẩu / quyền / khoá thì người đó phải đăng nhập lại.
+- Lần đầu máy chủ tự tạo tài khoản **admin / doimatkhau** — hãy đổi mật khẩu ngay trong sheet.
+- Mọi thao tác đều được máy chủ kiểm tra quyền; cột **Người lưu** ghi ai đã lưu từng dòng.
+
+## Lưu vào Google Drive
+
+Dữ liệu được lưu thẳng vào Drive (không cần nhập gì thêm):
 
 ```
 Cà Tươi + Thu Hồi/
-├── Dữ liệu Cà Tươi + Thu Hồi   (Google Sheet: tab "Cà tươi" – mỗi xe 1 dòng, tab "Thu hồi" – mỗi mẫu 1 dòng)
+├── Dữ liệu Cà Tươi + Thu Hồi   (Google Sheet: tab "Cà tươi", "Thu hồi", "User")
 └── Phiếu/<năm-tháng-ngày>/     (phiếu cà tươi PDF, phiếu thu hồi PNG)
 ```
 
-1. Mở trang → ⚙️ → **📋 Sao chép mã Apps Script** (hoặc mở tệp [`apps-script/Code.gs`](apps-script/Code.gs)).
-2. Vào [script.google.com](https://script.google.com/home/projects/create) → dự án mới → xoá nội dung có sẵn → dán mã → 💾.
-3. **Triển khai → Tùy chọn triển khai mới** → loại **Ứng dụng web** → *Thực thi dưới dạng*: **Tôi**, *Người có quyền truy cập*: **Bất kỳ ai** → Triển khai → cấp quyền.
-4. Sao chép **URL ứng dụng web** (đuôi `/exec`) → dán vào ⚙️ → **Kiểm tra & lưu**.
-5. Trên máy / điện thoại khác chỉ cần dán cùng URL đó để dùng chung dữ liệu.
+Mất mạng vẫn lưu được: dữ liệu giữ trên máy và tự gửi lên Drive khi có mạng lại.
 
-- Có thể đặt `MA_BAO_VE` trong mã để chỉ người biết mã mới ghi được dữ liệu (nhập cùng mã trong ⚙️).
-- Mất mạng vẫn lưu được: dữ liệu giữ trên máy và tự gửi lên Drive khi có mạng lại.
-- Chưa cài Drive thì dữ liệu chỉ lưu trên trình duyệt của máy đang dùng.
+### Cài / cập nhật máy chủ (Apps Script)
+
+1. Mở dự án trên [script.google.com](https://script.google.com/home), xoá nội dung cũ, dán toàn bộ [`apps-script/Code.gs`](apps-script/Code.gs) (hoặc ⚙️ → **📋 Sao chép mã Apps Script**), bấm 💾.
+2. Lần đầu: **Triển khai → Tùy chọn triển khai mới → Ứng dụng web** (*Thực thi dưới dạng*: **Tôi**, *Người có quyền truy cập*: **Bất kỳ ai**).
+   Đã triển khai: **Triển khai → Quản lý các tùy chọn triển khai → ✏️ → Phiên bản mới → Triển khai** (URL giữ nguyên).
+3. URL `…/exec` được gắn sẵn trong trang (`GAS_URL` trong `index.html`).
 
 ## Đọc ảnh chữ viết tay chính xác hơn (tuỳ chọn)
 
