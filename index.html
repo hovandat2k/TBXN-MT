@@ -2309,7 +2309,7 @@ var APP = (() => {
     catch(e){ const er = new Error(e.name === 'AbortError' ? 'Google Drive phản hồi quá lâu' : 'Không kết nối được Google Drive'); er.net = true; throw er; }
     finally { clearTimeout(to); }
     let j; try { j = await r.json(); } catch(e){ throw new Error('Địa chỉ máy chủ không đúng (không trả về dữ liệu)'); }
-    if (!j.ok){ const er = new Error(j.error || 'Lỗi Google Drive'); er.auth = !!j.auth; er.denied = !!j.denied; if (j.auth && action !== 'login') logout(true); throw er; }
+    if (!j.ok){ const er = new Error(j.error || 'Lỗi Google Drive'); er.auth = !!j.auth; er.denied = !!j.denied; if (j.auth && action !== 'login' && AUTH && AUTH.token === key) logout(true); throw er; }
     return j;
   }
   async function flush(){
