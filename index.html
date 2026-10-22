@@ -589,8 +589,9 @@ const isMerged = () => grpMode === 'all';
 const multiDay = () => new Set(rows.map(r => r.date || '')).size > 1;
 function sheetCols(){
   const c = expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']];
-  // gộp nhiều ngày: thêm cột Ngày cân ngay sau STT để vẫn biết xe cân ngày nào
-  return isMerged() && multiDay() ? c.flatMap(x => x[0] === 'stt' ? [x, ['date','Ngày cân']] : [x]) : c;
+  // gộp nhiều ngày: ngày cân ghi ngay dưới giờ cân (cùng ô); phiếu rút gọn không có cột giờ thì thêm cột Ngày cân
+  if (!(isMerged() && multiDay()) || c.some(x => x[0] === 'gio')) return c;
+  return c.flatMap(x => x[0] === 'stt' ? [x, ['date','Ngày cân']] : [x]);
 }
 function cellText(r, f, i){
   let v = r[f] ?? '';
@@ -598,6 +599,7 @@ function cellText(r, f, i){
   else if (isPF(f)){ const n = pcts(r).v[f]; v = n == null ? '' : fmtPct(n); }
   else if (f === 'stt' && (isMerged() || !String(v).trim())) v = String(i + 1);   // gộp ngày: đánh số liên tục
   v = String(v).trim();
+  if (f === 'gio' && isMerged() && multiDay() && r.date) return v ? [v, r.date] : [r.date];
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
   return [v];
 }
@@ -619,7 +621,7 @@ async function makeCanvas(mono = false){
     return Math.ceil(w + PADX * 2 + (f === 'khach' ? 30 : 0));
   });
   const iThuc = cols.findIndex(c => c[0] === 'thuc');
-  const hasWrap = cols.some(c => c[0] === 'hang') && rows.some((r, i) => cellText(r, 'hang', i).length > 1);
+  const hasWrap = cols.some(c => rows.some((r, i) => cellText(r, c[0], i).length > 1));
   const H_HEAD = 58, H_DATE = 50, H_ROW = hasWrap ? 73 : 54, H_TOT = 48, H_GRAND = 56;
   // Ghi chú: ô gộp ngay dưới Xanh/Nổi/Chín của dòng đó
   const iP0 = cols.findIndex(c => isPF(c[0])), iP1 = cols.length - 1 - [...cols].reverse().findIndex(c => isPF(c[0]));
@@ -782,6 +784,7 @@ function sheetGroups(){
 }
 function fillSortOpts(){
   const sel = $('#sortKey'), cols = [...sheetCols(), ['ghichu','Ghi chú']];
+  if (isMerged() && multiDay() && !cols.some(c => c[0] === 'date')) cols.splice(1, 0, ['date','Ngày cân']);
   if (sortSt.key && !cols.some(c => c[0] === sortSt.key)) sortSt.key = '';
   sel.innerHTML = '<option value="">Thứ tự gốc</option>' + cols.map(([f, t]) => `<option value="${f}">${esc(t)}</option>`).join('');
   sel.value = sortSt.key;
