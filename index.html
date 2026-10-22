@@ -224,6 +224,11 @@ button:disabled{opacity:.5;cursor:default}
 .slevels{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;flex:1 1 220px;font-size:13px}
 .actions.a5{grid-template-columns:repeat(5,1fr)}
 #lsDel{display:none}
+#lsDel.on{background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.rdel{position:absolute;pointer-events:auto;width:28px;height:28px;min-height:0;padding:0;border-radius:50%;background:var(--warn);color:#fff;
+  transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff;display:grid;place-items:center}
+.rdel .ic{width:15px;height:15px;stroke-width:3}
+.rdel:hover{filter:brightness(1.1)}
 body.role-admin #lsDel{display:flex}
 body.role-admin .actions.a5{grid-template-columns:repeat(6,1fr)}
 .lsrange{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1 1 100%}
@@ -583,7 +588,7 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
         <div class="sortbar">
           <div class="sortbox"><span class="sl">Sắp xếp</span><div id="lsSortLevels" class="slevels"></div></div>
           <div class="seg" id="lsGrpSeg"><button type="button" data-g="all" class="on">Gộp các đêm</button><button type="button" data-g="day">Tách theo đêm</button></div></div>
-        <div id="lsPv" class="pvwrap"><div class="pvbox" data-sheet="ls"><img id="lsPrev" alt="Phiếu tổng hợp mẫu" title="Bấm vào dòng xe để xem chi tiết"><div class="hot" id="lsHot"></div></div></div>
+        <div id="lsPv" class="pvwrap"><div class="pvbox" data-sheet="ls"><img id="lsPrev" alt="Phiếu tổng hợp mẫu" title="Bấm vào dòng xe để xem chi tiết"><div class="hot" id="lsHot"></div><div class="hot" id="lsDelLayer"></div></div></div>
         <div class="actions a5">
           <button type="button" class="ghost" id="lsCopy"><span class="i"><i data-ic="copy"></i></span>Sao chép ảnh</button>
           <button type="button" class="ghost" id="lsShare"><span class="i"><i data-ic="share"></i></span>Chia sẻ</button>
@@ -2955,8 +2960,20 @@ var APP = (() => {
       const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (tok !== lsTok) return;
       const img = $('#lsPrev'), old = img.src;
       img.src = URL.createObjectURL(blob); if (old.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(old), 1000);
-      drawHot(c.hdr, LSX);
+      drawHot(c.hdr, LSX); LSX.hdr = c.hdr;
+      drawDelMarks();
     } catch(e){ console.error(e); }
+  }
+  // Chế độ xoá: mỗi dòng xe trên phiếu có một dấu ✕ để xoá riêng dòng đó
+  let lsDelMode = false;
+  function drawDelMarks(){
+    const layer = $('#lsDelLayer'), on = lsDelMode && isAdmin() && LSX.rows.length;
+    $('#lsDel').classList.toggle('on', !!on);
+    $('#lsDel').innerHTML = `<span class="i">${IC(on ? 'check' : 'trash')}</span>${on ? 'Xong' : 'Xoá'}`;
+    if (!on || !LSX.hdr){ layer.innerHTML = ''; return; }
+    const h = LSX.hdr, xe = h.xs[h.xs.length - 1], pct = (v, t) => (v / t * 100).toFixed(3) + '%';
+    layer.innerHTML = LSX.hits.map((x, i) => `<button type="button" class="rdel" data-i="${i}" title="Xoá dòng ${esc(x.r.khach || '')}" aria-label="Xoá dòng ${esc(x.r.khach || '')}"
+      style="left:${pct(xe, h.W)};top:${pct((x.y0 + x.y1) / 2, h.H)}">${IC('x')}</button>`).join('');
   }
   function setLSRows(list, fr, sub){
     LSX.sub = sub; LSX.rows = sheetRowsOf(list, fr);
@@ -3072,32 +3089,40 @@ var APP = (() => {
     $('#detBtns').innerHTML = '';
     $('#detDlg').showModal();
   });
-  // Xoá (chỉ Toàn quyền): xoá các xe đang hiện trên phiếu + mẫu thu hồi của chúng
+  // Xoá (chỉ Toàn quyền): bấm Xoá để hiện dấu ✕ ở từng dòng, bấm ✕ xoá đúng dòng đó (kèm mẫu thu hồi của xe)
   $('#lsDel').addEventListener('click', () => {
     if (!isAdmin()){ toast('Cần tài khoản Toàn quyền'); return; }
-    const rids = new Set(LSX.rows.filter(r => r.rid).map(r => String(r.rid)));
-    const sids = new Set(DB.samples.filter(sp => (sp.rid && rids.has(String(sp.rid)))).map(sp => String(sp.id)));
-    LSX.rows.forEach(r => { if (!r.rid && r.sid) sids.add(String(r.sid)); });
-    if (!rids.size && !sids.size) return;
-    const msg = [rids.size ? `${rids.size} xe cà tươi` : '', sids.size ? `${sids.size} mẫu thu hồi` : ''].filter(Boolean).join(' và ');
-    if (!confirm(`Xoá ${msg} đang hiện trên phiếu này?\nDữ liệu sẽ bị xoá khỏi Google Sheet và không khôi phục được.`)) return;
-    if (rids.size && !confirm(`Xác nhận lần nữa: xoá vĩnh viễn ${msg}?`)) return;
-    sids.forEach(id => enqueue({ action: 'deleteSample', id }));
-    // lô cân: ghi lại phần còn lại của từng lô (lô hết xe thì mất hẳn)
-    const lots = [...new Set(DB.rows.filter(r => rids.has(String(r.rid))).map(r => String(r.batch)))];
-    lots.forEach(b => {
-      const all = DB.rows.filter(r => String(r.batch) === b);
-      const keep = all.filter(r => !rids.has(String(r.rid))).map(r => { const o = Object.assign({}, r); delete o.batch; delete o.savedAt; delete o.savedBy; return o; });
-      enqueue({ action: 'saveBatch', batch: { id: b, savedAt: (all[0] && all[0].savedAt) || nowStr(), rows: keep } });
-    });
-    // lô đang mở ở thẻ Cà tươi: bỏ luôn các xe đã xoá
-    if (batchId && lots.includes(String(batchId))){
-      rows = rows.filter(r => !rids.has(String(r.rid))); save();
-      if (!rows.length) newBatch(); else LS.set('tbxn_savedsig', batchId + sig());
-      renderTable();
-    }
-    toast(`🗑 Đã xoá ${msg}`, 3000);
+    lsDelMode = !lsDelMode; drawDelMarks();
+    if (lsDelMode) toast('Bấm dấu ✕ ở dòng cần xoá', 2500);
   });
+  $('#lsDelLayer').addEventListener('click', e => {
+    const btn = e.target.closest('.rdel'); if (!btn) return;
+    e.stopPropagation();
+    const hit = LSX.hits[+btn.dataset.i]; if (!hit) return;
+    delRow(hit.r);
+  });
+  function delRow(r){
+    const sp = r.rid ? sampleOf(r.rid) : (r.sid ? DB.samples.find(x => String(x.id) === String(r.sid)) : null);
+    const what = [r.khach || '(không tên)', r.soxe, [r.gio, r.date].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+    const msg = r.rid ? `Xoá xe ${what}${sp ? ' và mẫu thu hồi của xe này' : ''}?` : `Xoá mẫu thu hồi ${what}?`;
+    if (!confirm(msg + '\nDữ liệu sẽ bị xoá khỏi Google Sheet và không khôi phục được.')) return;
+    if (sp) enqueue({ action: 'deleteSample', id: String(sp.id) });
+    if (r.rid){
+      const row = rowOf(r.rid), b = row && String(row.batch);
+      if (row){
+        const all = DB.rows.filter(x => String(x.batch) === b);
+        const keep = all.filter(x => String(x.rid) !== String(r.rid)).map(x => { const o = Object.assign({}, x); delete o.batch; delete o.savedAt; delete o.savedBy; return o; });
+        enqueue({ action: 'saveBatch', batch: { id: b, savedAt: (all[0] && all[0].savedAt) || nowStr(), rows: keep } });
+        // lô đang mở ở thẻ Cà tươi: bỏ luôn xe đã xoá
+        if (batchId && String(batchId) === b){
+          rows = rows.filter(x => String(x.rid) !== String(r.rid)); save();
+          if (!rows.length) newBatch(); else LS.set('tbxn_savedsig', batchId + sig());
+          renderTable();
+        }
+      }
+    }
+    toast(`🗑 Đã xoá ${r.khach || 'dòng'}`, 2500);
+  }
   $('#detBody').addEventListener('click', e => { const o = e.target.closest('[data-openlot]'); if (o){ $('#detDlg').close(); openLot(o.dataset.openlot); } });
 
   // Cửa sổ chi tiết 1 xe / 1 mẫu: thông tin cân + phiếu thu hồi
