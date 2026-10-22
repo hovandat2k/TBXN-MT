@@ -167,7 +167,25 @@ button:disabled{opacity:.5;cursor:default}
   background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
   background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px;background-repeat:no-repeat}
 .sortbar .seg button:disabled{opacity:.45}
-.sortbar .sp{flex:1}
+.sortbar{align-items:flex-start;justify-content:space-between}
+.sortbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0;flex:1}
+#sortLevels{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;flex:1 1 220px;font-size:13px}
+.schip{display:inline-flex;align-items:center;gap:4px;background:var(--soft);border-radius:999px;padding:3px 10px;font-weight:700;font-size:12.5px;color:var(--ink)}
+.schip b{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--brand);color:#fff;font-size:10.5px}
+.sthen{color:var(--muted);font-size:12px}
+.shint{color:var(--muted);font-size:12.5px}
+#sortClear{min-height:28px;padding:2px 9px;font-size:12px;border-radius:9px}
+.pvbox{position:relative;line-height:0}
+.hot{position:absolute;inset:0;pointer-events:none}
+.hot button{position:absolute;pointer-events:auto;background:transparent;border:0;border-radius:0;min-height:0;padding:0;cursor:pointer;transition:background .12s}
+.hot button:hover,.hot button:focus-visible{background:rgba(78,168,222,.16);outline:none}
+.hot button.on{background:rgba(78,168,222,.18)}
+.hot .ar{position:absolute;left:50%;bottom:0;transform:translate(-50%,45%);display:flex;align-items:center;gap:1px;font:800 clamp(8px,1vw,12px)/1.15 "Be Vietnam Pro",system-ui,sans-serif;
+  background:#1b6fa6;color:#fff;border-radius:5px;padding:1px 4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:1}
+.hot .ar.idle{background:#e3f1fb;color:#1b6fa6;opacity:0;transition:opacity .12s}
+.hot button:hover .ar.idle,.hot button:focus-visible .ar.idle{opacity:1}
+.schip,.sthen,#sortClear,.shint{white-space:nowrap}
+.shint{white-space:normal}
 .ptog{padding:0;min-height:0;gap:10px;background:none}
 .ptog .chev{font-size:12.5px;font-weight:700;color:var(--brand);background:var(--soft);border-radius:999px;padding:4px 10px;white-space:nowrap}
 #prevWrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff;max-height:70vh}
@@ -203,6 +221,10 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
 #zoomDlg .dlg{padding:8px}
 
 @media (max-width:640px){
+  .sortbar{flex-direction:column;align-items:stretch}
+  .sortbar #grpSeg{order:-1;align-self:flex-start}
+  .sortbox{width:100%;flex-wrap:nowrap;align-items:flex-start}
+  .sortbox .sl{padding-top:4px;flex:none}
   body{padding:0 12px calc(28px + env(safe-area-inset-bottom))}
   .card{padding:13px;border-radius:18px}
   h1{font-size:18px}
@@ -283,11 +305,10 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
       <span class="sp"></span>
       <div class="seg" id="expSeg"><button type="button" data-e="full" class="on">Đầy đủ cột</button><button type="button" data-e="short">Rút gọn</button></div>
     </div>
-    <div class="sortbar"><span class="sl">Sắp xếp</span><select class="fld" id="sortKey" aria-label="Sắp xếp theo cột"></select>
-      <div class="seg" id="sortDir"><button type="button" data-d="asc" class="on">A → Z</button><button type="button" data-d="desc">Z → A</button></div>
-      <span class="sp"></span>
+    <div class="sortbar">
+      <div class="sortbox"><span class="sl">Sắp xếp</span><div id="sortLevels"></div></div>
       <div class="seg" id="grpSeg"><button type="button" data-g="all" class="on">Gộp các ngày</button><button type="button" data-g="day">Tách theo ngày</button></div></div>
-    <div id="prevWrap" hidden><img id="prev" alt="Phiếu kết quả"></div>
+    <div id="prevWrap" hidden><div class="pvbox"><img id="prev" alt="Phiếu kết quả"><div class="hot" id="hot"></div></div></div>
     <div class="actions">
       <button type="button" class="primary" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
       <button type="button" class="ghost" id="shareImg"><span class="i">📤</span>Chia sẻ</button>
@@ -746,6 +767,7 @@ async function makeCanvas(mono = false){
   });
   g.textAlign = 'left'; g.fillStyle = T('#7b98aa'); g.font = `500 12.5px ${SANS}`;
   g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
+  cv.hdr = { cols: cols.map(c => c[0]), xs: xs.slice(), top: TOP, h: H_HEAD, W: Wc, H: Hc };
   cv.breaks = brk; cv.head = [TOP, TOP + H_HEAD]; cv.cssW = Wc; cv.cssH = Hc; cv.S = S;   // ranh giới dòng + dòng tiêu đề để chia trang A4
   return cv;
 }
@@ -762,6 +784,7 @@ async function renderExport(){
   if ($('#prevWrap').hidden) return;          // phiếu đang thu gọn: chỉ vẽ khi mở ra
   try {
     const c = await makeCanvas();
+    drawHot(c.hdr);
     lastBlob = await new Promise(r => c.toBlob(r, 'image/png'));
     const url = URL.createObjectURL(lastBlob);
     const old = $('#prev').src; $('#prev').src = url; if (old.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(old), 1000);
@@ -773,37 +796,76 @@ async function freshBlob(mono = false){
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
 /* Sắp xếp phiếu theo cột (gộp ngày: cả phiếu; tách ngày: trong từng ngày); bảng dữ liệu giữ nguyên thứ tự */
-let sortSt = LS.get('tbxn_sort', { key: '', dir: 'asc' });
+// Sắp xếp nhiều mức như Data → Sort của Excel: [{ key, dir }, …]; mức sau chỉ xét khi các mức trước bằng nhau
+let sortLv = (() => {
+  const v = LS.get('tbxn_sort', null);
+  if (Array.isArray(v)) return v.filter(x => x && x.key);
+  return v && v.key ? [{ key: v.key, dir: v.dir || 'asc' }] : [];   // định dạng cũ (1 cột)
+})();
+const saveSort = () => LS.set('tbxn_sort', sortLv);
 function sortVal(r, f){
   if (f === 'date'){ const m = String(r.date || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : null; }
+  if (f === 'gio'){ const t = String(r.gio || '').match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/); if (!t) return null; const hms = +t[1] * 1e4 + +t[2] * 100 + +(t[3] || 0);
+    const d = isMerged() ? sortVal(r, 'date') : null; return (d || 0) * 1e6 + hms; }   // gộp ngày: theo ngày rồi giờ
   if (NUMF.has(f)) return parseKg(r[f]);
   if (isPF(f)) return pcts(r).v[f];
   if (f === 'stt'){ const n = parseInt(r.stt, 10); return isNaN(n) ? null : n; }
   const t = String(r[f] ?? '').trim(); return t || null;
 }
-function sheetGroups(){
-  const gs = isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : groups(), k = sortSt.key;
-  if (!k) return gs;
-  const d = sortSt.dir === 'desc' ? -1 : 1;
-  return gs.map(g => ({ date: g.date, rows: [...g.rows].sort((a, b) => {
-    const va = sortVal(a, k), vb = sortVal(b, k);
-    if (va == null || vb == null) return va == null ? (vb == null ? 0 : 1) : -1;   // ô trống luôn ở cuối
+function cmpRows(a, b){
+  for (const { key, dir } of sortLv){
+    const va = sortVal(a, key), vb = sortVal(b, key);
+    if (va == null || vb == null){ if (va == null && vb == null) continue; return va == null ? 1 : -1; }   // ô trống luôn ở cuối
     const c = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'vi', { numeric: true, sensitivity: 'base' });
-    return c * d;
-  }) }));
+    if (c) return dir === 'desc' ? -c : c;
+  }
+  return 0;   // bằng nhau ở mọi mức: giữ thứ tự gốc
 }
-function fillSortOpts(){
-  const sel = $('#sortKey'), cols = [...sheetCols(), ['ghichu','Ghi chú']];
+function sheetGroups(){
+  const gs = isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : groups();
+  if (!sortLv.length) return gs;
+  return gs.map(g => ({ date: g.date, rows: [...g.rows].sort(cmpRows) }));
+}
+function sortCols(){
+  const cols = [...sheetCols(), ['ghichu','Ghi chú']];
   if (isMerged() && multiDay() && !cols.some(c => c[0] === 'date')) cols.splice(1, 0, ['date','Ngày cân']);
-  if (sortSt.key && !cols.some(c => c[0] === sortSt.key)) sortSt.key = '';
-  sel.innerHTML = '<option value="">Thứ tự gốc</option>' + cols.map(([f, t]) => `<option value="${f}">${esc(t)}</option>`).join('');
-  sel.value = sortSt.key;
-  document.querySelectorAll('#sortDir button').forEach(b => { b.classList.toggle('on', b.dataset.d === sortSt.dir); b.disabled = !sortSt.key; });
+  return cols;
+}
+// Mũi tên trên hàng tiêu đề của phiếu: bấm 1 lần tăng dần, lần 2 giảm dần, lần 3 bỏ; bấm cột khác = sắp xếp tiếp theo cột đó
+function colLabel(f){ const c = sortCols().find(x => x[0] === f); return c ? c[1].replace(/\s*\(%\)/, '') : f; }
+function fillSortOpts(){
+  const have = new Set(sortCols().map(c => c[0]));
+  const before = sortLv.length;
+  sortLv = sortLv.filter(l => have.has(l.key));
+  if (sortLv.length !== before) saveSort();
+  const box = $('#sortLevels');
+  box.innerHTML = sortLv.length
+    ? sortLv.map((l, i) => `${i ? '<span class="sthen">rồi</span>' : ''}<span class="schip"><b>${i + 1}</b>${esc(colLabel(l.key))} ${l.dir === 'desc' ? '↓' : '↑'}</span>`).join('') +
+      ' <button type="button" class="ghost" id="sortClear">✕ Bỏ sắp xếp</button>'
+    : `<span class="shint">${$('#prevWrap').hidden ? 'Mở phiếu rồi bấm' : 'Bấm'} vào tiêu đề cột trên phiếu để sắp xếp</span>`;
   document.querySelectorAll('#grpSeg button').forEach(b => b.classList.toggle('on', b.dataset.g === grpMode));
 }
+function drawHot(h){
+  const box = $('#hot'); if (!box || !h) return;
+  box.innerHTML = h.cols.map((f, k) => {
+    const i = sortLv.findIndex(l => l.key === f), l = sortLv[i];
+    const ar = l ? `<span class="ar">${l.dir === 'desc' ? '▼' : '▲'}${sortLv.length > 1 ? i + 1 : ''}</span>` : '<span class="ar idle">⇅</span>';
+    const st = `left:${(h.xs[k] / h.W * 100).toFixed(3)}%;width:${((h.xs[k + 1] - h.xs[k]) / h.W * 100).toFixed(3)}%;top:${(h.top / h.H * 100).toFixed(3)}%;height:${(h.h / h.H * 100).toFixed(3)}%`;
+    const tip = !l ? `Sắp xếp theo ${colLabel(f)} (tăng dần)` : l.dir !== 'desc' ? `Đổi ${colLabel(f)} sang giảm dần` : `Bỏ sắp xếp theo ${colLabel(f)}`;
+    return `<button type="button" data-sort="${f}" class="${l ? 'on' : ''}" style="${st}" title="${esc(tip)}" aria-label="Sắp xếp theo ${esc(colLabel(f))}">${ar}</button>`;
+  }).join('');
+}
+$('#hot').addEventListener('click', e => {
+  const b = e.target.closest('[data-sort]'); if (!b) return;
+  e.stopPropagation();
+  const f = b.dataset.sort, i = sortLv.findIndex(l => l.key === f);
+  if (i < 0) sortLv.push({ key: f, dir: 'asc' });
+  else if (sortLv[i].dir !== 'desc') sortLv[i].dir = 'desc';
+  else sortLv.splice(i, 1);
+  saveSort(); fillSortOpts(); renderExport();
+});
 document.querySelectorAll('#grpSeg button').forEach(b => b.addEventListener('click', () => { grpMode = b.dataset.g; LS.set('tbxn_grp', grpMode); fillSortOpts(); renderExport(); }));
-$('#sortKey').addEventListener('change', e => { sortSt.key = e.target.value; LS.set('tbxn_sort', sortSt); fillSortOpts(); renderExport(); });
-document.querySelectorAll('#sortDir button').forEach(b => b.addEventListener('click', () => { sortSt.dir = b.dataset.d; LS.set('tbxn_sort', sortSt); fillSortOpts(); renderExport(); }));
+$('#sortLevels').addEventListener('click', e => { if (e.target.closest('#sortClear')){ sortLv = []; saveSort(); fillSortOpts(); renderExport(); } });
 function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `phieu-ca-tuoi_${d}.png`; }
 document.querySelectorAll('#expSeg button').forEach(b => {
   b.classList.toggle('on', b.dataset.e === expMode);
@@ -813,6 +875,7 @@ $('#prevTog').addEventListener('click', () => {
   const w = $('#prevWrap'), open = w.hidden;
   w.hidden = !open; $('#prevTog').setAttribute('aria-expanded', open);
   $('#prevTog .chev').textContent = open ? 'Ẩn phiếu ▴' : 'Xem phiếu ▾';
+  fillSortOpts();
   if (open) renderExport();
 });
 $('#prev').addEventListener('click', () => { $('#zoomImg').src = $('#prev').src; $('#zoomDlg').showModal(); });
