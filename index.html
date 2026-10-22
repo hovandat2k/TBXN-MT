@@ -3188,7 +3188,6 @@ var APP = (() => {
       $('#lgPass').value = '';
       applyRole(); lastErr = '';
       showTab(LS.get('tbxn_tab', 'tuoi') || 'tuoi');
-      toast(`👋 Xin chào ${j.name}`);
       api('ping').then(p => { if (p.folderUrl) LS.set('tbxn_gasfolder', p.folderUrl); if (p.sheetUrl) LS.set('tbxn_gassheet', p.sheetUrl); }).catch(() => {});
       await flush(); lastPull = 0; pull(true);
     } catch(err){ $('#lgErr').textContent = err.message; }
