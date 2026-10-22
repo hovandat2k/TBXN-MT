@@ -2275,7 +2275,7 @@ var APP = (() => {
   const dateKey = s => { const m = String(s || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : 0; };
   const numv = v => v === '' || v == null ? null : typeof v === 'number' ? v : parseKg(String(v));
   // URL máy chủ Apps Script gắn sẵn: người dùng chỉ cần đăng nhập. Để trống thì màn hình đăng nhập hiện ô nhập URL.
-  const GAS_URL = '';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyd1j55R2fAbaRSaJv6lULpmD8ZuNSCyVD6A3MtrpOyHDfTVDg08K6sQF5erWfN0po/exec';
   const gasUrl = () => GAS_URL || String(LS.get('tbxn_gas', '') || '').trim();
   let AUTH = LS.get('tbxn_auth', null);       // { token, user, name, role }
   const isAdmin = () => !!AUTH && AUTH.role === 'Toàn quyền';
