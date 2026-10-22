@@ -176,11 +176,11 @@ button:disabled{opacity:.5;cursor:default}
 .actions .danger{color:var(--warn)}
 #printArea{display:none}
 @media print{
-  @page{margin:8mm}
   html,body{background:#fff !important;padding:0 !important}
   body > *:not(#printArea){display:none !important}
   #printArea{display:block !important}
-  #printArea img{display:block;width:100%;height:auto}
+  #printArea img{display:block;height:auto;margin:0 auto;break-after:page;page-break-after:always}
+  #printArea img:last-child{break-after:auto;page-break-after:auto}
 }
 .actions button{flex-direction:column;gap:2px;min-height:0;padding:8px 2px;font-size:12px;font-weight:700;border-radius:12px;line-height:1.15}
 .actions button .i{font-size:18px;line-height:1}
@@ -291,7 +291,7 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
     <div class="actions">
       <button type="button" class="primary" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
       <button type="button" class="ghost" id="shareImg"><span class="i">📤</span>Chia sẻ</button>
-      <button type="button" class="ghost" id="dlImg"><span class="i">⬇️</span>Tải ảnh</button>
+      <button type="button" class="ghost" id="dlImg"><span class="i">⬇️</span>Tải PDF</button>
       <button type="button" class="ghost" id="printBtn"><span class="i">🖨️</span>In phiếu</button>
       <button type="button" class="ghost danger" id="resetBtn"><span class="i">🗑️</span>Xoá</button>
     </div>
@@ -299,7 +299,8 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="printArea"><img id="printImg" alt=""></div>
+<div id="printArea"></div>
+<style id="printPage"></style>
 
 <dialog id="setDlg">
   <form method="dialog" class="dlg">
@@ -666,7 +667,7 @@ async function makeCanvas(mono = false){
   // bảng
   const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
   const XE = xs[xs.length - 1];
-  let y = TOP;
+  let y = TOP; const brk = [TOP];
   const line = (x1, y1, x2, y2, w = 1.6) => { g.beginPath(); g.lineWidth = w; g.strokeStyle = '#000'; g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
   const nxFill = (y1, h, c) => cols.forEach(([f], k) => { if (isNX(f)){ g.fillStyle = c; g.fillRect(xs[k], y1, widths[k], h); } });
   const txt = (t, x, yy, align = 'center', w = 400, sz = FS, color = '#000') => { g.font = `${w} ${sz}px ${SERIF}`; g.fillStyle = color; g.textAlign = align; g.fillText(t, x, yy); };
@@ -675,13 +676,13 @@ async function makeCanvas(mono = false){
   nxFill(y, H_HEAD, F('#dceffb'));
   cols.forEach(([f, t], k) => txt(t, cellX(k), y + H_HEAD / 2 + 1, 'center', isNX(f) ? 700 : 400, FS, T(isNX(f) ? '#0f4c75' : '#000')));
   line(X0, y, XE, y); xs.forEach(x => line(x, y, x, y + H_HEAD));
-  y += H_HEAD;
+  y += H_HEAD; brk.push(y);
   gs.forEach(gr => {
     if (!isMerged()){
       line(X0, y, XE, y);
       line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
       txt(`Ngày cân : ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
-      y += H_DATE;
+      y += H_DATE; brk.push(y);
     }
     gr.rows.forEach((r, i) => {
       const note = noteOf.get(r) || [], h = rowH(r), pfH = note.length ? TOP_H : h;
@@ -700,7 +701,7 @@ async function makeCanvas(mono = false){
         const cx = (xs[iP0] + xs[iP1 + 1]) / 2, ny = y + pfH + (h - pfH) / 2 + 1;
         note.forEach((l, j) => { g.font = `italic 400 ${NOTE_FS}px ${SERIF}`; g.fillStyle = T('#24425a'); g.textAlign = 'center'; g.fillText(l, cx, ny + (j - (note.length - 1) / 2) * NOTE_LH); });
       }
-      y += h;
+      y += h; brk.push(y);
     });
     // tổng ngày
     const a = agg(gr.rows);
@@ -711,7 +712,7 @@ async function makeCanvas(mono = false){
     cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(a[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#0f4c75')); });
     line(X0, y, X0, y + H_TOT); line(XE, y, XE, y + H_TOT);
     cols.forEach(([f], k) => { if (isNX(f)){ line(xs[k], y, xs[k], y + H_TOT); } });
-    y += H_TOT;
+    y += H_TOT; brk.push(y);
   });
   if (gs.length > 1){
     line(X0, y, XE, y);
@@ -722,7 +723,7 @@ async function makeCanvas(mono = false){
     cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(A[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#0f4c75')); });
     line(X0, y, X0, y + H_GRAND); line(XE, y, XE, y + H_GRAND);
     cols.forEach(([f], k) => { if (isNX(f)) line(xs[k], y, xs[k], y + H_GRAND); });
-    y += H_GRAND;
+    y += H_GRAND; brk.push(y);
   }
   line(X0, y, XE, y);
   // ô tổng kết
@@ -737,6 +738,7 @@ async function makeCanvas(mono = false){
   });
   g.textAlign = 'left'; g.fillStyle = T('#7b98aa'); g.font = `500 12.5px ${SANS}`;
   g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
+  cv.breaks = brk; cv.head = [TOP, TOP + H_HEAD]; cv.cssW = Wc; cv.cssH = Hc; cv.S = S;   // ranh giới dòng + dòng tiêu đề để chia trang A4
   return cv;
 }
 function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -806,33 +808,104 @@ $('#prevTog').addEventListener('click', () => {
   if (open) renderExport();
 });
 $('#prev').addEventListener('click', () => { $('#zoomImg').src = $('#prev').src; $('#zoomDlg').showModal(); });
+// Sao chép: phiếu vừa 1 trang A4 -> sao chép ảnh; dài hơn -> tải PDF (bộ nhớ tạm không chứa được PDF)
 $('#copyImg').addEventListener('click', async () => {
+  const spP = sheetPages(false);
   try {
     if (!navigator.clipboard || !window.ClipboardItem) throw new Error('nosupport');
     // Truyền Promise vào ClipboardItem để Safari/iOS giữ thao tác người dùng
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': freshBlob() })]);
+    const pngP = spP.then(sp => sp.pages.length === 1 ? new Promise(r => sp.cv.toBlob(r, 'image/png')) : Promise.reject(new Error('multipage')));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngP })]);
     toast('✅ Đã sao chép ảnh');
   } catch(e){
-    const ok = await shareBlob().catch(() => false);
-    if (!ok) toast('Trình duyệt chưa hỗ trợ sao chép ảnh. Hãy dùng “Tải ảnh”.');
+    const sp = await spP.catch(() => null);
+    if (sp && sp.pages.length > 1){
+      await download(sp);
+      toast(`Phiếu dài ${sp.pages.length} trang A4 — đã tải về dạng PDF thay vì sao chép ảnh`, 5000);
+      return;
+    }
+    const ok = await shareBlob(sp).catch(() => false);
+    if (!ok) toast('Trình duyệt chưa hỗ trợ sao chép ảnh. Hãy dùng “Tải PDF”.');
   }
 });
-async function shareBlob(){
-  const blob = await freshBlob();
-  const file = new File([blob], fileName(), { type: 'image/png' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })){
-    await navigator.share({ files: [file], title: 'Phiếu báo cáo cà tươi', text: summaryText() });
-    return true;
+/* ---------- PDF: tự ghép, không cần thư viện. Ảnh phiếu (JPEG) đặt vào khổ A4, chia trang tại ranh giới dòng ---------- */
+// Chia phiếu thành các trang A4 (giống khi in): cắt tại ranh giới dòng, trang sau lặp lại dòng tiêu đề bảng
+async function sheetPages(mono = false){
+  clearTimeout(expTimer);
+  const cv = await makeCanvas(mono);
+  const W = cv.cssW, H = cv.cssH, S = cv.S;
+  const land = W > 1100;                                   // phiếu nhiều cột: khổ ngang
+  const PW = land ? 841.89 : 595.28, PH = land ? 595.28 : 841.89, MG = 22;   // A4 (pt), lề ~8mm
+  const k = Math.min((PW - MG * 2) / W, 1.2);               // pt trên mỗi px
+  const maxH = (PH - MG * 2) / k;
+  const [h0, h1] = cv.head, hh = h1 - h0;
+  const br = [...new Set([...cv.breaks, H])].sort((a, b) => a - b);
+  const slices = [];
+  for (let y0 = 0; y0 < H - 1;){
+    const cap = slices.length ? maxH - hh : maxH;
+    let y1 = H - y0 <= cap ? H : (br.filter(b => b > y0 + 1 && b <= y0 + cap).pop() || y0 + cap);
+    slices.push([y0, y1]); y0 = y1;
   }
+  const pages = slices.map(([a, b], i) => {
+    const head = i > 0 && a >= h1 ? hh : 0, ph = b - a + head;
+    const c = mkCanvas(W * S, ph * S), g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    if (head) g.drawImage(cv, 0, h0 * S, W * S, hh * S, 0, 0, W * S, hh * S);
+    g.drawImage(cv, 0, a * S, W * S, (b - a) * S, 0, head * S, W * S, (b - a) * S);
+    return { canvas: c, dw: W * k, dh: ph * k };
+  });
+  return { cv, pages, land, PW, PH, MG };
+}
+async function pdfBlob(sp){
+  sp = sp || await sheetPages(false);
+  const pages = [];
+  for (const p of sp.pages){
+    const jpg = new Uint8Array(await (await new Promise(r => p.canvas.toBlob(r, 'image/jpeg', 0.9))).arrayBuffer());
+    pages.push({ jpg, w: p.canvas.width, h: p.canvas.height, dw: p.dw, dh: p.dh });
+  }
+  return buildPdf(pages, sp.PW, sp.PH, sp.MG);
+}
+function buildPdf(pages, PW, PH, MG){
+  const enc = new TextEncoder(), parts = [], offs = [];
+  let len = 0;
+  const put = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put('\nendobj\n'); };
+  put('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  const n = pages.length, kids = pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
+  obj(1, () => put('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => put(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>`));
+  pages.forEach((p, i) => {
+    const pg = 3 + i * 3, im = pg + 1, ct = pg + 2;
+    const cs = `q ${p.dw.toFixed(2)} 0 0 ${p.dh.toFixed(2)} ${((PW - p.dw) / 2).toFixed(2)} ${(PH - MG - p.dh).toFixed(2)} cm /Im0 Do Q`;
+    obj(pg, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>`));
+    obj(im, () => { put(`<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.jpg.length} >>\nstream\n`); put(p.jpg); put('\nendstream'); });
+    obj(ct, () => put(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`));
+  });
+  const total = 3 + n * 3, xref = len;
+  put(`xref\n0 ${total}\n0000000000 65535 f \n` + offs.slice(1, total).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join(''));
+  put(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+const pdfName = () => fileName().replace(/\.png$/, '.pdf');
+async function shareBlob(sp){
+  // vừa 1 trang A4: gửi ảnh (xem ngay trong Zalo/Messenger); dài hơn hoặc không gửi được ảnh: gửi PDF
+  sp = sp || await sheetPages(false);
+  const can = f => navigator.canShare && navigator.canShare({ files: [f] });
+  if (sp.pages.length === 1){
+    const img = new File([await new Promise(r => sp.cv.toBlob(r, 'image/png'))], fileName(), { type: 'image/png' });
+    if (can(img)){ await navigator.share({ files: [img], title: 'Phiếu báo cáo cà tươi' }); return true; }
+  }
+  const pdf = new File([await pdfBlob(sp)], pdfName(), { type: 'application/pdf' });
+  if (can(pdf)){ await navigator.share({ files: [pdf], title: 'Phiếu báo cáo cà tươi' }); return true; }
   return false;
 }
 $('#shareImg').addEventListener('click', async () => {
-  try { if (!(await shareBlob())){ toast('Thiết bị không hỗ trợ chia sẻ trực tiếp — đã tải ảnh về'); download(); } }
+  try { if (!(await shareBlob())){ toast('Thiết bị không hỗ trợ chia sẻ trực tiếp — đã tải PDF về'); download(); } }
   catch(e){ if (e.name !== 'AbortError') toast('Không chia sẻ được: ' + e.message); }
 });
-async function download(){
-  const blob = await freshBlob();
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName();
+async function download(sp){
+  const blob = await pdfBlob(sp);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = pdfName();
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 $('#dlImg').addEventListener('click', () => download().catch(e => toast('Lỗi: ' + e.message)));
@@ -850,13 +923,21 @@ function summaryText(){
   return out.join('\n');
 }
 // In phiếu: đặt ảnh phiếu vào vùng in riêng rồi mở hộp thoại in
+// In phiếu: trắng đen, chia trang A4 giống hệt file PDF
 $('#printBtn').addEventListener('click', async () => {
   try {
-    const blob = await freshBlob(true), url = URL.createObjectURL(blob);   // in trắng đen
-    const img = $('#printImg');
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const sp = await sheetPages(true), area = $('#printArea');
+    area.querySelectorAll('img').forEach(i => { if (i.src.startsWith('blob:')) URL.revokeObjectURL(i.src); });
+    area.innerHTML = '';
+    for (const p of sp.pages){
+      const img = new Image(); img.alt = '';
+      img.style.width = (p.dw / (sp.PW - sp.MG * 2) * 100).toFixed(2) + '%';
+      img.src = URL.createObjectURL(await new Promise(r => p.canvas.toBlob(r, 'image/png')));
+      await img.decode().catch(() => {});
+      area.appendChild(img);
+    }
+    $('#printPage').textContent = `@page{size:A4 ${sp.land ? 'landscape' : 'portrait'};margin:${(sp.MG / 72 * 25.4).toFixed(1)}mm}`;
     window.print();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } catch(e){ toast('Không in được: ' + (e.message || e)); }
 });
 // Xoá toàn bộ trang: bảng, ảnh gốc, tiến trình, phiếu
