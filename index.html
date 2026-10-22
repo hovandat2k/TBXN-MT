@@ -167,6 +167,7 @@ button:disabled{opacity:.5;cursor:default}
   background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
   background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px;background-repeat:no-repeat}
 .sortbar .seg button:disabled{opacity:.45}
+.sortbar .sp{flex:1}
 .ptog{padding:0;min-height:0;gap:10px;background:none}
 .ptog .chev{font-size:12.5px;font-weight:700;color:var(--brand);background:var(--soft);border-radius:999px;padding:4px 10px;white-space:nowrap}
 #prevWrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff;max-height:70vh}
@@ -283,7 +284,9 @@ dialog::backdrop{background:rgba(10,30,45,.45)}
       <div class="seg" id="expSeg"><button type="button" data-e="full" class="on">Đầy đủ cột</button><button type="button" data-e="short">Rút gọn</button></div>
     </div>
     <div class="sortbar"><span class="sl">Sắp xếp</span><select class="fld" id="sortKey" aria-label="Sắp xếp theo cột"></select>
-      <div class="seg" id="sortDir"><button type="button" data-d="asc" class="on">A → Z</button><button type="button" data-d="desc">Z → A</button></div></div>
+      <div class="seg" id="sortDir"><button type="button" data-d="asc" class="on">A → Z</button><button type="button" data-d="desc">Z → A</button></div>
+      <span class="sp"></span>
+      <div class="seg" id="grpSeg"><button type="button" data-g="all" class="on">Gộp các ngày</button><button type="button" data-g="day">Tách theo ngày</button></div></div>
     <div id="prevWrap" hidden><img id="prev" alt="Phiếu kết quả"></div>
     <div class="actions">
       <button type="button" class="primary" id="copyImg"><span class="i">📋</span>Sao chép ảnh</button>
@@ -581,14 +584,19 @@ function getLogo(){
   logoImg = new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'icons/icon-192.png'; });
   return logoImg;
 }
+let grpMode = LS.get('tbxn_grp', 'all');   // 'all' = gộp chung các ngày (mặc định), 'day' = tách theo ngày
+const isMerged = () => grpMode === 'all';
+const multiDay = () => new Set(rows.map(r => r.date || '')).size > 1;
 function sheetCols(){
-  return expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']];
+  const c = expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']];
+  // gộp nhiều ngày: thêm cột Ngày cân ngay sau STT để vẫn biết xe cân ngày nào
+  return isMerged() && multiDay() ? c.flatMap(x => x[0] === 'stt' ? [x, ['date','Ngày cân']] : [x]) : c;
 }
 function cellText(r, f, i){
   let v = r[f] ?? '';
   if (NUMF.has(f)){ const n = parseKg(v); v = n == null ? String(v) : fmtKg(n); }
   else if (isPF(f)){ const n = pcts(r).v[f]; v = n == null ? '' : fmtPct(n); }
-  else if (f === 'stt' && !String(v).trim()) v = String(i + 1);
+  else if (f === 'stt' && (isMerged() || !String(v).trim())) v = String(i + 1);   // gộp ngày: đánh số liên tục
   v = String(v).trim();
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
   return [v];
@@ -633,7 +641,8 @@ async function makeCanvas(mono = false){
   if (leftW < labW){ const add = Math.ceil((labW - leftW) / Math.max(1, iThuc)); for (let k = 0; k < iThuc; k++) widths[k] += add; leftW = widths.slice(0, iThuc).reduce((a, b) => a + b, 0); }
   const tableW = widths.reduce((a, b) => a + b, 0);
   const M = 24, TOP = 92;
-  let tableH = H_HEAD + gs.reduce((a, g) => a + H_DATE + g.rows.reduce((s2, r) => s2 + rowH(r), 0) + H_TOT, 0) + (gs.length > 1 ? H_GRAND : 0);
+  const hDate = isMerged() ? 0 : H_DATE;
+  let tableH = H_HEAD + gs.reduce((a, g) => a + hDate + g.rows.reduce((s2, r) => s2 + rowH(r), 0) + H_TOT, 0) + (gs.length > 1 ? H_GRAND : 0);
   const SUMH = 96;
   const Wc = Math.max(tableW + M * 2, 640), Hc = TOP + tableH + SUMH + 34;
   const cv = mkCanvas(Wc * S, Hc * S), g = cv.getContext('2d');
@@ -646,7 +655,7 @@ async function makeCanvas(mono = false){
   g.font = `800 28px ${SANS}`; const titleW = g.measureText(TITLE).width;
   const gx = Math.round(Wc / 2 - (54 + 16 + titleW) / 2), tx = gx + 70;
   if (logo){ g.save(); roundRect(g, gx, 20, 54, 54, 13); g.clip(); if (mono) g.filter = 'grayscale(1)'; g.drawImage(logo, gx, 20, 54, 54); g.restore(); }
-  const dates = gs.map(x => x.date).filter(Boolean);
+  const dates = groups().map(x => x.date).filter(Boolean);
   const range = dates.length ? (dates.length > 1 ? `${dates[0]} – ${dates[dates.length - 1]}` : dates[0]) : '';
   g.fillStyle = T('#1b5f8c'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
   g.fillText(TITLE, tx, 37);
@@ -666,10 +675,12 @@ async function makeCanvas(mono = false){
   line(X0, y, XE, y); xs.forEach(x => line(x, y, x, y + H_HEAD));
   y += H_HEAD;
   gs.forEach(gr => {
-    line(X0, y, XE, y);
-    line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
-    txt(`Ngày cân : ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
-    y += H_DATE;
+    if (!isMerged()){
+      line(X0, y, XE, y);
+      line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
+      txt(`Ngày cân : ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
+      y += H_DATE;
+    }
     gr.rows.forEach((r, i) => {
       const note = noteOf.get(r) || [], h = rowH(r), pfH = note.length ? TOP_H : h;
       line(X0, y, XE, y);
@@ -749,16 +760,17 @@ async function freshBlob(mono = false){
   const c = await makeCanvas(mono);
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
-/* Sắp xếp phiếu theo cột (trong từng ngày cân); bảng dữ liệu giữ nguyên thứ tự */
+/* Sắp xếp phiếu theo cột (gộp ngày: cả phiếu; tách ngày: trong từng ngày); bảng dữ liệu giữ nguyên thứ tự */
 let sortSt = LS.get('tbxn_sort', { key: '', dir: 'asc' });
 function sortVal(r, f){
+  if (f === 'date'){ const m = String(r.date || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : null; }
   if (NUMF.has(f)) return parseKg(r[f]);
   if (isPF(f)) return pcts(r).v[f];
   if (f === 'stt'){ const n = parseInt(r.stt, 10); return isNaN(n) ? null : n; }
   const t = String(r[f] ?? '').trim(); return t || null;
 }
 function sheetGroups(){
-  const gs = groups(), k = sortSt.key;
+  const gs = isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : groups(), k = sortSt.key;
   if (!k) return gs;
   const d = sortSt.dir === 'desc' ? -1 : 1;
   return gs.map(g => ({ date: g.date, rows: [...g.rows].sort((a, b) => {
@@ -774,7 +786,9 @@ function fillSortOpts(){
   sel.innerHTML = '<option value="">Thứ tự gốc</option>' + cols.map(([f, t]) => `<option value="${f}">${esc(t)}</option>`).join('');
   sel.value = sortSt.key;
   document.querySelectorAll('#sortDir button').forEach(b => { b.classList.toggle('on', b.dataset.d === sortSt.dir); b.disabled = !sortSt.key; });
+  document.querySelectorAll('#grpSeg button').forEach(b => b.classList.toggle('on', b.dataset.g === grpMode));
 }
+document.querySelectorAll('#grpSeg button').forEach(b => b.addEventListener('click', () => { grpMode = b.dataset.g; LS.set('tbxn_grp', grpMode); fillSortOpts(); renderExport(); }));
 $('#sortKey').addEventListener('change', e => { sortSt.key = e.target.value; LS.set('tbxn_sort', sortSt); fillSortOpts(); renderExport(); });
 document.querySelectorAll('#sortDir button').forEach(b => b.addEventListener('click', () => { sortSt.dir = b.dataset.d; LS.set('tbxn_sort', sortSt); fillSortOpts(); renderExport(); }));
 function fileName(){ const g = groups(); const d = (g[0] && g[0].date || today()).replace(/\D+/g, '-'); return `phieu-ca-tuoi_${d}.png`; }
@@ -821,11 +835,12 @@ async function download(){
 $('#dlImg').addEventListener('click', () => download().catch(e => toast('Lỗi: ' + e.message)));
 function summaryText(){
   const out = [];
+  const merged = isMerged(), many = multiDay();
   sheetGroups().forEach(g => {
-    out.push(`📅 Ngày cân ${g.date || ''}`.trim());
-    g.rows.forEach((r, i) => out.push(`${i + 1}. ${r.khach || '?'} — ${fmtKg(parseKg(r.thuc)) || '?'} kg — Xanh ${fmtPct(pcts(r).x)}% · Nổi ${fmtPct(pcts(r).n)}% · Chín ${fmtPct(pcts(r).c)}%${String(r.ghichu ?? '').trim() ? ' — ' + String(r.ghichu).trim() : ''}`));
+    if (!merged) out.push(`📅 Ngày cân ${g.date || ''}`.trim());
+    g.rows.forEach((r, i) => out.push(`${i + 1}. ${merged && many && r.date ? '[' + r.date + '] ' : ''}${r.khach || '?'} — ${fmtKg(parseKg(r.thuc)) || '?'} kg — Xanh ${fmtPct(pcts(r).x)}% · Nổi ${fmtPct(pcts(r).n)}% · Chín ${fmtPct(pcts(r).c)}%${String(r.ghichu ?? '').trim() ? ' — ' + String(r.ghichu).trim() : ''}`));
     const a = agg(g.rows);
-    out.push(`   Tổng: ${fmtKg(a.tl)} kg · Xanh ${fmtPct(a.x)}% · Nổi ${fmtPct(a.n)}% · Chín ${fmtPct(a.c)}%`, '');
+    if (!merged) out.push(`   Tổng: ${fmtKg(a.tl)} kg · Xanh ${fmtPct(a.x)}% · Nổi ${fmtPct(a.n)}% · Chín ${fmtPct(a.c)}%`, '');
   });
   const A = agg(rows);
   out.push(`➡️ TỔNG KL: ${fmtKg(A.tl)} kg`, `➡️ TB Xanh: ${fmtPct(A.x)}%`, `➡️ TB Nổi: ${fmtPct(A.n)}%`, `➡️ TB Chín: ${fmtPct(A.c)}%`);
