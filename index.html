@@ -397,7 +397,7 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
   <nav class="tabs" id="tabs" role="tablist">
     <button type="button" role="tab" data-tab="tuoi" class="on">🌱 Cà tươi</button>
     <button type="button" role="tab" data-tab="th">⚖️ Thu hồi<span class="badge" id="thBadge" hidden></span></button>
-    <button type="button" role="tab" data-tab="ls">📚 Lịch sử</button>
+    <button type="button" role="tab" data-tab="ls">📚 Tổng hợp mẫu</button>
   </nav>
   <button type="button" class="sync" id="syncSt" hidden></button>
 
@@ -453,7 +453,7 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
     </div>
     <div class="sortbar">
       <div class="sortbox"><span class="sl">Sắp xếp</span><div id="sortLevels"></div></div>
-      <div class="seg" id="grpSeg"><button type="button" data-g="all" class="on">Gộp các ngày</button><button type="button" data-g="day">Tách theo ngày</button></div></div>
+      <div class="seg" id="grpSeg"><button type="button" data-g="all" class="on">Gộp các đêm</button><button type="button" data-g="day">Tách theo đêm</button></div></div>
     <div id="prevWrap" hidden><div class="pvbox"><img id="prev" alt="Phiếu kết quả"><div class="hot" id="hot"></div></div></div>
     <div class="actions">
       <button type="button" class="primary" id="saveSheet"><span class="i">💾</span><span class="t">Lưu</span></button>
@@ -503,9 +503,9 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
   <div class="tab" id="tab-ls" hidden>
     <section class="card">
       <div class="tbar">
-        <h2 style="margin:0">Lịch sử</h2>
+        <h2 style="margin:0">Tổng hợp mẫu</h2>
         <span class="sp"></span>
-        <div class="seg" id="lsSeg"><button type="button" data-m="day" class="on">Theo ngày</button><button type="button" data-m="cus">Theo khách hàng</button><button type="button" data-m="mau">Theo mẫu</button></div>
+        <div class="seg" id="lsSeg"><button type="button" data-m="day" class="on">Theo đêm</button><button type="button" data-m="cus">Theo khách hàng</button><button type="button" data-m="mau">Theo mẫu</button></div>
         <button type="button" class="ghost small" id="lsRefresh" title="Tải lại từ Google Drive">⟳</button>
       </div>
       <div class="lsctl" id="lsCtl"></div>
@@ -553,19 +553,6 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
       <button type="button" class="ghost test" id="gTest">🔍 Kiểm tra</button>
       <button type="button" class="primary" id="setSave">Lưu khoá</button>
     </div>
-    <h4 class="dsec">☁️ Google Drive</h4>
-    <p>Dữ liệu được lưu thẳng vào thư mục <b>“Cà Tươi + Thu Hồi”</b>. Tài khoản đăng nhập quản lý ở tab <b>User</b> của Google Sheet.</p>
-    <div class="gstat" id="gasStat"></div>
-    <div class="row2">
-      <button type="button" class="ghost test" id="gasCopy">📋 Sao chép mã Apps Script</button>
-    </div>
-    <details class="guide"><summary>Cập nhật mã Apps Script</summary>
-      <ol>
-        <li>Bấm <b>📋 Sao chép mã Apps Script</b>.</li>
-        <li>Mở dự án trên <a href="https://script.google.com/home" target="_blank" rel="noopener">script.google.com</a>, xoá nội dung cũ, dán mã mới, bấm 💾.</li>
-        <li><b>Triển khai → Quản lý các tùy chọn triển khai</b> → ✏️ → Phiên bản: <b>Phiên bản mới</b> → <b>Triển khai</b> (URL giữ nguyên).</li>
-      </ol>
-    </details>
     </div>
     <div class="row2"><button value="cancel" class="ghost">Đóng</button></div>
   </form>
@@ -751,7 +738,7 @@ function updateNumbers(){
   $('#sX').textContent = fmtPct(a.x);
   $('#sN').textContent = fmtPct(a.n);
   $('#sC').textContent = fmtPct(a.c);
-  $('#sumTag').textContent = rows.length ? `${rows.length} xe · ${gs.length} ngày` : '';
+  $('#sumTag').textContent = rows.length ? `${rows.length} xe · ${nightGroups().length} đêm` : '';
   $('#missNote').textContent = [
     a.bad ? `⚠️ ${a.bad} dòng có Xanh + Nổi + Chín khác 100% — hãy kiểm tra ô viền đỏ.` : '',
     a.miss ? `⚠️ ${a.miss} dòng chưa đủ 2 trong 3 số xanh/nổi/chín.` : ''
@@ -847,17 +834,17 @@ const isMerged = () => grpMode === 'all';
 const multiDay = () => new Set(rows.map(r => r.date || '')).size > 1;
 function sheetCols(){
   const c = expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']];
-  // gộp nhiều ngày: ngày cân ghi ngay dưới giờ cân (cùng ô); phiếu rút gọn không có cột giờ thì thêm cột Ngày cân
-  if (!(isMerged() && multiDay()) || c.some(x => x[0] === 'gio')) return c;
+  // nhiều ngày (gộp, hoặc 1 đêm kéo qua 2 ngày): ngày cân ghi ngay dưới giờ cân (cùng ô); phiếu rút gọn không có cột giờ thì thêm cột Ngày cân
+  if (!multiDay() || c.some(x => x[0] === 'gio')) return c;
   return c.flatMap(x => x[0] === 'stt' ? [x, ['date','Giờ / Ngày cân']] : [x]);
 }
 function cellText(r, f, i){
   let v = r[f] ?? '';
   if (NUMF.has(f)){ const n = parseKg(v); v = n == null ? String(v) : fmtKg(n); }
   else if (isPF(f)){ const n = pcts(r).v[f]; v = n == null ? '' : fmtPct(n); }
-  else if (f === 'stt' && (isMerged() || !String(v).trim())) v = String(i + 1);   // gộp ngày: đánh số liên tục
+  else if (f === 'stt' && (isMerged() || multiDay() || !String(v).trim())) v = String(i + 1);   // gộp ngày: đánh số liên tục
   v = String(v).trim();
-  if (f === 'gio' && isMerged() && multiDay() && r.date) return v ? [v, r.date] : [r.date];
+  if (f === 'gio' && multiDay() && r.date) return v ? [v, r.date] : [r.date];
   if (f === 'date'){ const t = String(r.gio ?? '').trim(); return t && v ? [t, v] : [t || v]; }   // phiếu rút gọn: giờ cân trên, ngày cân dưới
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
   return [v];
@@ -923,12 +910,11 @@ async function makeCanvas(mono = false){
   g.font = `800 28px ${SANS}`; const titleW = g.measureText(TITLE).width;
   const gx = Math.round(Wc / 2 - (54 + 16 + titleW) / 2), tx = gx + 70;
   if (logo){ g.save(); roundRect(g, gx, 20, 54, 54, 13); g.clip(); if (mono) g.filter = 'grayscale(1)'; g.drawImage(logo, gx, 20, 54, 54); g.restore(); }
-  const dates = groups().map(x => x.date).filter(Boolean);
-  const range = dates.length ? (dates.length > 1 ? `${dates[0]} – ${dates[dates.length - 1]}` : dates[0]) : '';
+  const range = nightRange();
   g.fillStyle = T('#1f6b3d'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
   g.fillText(TITLE, tx, 37);
   g.fillStyle = T('#5b7d64'); g.font = `600 15.5px ${SANS}`;
-  g.textAlign = 'center'; g.fillText([range ? 'Ngày ' + range : '', `${rows.length} xe`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
+  g.textAlign = 'center'; g.fillText([range, `${rows.length} xe`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
   // bảng
   const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
   const XE = xs[xs.length - 1];
@@ -946,7 +932,7 @@ async function makeCanvas(mono = false){
     if (!isMerged()){
       line(X0, y, XE, y);
       line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
-      txt(`Ngày cân : ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
+      txt(`Đêm ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
       y += H_DATE; brk.push(y);
     }
     gr.rows.forEach((r, i) => {
@@ -1057,14 +1043,30 @@ function cmpRows(a, b){
   }
   return 0;   // bằng nhau ở mọi mức: giữ thứ tự gốc
 }
+/* Ca đêm: từ 15h ngày D đến trước 15h ngày D+1 thuộc “Đêm D” */
+const NIGHT_H = 15;
+function nightOf(date, gio){
+  const m = String(date || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); if (!m) return String(date || '');
+  const d = new Date(+m[3], +m[2] - 1, +m[1]), t = String(gio || '').match(/(\d{1,2})\s*:/);
+  if (t && +t[1] < NIGHT_H) d.setDate(d.getDate() - 1);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+const nightKey = s => { const m = String(s || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : 0; };
+// nhóm theo đêm (giữ thứ tự gốc trong mỗi đêm, các đêm xếp tăng dần)
+function nightGroups(list){
+  const g = [], idx = new Map();
+  (list || rows).forEach(r => { const k = nightOf(r.date, r.gio); if (!idx.has(k)){ idx.set(k, g.length); g.push({ date: k, rows: [] }); } g[idx.get(k)].rows.push(r); });
+  return g.sort((a, b) => nightKey(a.date) - nightKey(b.date));
+}
+const nightRange = () => { const n = nightGroups().map(x => x.date).filter(Boolean); return n.length ? 'Đêm ' + (n.length > 1 ? `${n[0]} – ${n[n.length - 1]}` : n[0]) : ''; };
 function sheetGroups(){
-  const gs = isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : groups();
+  const gs = isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : nightGroups();
   if (!sortLv.length) return gs;
   return gs.map(g => ({ date: g.date, rows: [...g.rows].sort(cmpRows) }));
 }
 function sortCols(){
   const cols = [...sheetCols(), ['ghichu','Ghi chú']];
-  if (isMerged() && multiDay() && !cols.some(c => c[0] === 'date')) cols.splice(1, 0, ['date','Ngày cân']);
+  if (multiDay() && !cols.some(c => c[0] === 'date')) cols.splice(1, 0, ['date','Ngày cân']);
   return cols;
 }
 // Mũi tên trên hàng tiêu đề của phiếu: bấm 1 lần tăng dần, lần 2 giảm dần, lần 3 bỏ; bấm cột khác = sắp xếp tiếp theo cột đó
@@ -1820,7 +1822,8 @@ async function parseGrid(grid, words, ctx){
     hdrIdx = -1;
   }
   const out = [];
-  let date = '';
+  let date = '', nightHdr = false;
+  const nextDay = d => { const m = String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (!m) return d; const x = new Date(+m[3], +m[2] - 1, +m[1] + 1); return `${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}/${x.getFullYear()}`; };
   const dataIdx = [];
   // Phiếu kết quả (do trang này xuất) có sẵn cột Xanh/Nổi/Chín: lấy số in sẵn, ghi chú nằm ngay dưới các cột đó
   const hasPF = !!colX && PF.some(f => map[f] != null && colX[map[f]]);
@@ -1845,7 +1848,7 @@ async function parseGrid(grid, words, ctx){
     const txt = joinWords(wIn(b));
     const dm = txt.match(reDate);
     if (b.cells.length < Math.max(4, nCells - 2)){
-      if (dm && /ng.y|can|c.n/i.test(norm(txt))) date = fixDate(dm);
+      if (dm && /ng.y|can|c.n|dem/i.test(norm(txt))){ date = fixDate(dm); nightHdr = /dem/i.test(norm(txt)); }
       else if (dm && b.cells.length <= 2 && !/t.ng|cong/.test(norm(txt))) date = fixDate(dm);
       continue;
     }
@@ -1861,16 +1864,18 @@ async function parseGrid(grid, words, ctx){
       }, null) || ref;
     };
     const get = k => { if (map[k] == null) return ''; const c = cellOf(k); return c ? joinWords(wIn(b, c)) : ''; };
-    const r = { date, flags: {}, _band: i, _cells: {} };
+    const r = { date, flags: {}, _band: i, _cells: {}, _night: nightHdr };
     ['stt','soxe','hang','khach','tl1','tl2','tlh','bi','thuc','gio'].forEach(k => { r[k] = get(k); if (map[k] != null) r._cells[k] = cellOf(k); });
     if (!/\d/.test(r.thuc) && !/\d/.test(r.tlh) && !reTime.test(r.gio)) continue;   // dòng tiêu đề / dòng rác
     // phiếu gộp ngày: ngày cân ghi trong ô giờ hoặc cột Ngày cân
-    { const dm2 = (r.gio + ' ' + get('date')).match(reDate); if (dm2) r.date = fixDate(dm2); }
+    { const dm2 = (r.gio + ' ' + get('date')).match(reDate); if (dm2){ r.date = fixDate(dm2); r._night = false; } }
     if (hasPF) readPrintedPF(r, b);
     r.khach = cleanText(r.khach); r.hang = cleanText(r.hang); r.soxe = cleanText(r.soxe);
     r.stt = (r.stt.match(/\d+/) || [''])[0];
     const tm = r.gio.match(/(\d{1,2})[:.;](\d{2})(?:[:.;](\d{2}))?/);
     r.gio = tm ? [tm[1].padStart(2, '0'), tm[2], tm[3]].filter(Boolean).join(':') : cleanText(r.gio);
+    if (r._night && tm && +tm[1] < NIGHT_H && r.date) r.date = nextDay(r.date);   // dòng “Đêm D”: xe cân trước 15h thuộc ngày D+1
+    delete r._night;
     out.push(r); dataIdx.push(i);
   }
   // Kiểm tra số liệu, đọc lại các ô số nghi ngờ
@@ -2120,7 +2125,7 @@ function blobToB64(blob){ return new Promise((res, rej) => { const fr = new File
 async function geminiRead(blob, key, model){
   const b64 = await blobToB64(blob);
   const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
-Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô.
+Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô. Dòng "Đêm dd/mm/yyyy" là ca từ 15h ngày đó tới 15h hôm sau: xe có giờ cân trước 15:00 thì ngày cân là ngày hôm sau (dd+1).
 Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"/"TỔNG CỘNG TẤT CẢ" và các ô tổng kết bên dưới bảng), theo đúng thứ tự từ trên xuống. Trả về JSON:
 {"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null,"ghi_chu":""}]}
 Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi/chin là số (có thể có phần thập phân), null nếu không ghi. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
@@ -2347,11 +2352,10 @@ var APP = (() => {
     el.hidden = false;
     let t, c = '';
     if (!AUTH){ el.hidden = true; return; }
-    if (flushing) t = '⏳ Đang lưu lên Google Drive…';
-    else if (lastErr){ t = `⚠️ ${Q.length ? Q.length + ' mục chưa lưu lên Drive — ' : ''}${lastErr}`; c = 'err'; }
-    else if (Q.length){ t = `📴 ${Q.length} mục chờ gửi lên Drive`; c = 'warn'; }
-    else { t = '☁️ Đã lưu Google Drive'; c = 'ok'; }
-    el.textContent = `👤 ${AUTH.name} · ${t}`; el.className = 'sync ' + c;
+    if (lastErr){ t = `⚠️ ${Q.length ? Q.length + ' mục chưa lưu lên Drive — ' : ''}${lastErr}`; c = 'err'; }
+    else if (Q.length){ t = flushing ? '⏳ Đang lưu lên Google Drive…' : `📴 ${Q.length} mục chờ gửi lên Drive`; c = 'warn'; }
+    else { el.hidden = true; el.textContent = ''; return; }   // đã lưu xong: không hiện gì
+    el.hidden = false; el.textContent = t; el.className = 'sync ' + c;
   }
   $('#syncSt').addEventListener('click', () => { lastPull = 0; pull(true); });
   window.addEventListener('online', () => flush());
@@ -2454,17 +2458,20 @@ var APP = (() => {
     const done = new Set(DB.samples.map(s => String(s.rid || '')).filter(Boolean));
     return DB.rows.filter(r => r.rid && !done.has(String(r.rid)));
   }
-  const rowLabel = r => [r.khach || '(chưa có tên)', r.soxe, numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : ''].filter(Boolean).join(' · ');
+  const rowLabel = r => r.khach || '(chưa có tên)';
   function renderTH(){
     const sel = $('#thSel'), cur = sel.value;
     const pend = pending();
     const byDate = {};
-    pend.forEach(r => (byDate[r.date || ''] = byDate[r.date || ''] || []).push(r));
-    const dates = Object.keys(byDate).sort((a, b) => dateKey(b) - dateKey(a));
+    pend.forEach(r => { const k = nightOf(r.date, r.gio); (byDate[k] = byDate[k] || []).push(r); });
+    const dates = Object.keys(byDate).sort((a, b) => nightKey(b) - nightKey(a));
+    const tkey = r => dateKey(r.date) * 1e6 + (+(String(r.gio || '').replace(/\D/g, '').padEnd(6, '0').slice(0, 6)) || 0);
     let h = `<option value="">${pend.length ? '— Chọn khách hàng / xe —' : (DB.rows.length ? '✅ Đã làm thu hồi hết các xe đã lưu' : '— Chưa có phiếu cà tươi nào được lưu —')}</option>`;
     dates.forEach(d => {
-      h += `<optgroup label="Ngày cân ${esc(d || '?')} · còn ${byDate[d].length} xe">` +
-        byDate[d].sort((a, b) => String(a.gio).localeCompare(String(b.gio))).map(r => `<option value="${esc(r.rid)}">${esc(rowLabel(r))}</option>`).join('') + '</optgroup>';
+      const list = byDate[d].sort((a, b) => tkey(a) - tkey(b)), cnt = {}, seen = {};
+      list.forEach(r => { const n = rowLabel(r); cnt[n] = (cnt[n] || 0) + 1; });
+      h += `<optgroup label="Đêm ${esc(d || '?')} · còn ${list.length} xe">` +
+        list.map(r => { const n = rowLabel(r); seen[n] = (seen[n] || 0) + 1; return `<option value="${esc(r.rid)}">${esc(cnt[n] > 1 ? `${n} (${seen[n]})` : n)}</option>`; }).join('') + '</optgroup>';
     });
     h += '<option value="__free">✏️ Nhập tên khác…</option>';
     sel.innerHTML = h;
@@ -2482,7 +2489,7 @@ var APP = (() => {
     const info = $('#thInfo');
     if (r){
       info.hidden = false;
-      info.innerHTML = `<span>KL cà tươi <b>${numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : '–'}</b></span><span>Xe ${esc(r.soxe || '–')}</span><span>Ngày ${esc(r.date || '–')}${r.gio ? ' · ' + esc(r.gio) : ''}</span>`;
+      info.innerHTML = `<span>KL cà tươi <b>${numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : '–'}</b></span>`;
     } else info.hidden = true;
     if (recalc) thCalc(false);
   }
@@ -2649,8 +2656,8 @@ var APP = (() => {
     enqueue({ action: 'saveSample', sample, file });
     const left = pending();
     toast(`💾 Đã lưu mẫu ${t.name || ''}${DB.rows.length ? (left.length ? ` — còn ${left.length} xe` : ' — đã làm hết các xe 🎉') : ''}`, 3500);
-    // sang xe tiếp theo cùng ngày (nếu có)
-    const next = r ? (left.find(x => x.date === r.date) || left[0]) : null;
+    // sang xe tiếp theo cùng đêm (nếu có)
+    const next = r ? (left.find(x => nightOf(x.date, x.gio) === nightOf(r.date, r.gio)) || left[0]) : null;
     thClear(true);
     renderTH();
     $('#thSel').value = next ? String(next.rid) : (r ? '' : $('#thSel').value);
@@ -2669,6 +2676,14 @@ var APP = (() => {
   /* ---------------- Lịch sử: theo ngày / theo khách hàng / theo mẫu + xem chi tiết ---------------- */
   let lsMode = LS.get('tbxn_lsmode', 'day'), lsDate = '', lsCus = '', lsQ = '', lsMauDate = '';
   const sampleOf = rid => DB.samples.find(s => rid && String(s.rid) === String(rid));
+  // “Đêm D” = 15h ngày D → 15h ngày D+1
+  const rNight = r => nightOf(r.date, r.gio);
+  const sNight = sp => {
+    const r = sp.rid ? DB.rows.find(x => String(x.rid) === String(sp.rid)) : null;
+    if (r) return rNight(r);
+    const m = String(sp.savedAt || '').match(/(\d{1,2}\/\d{1,2}\/\d{4})\D+(\d{1,2}:\d{2})/);
+    return m ? nightOf(m[1], m[2]) : nightOf(sp.date, '');
+  };
   const rowOf = rid => DB.rows.find(r => String(r.rid) === String(rid));
   const kg = v => numv(v) != null ? fmtKg(numv(v)) : '';
   function statsOf(list){
@@ -2691,18 +2706,18 @@ var APP = (() => {
     const st = statsOf(list);
     const body = list.map((r, i) => {
       const t = numv(r.thuc), sp = sampleOf(r.rid);
-      return `<tr class="clk" data-rid="${esc(r.rid)}" title="Bấm để xem chi tiết">${withDate ? `<td>${esc(r.date || '')}</td>` : `<td>${i + 1}</td>`}<td>${esc(r.gio || '')}</td><td>${esc(r.soxe || '')}</td>${withDate ? '' : `<td class="l">${esc(r.khach || '')}</td>`}
+      return `<tr class="clk" data-rid="${esc(r.rid)}" title="Bấm để xem chi tiết">${withDate ? `<td>${esc(rNight(r))}</td>` : `<td>${i + 1}</td>`}<td>${esc(r.gio || '')}</td><td>${esc(r.soxe || '')}</td>${withDate ? '' : `<td class="l">${esc(r.khach || '')}</td>`}
         <td class="r">${t != null ? fmtKg(t) : ''}</td><td>${fmtPct(numv(r.xanh))}</td><td>${fmtPct(numv(r.noi))}</td><td>${fmtPct(numv(r.chin))}</td>
         <td>${sp ? `<span class="thv">${f2(+sp.thuhoi)}</span>` : '<span class="pend">chưa làm</span>'}</td><td class="l note">${esc(r.ghichu || '')}</td><td class="go">›</td></tr>`;
     }).join('');
     const cols = withDate ? 3 : 4;
-    return `<div class="lstbl"><table><thead><tr>${withDate ? '<th>Ngày cân</th>' : '<th>#</th>'}<th>Giờ</th><th>Số xe</th>${withDate ? '' : '<th>Khách hàng</th>'}<th>TL thực</th><th>Xanh</th><th>Nổi</th><th>Chín</th><th>Thu hồi (kg)</th><th>Ghi chú</th><th></th></tr></thead>
+    return `<div class="lstbl"><table><thead><tr>${withDate ? '<th>Đêm</th>' : '<th>#</th>'}<th>Giờ</th><th>Số xe</th>${withDate ? '' : '<th>Khách hàng</th>'}<th>TL thực</th><th>Xanh</th><th>Nổi</th><th>Chín</th><th>Thu hồi (kg)</th><th>Ghi chú</th><th></th></tr></thead>
       <tbody>${body}<tr class="tot"><td colspan="${cols}" class="r">Tổng ${list.length} xe :</td><td class="r">${fmtKg(st.tl)}</td><td>${fmtPct(st.x)}</td><td>${fmtPct(st.nn)}</td><td>${fmtPct(st.c)}</td>
       <td>${st.th != null ? f2(st.th) : '–'}</td><td class="l">${st.done}/${list.length} đã làm</td><td></td></tr></tbody></table></div>`;
   }
   function sampleTable(list){
-    return `<div class="lstbl"><table><thead><tr><th>Ngày cân</th><th>Khách hàng</th><th>Số xe</th><th>Loại mẫu</th><th>KL (g)</th><th>KL quả (g)</th><th>Độ ẩm</th><th>KL cà tươi</th><th>Thu hồi (kg)</th><th>Lưu lúc</th><th></th></tr></thead><tbody>${
-      list.map(sp => `<tr class="clk" data-sid="${esc(sp.id)}" title="Bấm để xem phiếu thu hồi"><td>${esc(sp.date || '')}</td><td class="l">${esc(sp.khach || '')}</td><td>${esc(sp.soxe || '')}</td><td>${esc(sp.mau || '')}</td>
+    return `<div class="lstbl"><table><thead><tr><th>Đêm</th><th>Khách hàng</th><th>Số xe</th><th>Loại mẫu</th><th>KL (g)</th><th>KL quả (g)</th><th>Độ ẩm</th><th>KL cà tươi</th><th>Thu hồi (kg)</th><th>Lưu lúc</th><th></th></tr></thead><tbody>${
+      list.map(sp => `<tr class="clk" data-sid="${esc(sp.id)}" title="Bấm để xem phiếu thu hồi"><td>${esc(sNight(sp))}</td><td class="l">${esc(sp.khach || '')}</td><td>${esc(sp.soxe || '')}</td><td>${esc(sp.mau || '')}</td>
         <td class="r">${esc(String(sp.kl ?? ''))}</td><td class="r">${esc(String(sp.klq ?? ''))}</td><td>${sp.am !== '' && sp.am != null ? degree(+sp.am) : ''}</td><td class="r">${kg(sp.klTuoi)}</td>
         <td><span class="thv">${f2(+sp.thuhoi)}</span></td><td>${esc(sp.savedAt || '')}</td><td class="go">›</td></tr>`).join('')}</tbody></table></div>`;
   }
@@ -2712,39 +2727,39 @@ var APP = (() => {
     if (!DB.rows.length && !DB.samples.length){
       ctl.innerHTML = ''; body.innerHTML = `<div class="lsempty">Chưa có dữ liệu nào được lưu.<br>Bấm <b>💾 Lưu</b> ở Phiếu kết quả (tab Cà tươi) để bắt đầu.</div>`; return;
     }
-    const allDates = [...new Set([...DB.rows.map(r => r.date || ''), ...DB.samples.map(s => s.date || '')])].sort((a, b) => dateKey(b) - dateKey(a));
+    const allDates = [...new Set([...DB.rows.map(rNight), ...DB.samples.map(sNight)])].sort((a, b) => nightKey(b) - nightKey(a));
     if (lsMode === 'day'){
       if (!allDates.includes(lsDate)) lsDate = allDates[0];
-      ctl.innerHTML = `<select class="fld sel" id="lsDate">${allDates.map(d => { const n = DB.rows.filter(r => (r.date || '') === d).length; return `<option value="${esc(d)}"${d === lsDate ? ' selected' : ''}>Ngày cân ${esc(d || '(không rõ)')}${n ? ` · ${n} xe` : ''}</option>`; }).join('')}</select>`;
-      const dayRows = DB.rows.filter(r => (r.date || '') === lsDate);
+      ctl.innerHTML = `<select class="fld sel" id="lsDate">${allDates.map(d => { const n = DB.rows.filter(r => rNight(r) === d).length; return `<option value="${esc(d)}"${d === lsDate ? ' selected' : ''}>Đêm ${esc(d || '(không rõ)')}${n ? ` · ${n} xe` : ''}</option>`; }).join('')}</select>`;
+      const dayRows = DB.rows.filter(r => rNight(r) === lsDate).sort((a, b) => dateKey(a.date) - dateKey(b.date) || String(a.gio).localeCompare(String(b.gio)));
       const lots = [...new Set(dayRows.map(r => r.batch))];
       let h = dayRows.length ? statCards(statsOf(dayRows)) : '';
       h += lots.map(b => {
         const lr = dayRows.filter(r => r.batch === b), all = DB.rows.filter(r => r.batch === b);
-        return `<div class="lot"><div class="lothead"><span>Lô lưu lúc <b>${esc(lr[0].savedAt || '')}</b>${all.length !== lr.length ? ` · lô có ${all.length} xe (nhiều ngày)` : ''}</span><span class="sp"></span>
+        return `<div class="lot"><div class="lothead"><span>Lô lưu lúc <b>${esc(lr[0].savedAt || '')}</b>${all.length !== lr.length ? ` · lô có ${all.length} xe (nhiều đêm)` : ''}</span><span class="sp"></span>
           <button type="button" class="ghost small" data-openlot="${esc(b)}">↩ Mở lại lô này</button></div>${lsTable(lr, false)}</div>`;
       }).join('');
-      const free = DB.samples.filter(s => !s.rid && (s.date || '') === lsDate);
+      const free = DB.samples.filter(s => !s.rid && sNight(s) === lsDate);
       if (free.length) h += `<div class="lot"><div class="lothead">Mẫu thu hồi ngoài danh sách</div>${sampleTable(free)}</div>`;
-      body.innerHTML = h || '<div class="lsempty">Không có dữ liệu ngày này.</div>';
+      body.innerHTML = h || '<div class="lsempty">Không có dữ liệu đêm này.</div>';
     } else if (lsMode === 'cus'){
       const names = [...new Set([...DB.rows.map(r => (r.khach || '').trim()), ...DB.samples.map(s => (s.khach || '').trim())].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
       if (!lsCus || !names.some(n => norm(n) === norm(lsCus))) lsCus = names[0] || '';
       ctl.innerHTML = `<select class="fld sel" id="lsCus">${names.map(n => `<option${norm(n) === norm(lsCus) ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select><span class="lsnote">${names.length} khách hàng</span>`;
       const list = DB.rows.filter(r => norm(r.khach) === norm(lsCus)).sort((a, b) => dateKey(b.date) - dateKey(a.date) || String(b.gio).localeCompare(String(a.gio)));
       const free = DB.samples.filter(s => !s.rid && norm(s.khach) === norm(lsCus));
-      const st = statsOf(list), days = new Set(list.map(r => r.date)).size;
-      body.innerHTML = (list.length ? statCards(st).replace(`${st.n} xe</div>`, `${st.n} xe · ${days} ngày</div>`) + lsTable(list, true) : '') +
+      const st = statsOf(list), days = new Set(list.map(rNight)).size;
+      body.innerHTML = (list.length ? statCards(st).replace(`${st.n} xe</div>`, `${st.n} xe · ${days} đêm</div>`) + lsTable(list, true) : '') +
         (free.length ? `<div class="lot"><div class="lothead">Mẫu thu hồi ngoài danh sách</div>${sampleTable(free)}</div>` : '') || '<div class="lsempty">Không có dữ liệu.</div>';
     } else {
       // theo mẫu thu hồi
-      const mDates = [...new Set(DB.samples.map(s => s.date || ''))].sort((a, b) => dateKey(b) - dateKey(a));
+      const mDates = [...new Set(DB.samples.map(sNight))].sort((a, b) => nightKey(b) - nightKey(a));
       if (lsMauDate && !mDates.includes(lsMauDate)) lsMauDate = '';
       ctl.innerHTML = `<input class="fld" id="lsQ" type="search" placeholder="🔍 Tìm khách hàng / số xe" value="${esc(lsQ)}" autocomplete="off">
-        <select class="fld sel" id="lsMauDate"><option value="">Tất cả ngày</option>${mDates.map(d => `<option value="${esc(d)}"${d === lsMauDate ? ' selected' : ''}>Ngày cân ${esc(d || '(không rõ)')}</option>`).join('')}</select>`;
+        <select class="fld sel" id="lsMauDate"><option value="">Tất cả các đêm</option>${mDates.map(d => `<option value="${esc(d)}"${d === lsMauDate ? ' selected' : ''}>Đêm ${esc(d || '(không rõ)')}</option>`).join('')}</select>`;
       const q = norm(lsQ.trim());
-      const list = DB.samples.filter(sp => (!lsMauDate || (sp.date || '') === lsMauDate) && (!q || norm(sp.khach).includes(q) || norm(sp.soxe).includes(q)))
-        .sort((a, b) => dateKey(b.date) - dateKey(a.date) || String(b.savedAt).localeCompare(String(a.savedAt)));
+      const list = DB.samples.filter(sp => (!lsMauDate || sNight(sp) === lsMauDate) && (!q || norm(sp.khach).includes(q) || norm(sp.soxe).includes(q)))
+        .sort((a, b) => nightKey(sNight(b)) - nightKey(sNight(a)) || String(b.savedAt).localeCompare(String(a.savedAt)));
       let wt = 0, ws = 0, sum = 0; list.forEach(sp => { sum += +sp.thuhoi || 0; const t = numv(sp.klTuoi); if (t){ wt += t * +sp.thuhoi; ws += t; } });
       const nr = list.filter(sp => sp.mau === 'Mẫu riêng').length;
       body.innerHTML = list.length ? cards([
@@ -2783,7 +2798,7 @@ var APP = (() => {
     let h = '';
     if (r){
       h += `<h4>🌱 Thông tin cân</h4>` + kv([
-        ['Ngày cân', esc(r.date || '')], ['Giờ cân', esc(r.gio || '')], ['Số xe', esc(r.soxe || '')], ['Hàng hóa', esc(r.hang || '')],
+        ['Đêm', esc(rNight(r))], ['Ngày cân', esc(r.date || '')], ['Giờ cân', esc(r.gio || '')], ['Số xe', esc(r.soxe || '')], ['Hàng hóa', esc(r.hang || '')],
         ['TL Lần 1', kg(r.tl1)], ['TL Lần 2', kg(r.tl2)], ['TL Hàng', kg(r.tlh)], ['TL Bì', kg(r.bi)],
         ['TL thực', kg(r.thuc) ? kg(r.thuc) + ' kg' : '', true],
         ['Xanh / Nổi / Chín', `${fmtPct(numv(r.xanh))} / ${fmtPct(numv(r.noi))} / ${fmtPct(numv(r.chin))} %`],
@@ -2845,13 +2860,9 @@ var APP = (() => {
   }
 
   /* ---------------- Tài khoản, cài đặt ---------------- */
-  function gasStat(cls, html){ const e = $('#gasStat'); e.className = 'gstat ' + cls; e.innerHTML = html; }
   function showAcct(){
     if (!AUTH) return;
-    $('#acctBox').innerHTML = `<span>👤 <b>${esc(AUTH.name)}</b> <span style="color:var(--muted)">(${esc(AUTH.user)})</span></span><span class="role">${esc(AUTH.role)}</span><span class="sp"></span><button type="button" class="ghost" id="logoutBtn">Đăng xuất</button>`;
-    const f = LS.get('tbxn_gasfolder', ''), sh = LS.get('tbxn_gassheet', '');
-    gasStat(lastErr ? 'err' : 'ok', (lastErr ? '🔴 ' + esc(lastErr) : '🟢 Đang lưu vào Google Drive') +
-      (f ? ` · <a href="${esc(f)}" target="_blank" rel="noopener">Mở thư mục</a>` : '') + (sh ? ` · <a href="${esc(sh)}" target="_blank" rel="noopener">Mở Google Sheet</a>` : ''));
+    $('#acctBox').innerHTML = `<span>👤 <b>${esc(AUTH.name)}</b></span><span class="sp"></span><button type="button" class="ghost" id="logoutBtn">Đăng xuất</button>`;
   }
   $('#setBtn').addEventListener('click', showAcct);
   $('#acctBox').addEventListener('click', e => { if (e.target.id === 'logoutBtn'){ $('#setDlg').close(); logout(false); } });
@@ -2894,14 +2905,6 @@ var APP = (() => {
       await flush(); lastPull = 0; pull(true);
     } catch(err){ $('#lgErr').textContent = err.message; }
     finally { $('#lgBtn').disabled = false; $('#lgBtn').textContent = 'Đăng nhập'; }
-  });
-  $('#gasCopy').addEventListener('click', async () => {
-    try {
-      const code = await (await fetch('apps-script/Code.gs', { cache: 'no-store' })).text();
-      try { await navigator.clipboard.writeText(code); }
-      catch(e){ const ta = document.createElement('textarea'); ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-      toast('✅ Đã sao chép mã Apps Script — dán vào script.google.com');
-    } catch(e){ window.open('https://github.com/hovandat2k/TBXN-MT/blob/main/apps-script/Code.gs', '_blank'); }
   });
 
   /* ---------------- Khởi động ---------------- */
