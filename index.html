@@ -134,6 +134,11 @@ button:disabled{opacity:.5;cursor:default}
 .rhead{font-size:12px;font-weight:700;color:var(--muted);padding:0 2px 4px}
 .rhead span:nth-child(n+3){text-align:center}
 .row{padding:4px 2px;border-bottom:1px solid var(--line)}
+.row .rext{grid-column:2 / -2;display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;margin:2px 0 4px}
+.row .xf.w2{grid-column:span 2}
+.row .xf{display:flex;flex-direction:column;gap:2px;min-width:0}
+.row .xf span{font-size:11px;font-weight:700;color:var(--muted)}
+.row .xf .fld{padding:5px 6px;font-size:13px;min-height:0;height:32px}
 .row:last-of-type{border-bottom:0}
 .row .n{font-weight:800;color:var(--muted);text-align:center;padding-top:9px;font-size:14px}
 .row .del{width:34px;height:38px;min-height:0;padding:0;font-size:16px;color:var(--muted);border-radius:10px}
@@ -847,38 +852,27 @@ function renderTable(){
     return;
   }
   const gs = groups();
-  if (view === 'full'){
-    let h = `<div class="full"><table><thead><tr>${COLS_EDIT.map(c => `<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>`;
-    gs.forEach((g, gi) => {
-      h += `<tr><td class="gtd" colspan="${COLS_EDIT.length + 1}">Ngày cân : <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" style="width:130px;display:inline-block;font-weight:800"></td></tr>`;
-      g.rows.forEach(r => {
-        h += `<tr data-id="${r.id}">` + COLS_EDIT.map(([f]) => {
-          const cls = NUMF.has(f) ? 'num' : isPF(f) ? 'pct' : '';
-          const w = { stt: 46, soxe: 110, hang: 150, khach: 170, ghichu: 170, gio: 92, xanh: 62, noi: 62, chin: 62 }[f] || 88;
-          return `<td><input class="fld ${cls} ${r.flags[f] ? 'warn' : ''}" data-f="${f}" value="${esc(r[f] ?? '')}" style="width:${w}px" ${NUMF.has(f) || isPF(f) ? 'inputmode="decimal"' : ''}></td>`;
-        }).join('') + `<td class="c"><button class="del" data-del="${r.id}" title="Xoá dòng" style="width:30px;height:32px;min-height:0;padding:0">✕</button></td></tr>`;
-      });
-    });
-    box.innerHTML = h + `</tbody></table></div><button type="button" class="addrow" data-add="${gs.length - 1}">＋ Thêm dòng</button>`;
-  } else {
+  {
     box.innerHTML = gs.map((g, gi) => `
       <div class="grp">
         <div class="ghead">📅 Ngày cân <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" placeholder="dd/mm/yyyy"><span class="gsum" data-gs="${gi}"></span></div>
         <div class="rhead"><span>#</span><span>Khách hàng</span><span>Ghi chú</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span>Chín %</span><span></span></div>
-        ${g.rows.map((r, i) => rowHTML(r, i + 1)).join('')}
+        ${g.rows.map((r, i) => rowHTML(r, i + 1, view === 'full')).join('')}
         <button type="button" class="addrow" data-add="${gi}">＋ Thêm dòng</button>
       </div>`).join('');
   }
   updateNumbers();
 }
-function rowHTML(r, n){
+// "Tất cả cột": giữ nguyên dạng bảng gọn, thêm một hàng nhỏ bên dưới cho các cột cân (không phải kéo ngang)
+const EXT_COLS = [['soxe','Số xe',110],['hang','Hàng hóa',170],['tl1','TL Lần 1',90],['tl2','TL Lần 2',90],['tlh','TL Hàng',90],['bi','TL Bì',76],['gio','Giờ cân',92]];
+function rowHTML(r, n, full){
   const crop = crops[r.id];
   const hw = crop ? `<div class="hw" title="Chữ viết tay đọc được">✍️ <img src="${crop}" data-zoom="1" alt=""><span class="rd">${esc(r.hwText || '')}</span></div>` : '';
   const meta = [r.soxe ? `<span class="sx" data-sx="${r.id}">${esc(r.soxe)}</span>` : '', esc(r.gio || '')].filter(Boolean).join(' · ');
   return `<div class="row" data-id="${r.id}">
     <div class="n">${n}</div>
     <div class="ckh"><input class="fld ${r.flags.khach ? 'warn' : ''}" data-f="khach" value="${esc(r.khach)}" placeholder="Khách hàng">
-      ${meta ? `<div class="meta">${meta}</div>` : ''}${hw}</div>
+      ${meta && !full ? `<div class="meta">${meta}</div>` : ''}${hw}</div>
     <div class="cgc"><input class="fld" data-f="ghichu" value="${esc(r.ghichu ?? '')}" placeholder="Ghi chú"></div>
     <div class="ctl"><span class="cl">TL thực (kg)</span><input class="fld num ${r.flags.thuc ? 'warn' : r.flags.thucOk ? 'okv' : ''}" data-f="thuc" value="${esc(r.thuc)}" inputmode="decimal" placeholder="0"
       title="${r.flags.thuc ? 'Không khớp TL Hàng − TL Bì, hãy kiểm tra' : r.flags.thucOk ? 'Đã khớp TL Hàng − TL Bì' : ''}"></div>
@@ -886,6 +880,7 @@ function rowHTML(r, n){
     <div class="cn"><span class="cl">Nổi %</span><input class="fld pct ${r.flags.noi ? 'warn' : ''}" data-f="noi" value="${esc(r.noi ?? '')}" inputmode="decimal" placeholder="–"></div>
     <div class="cc"><span class="cl">Chín %</span><input class="fld pct ${r.flags.chin ? 'warn' : ''}" data-f="chin" value="${esc(r.chin ?? '')}" inputmode="decimal" placeholder="–"></div>
     <button type="button" class="del" data-del="${r.id}" title="Xoá dòng" aria-label="Xoá dòng">✕</button>
+    ${full ? `<div class="rext">${EXT_COLS.map(([f, l, w]) => `<label class="xf${w > 150 ? ' w2' : ''}"><span>${l}</span><input class="fld ${NUMF.has(f) ? 'num' : ''} ${r.flags[f] ? 'warn' : ''}" data-f="${f}" value="${esc(r[f] ?? '')}"${NUMF.has(f) ? ' inputmode="decimal"' : ''}></label>`).join('')}</div>` : ''}
   </div>`;
 }
 
