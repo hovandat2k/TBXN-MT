@@ -3157,7 +3157,7 @@ var APP = (() => {
     let h = '';
     if (r){
       h += `<h4>${IC('sprout')}Thông tin cân</h4>` + kv([
-        ['Đêm', esc(rNight(r))], ['Ngày cân', esc(r.date || '')], ['Giờ cân', esc(r.gio || '')], ['Số xe', esc(r.soxe || '')], ['Hàng hóa', esc(r.hang || '')],
+        ['Ngày cân', esc(r.date || '')], ['Giờ cân', esc(r.gio || '')], ['Số xe', esc(r.soxe || '')], ['Hàng hóa', esc(r.hang || '')],
         ['TL Lần 1', kg(r.tl1)], ['TL Lần 2', kg(r.tl2)], ['TL Hàng', kg(r.tlh)], ['TL Bì', kg(r.bi)],
         ['TL thực', kg(r.thuc) ? kg(r.thuc) + ' kg' : '', true],
         ['Xanh / Nổi / Chín', `${fmtPct(numv(r.xanh))} / ${fmtPct(numv(r.noi))} / ${fmtPct(numv(r.chin))} %`],
