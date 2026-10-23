@@ -3260,8 +3260,8 @@ var APP = (() => {
     const seen = new Set();
     const list = DB.samples.filter(sp => sNight(sp) === svNight).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))
       .filter(sp => { if (!sp.nhom) return true; if (seen.has(sp.nhom)) return false; seen.add(sp.nhom); return true; });
-    box.innerHTML = `<div class="svlist">${list.map(sp => { const g = groupOf(sp), many = g.length > 1; return `<button type="button" class="svitem${isAdmin() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc((many ? groupName(g) : sp.khach) || '(không tên)')}</span><span class="v">${isNaN(+sp.thuhoi) ? 'Không làm' : f2(+sp.thuhoi) + ' kg'}</span>${isAdmin() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
-      <span class="m">${[many ? `${g.length} xe chung mẫu` : sp.soxe, sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', 'Lưu ' + (sp.savedAt || ''), isAdmin() ? sp.savedBy : ''].filter(Boolean).map(esc).join(' · ')}</span></button>`; }).join('')}</div>`;
+    box.innerHTML = `<div class="svlist">${list.map(sp => { const g = groupOf(sp), many = g.length > 1; return `<button type="button" class="svitem${isAdmin() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc((many ? groupName(g) : sp.khach) || '(không tên)')}</span><span class="v">${isNaN(+sp.thuhoi) ? 'X' : f2(+sp.thuhoi) + ' kg'}</span>${isAdmin() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
+      <span class="m">${[many ? `${g.length} xe chung mẫu` : sp.soxe, isNaN(+sp.thuhoi) ? '' : sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', 'Lưu ' + (sp.savedAt || ''), isAdmin() ? sp.savedBy : ''].filter(Boolean).map(esc).join(' · ')}</span></button>`; }).join('')}</div>`;
   }
   $('#thSavedNight').addEventListener('change', e => { svNight = e.target.value; renderSaved(); });
   $('#thSaved').addEventListener('click', e => {
@@ -3868,8 +3868,8 @@ var APP = (() => {
     h += `<h4>${IC('scale')}Thu hồi</h4>`;
     const grp = groupOf(sp);
     if (sp){
-      h += kv([...(grp.length > 1 ? [['Mẫu chung', `${grp.length} xe: ${esc(groupName(grp))}`]] : []), ['Loại mẫu', esc(sp.mau || '')], ['KL', sp.kl !== '' ? esc(String(sp.kl)) + ' g' : ''], ['KL quả', sp.klq !== '' ? esc(String(sp.klq)) + ' g' : ''],
-        ['Độ ẩm', sp.am !== '' && sp.am != null ? degree(+sp.am) : ''], ['Thu hồi', isNaN(+sp.thuhoi) ? 'Không làm mẫu (x)' : f2(+sp.thuhoi) + ' kg', true], ['Lưu lúc', esc(sp.savedAt || '')]]) +
+      h += kv([...(grp.length > 1 ? [['Mẫu chung', `${grp.length} xe: ${esc(groupName(grp))}`]] : []), ['Loại mẫu', isNaN(+sp.thuhoi) ? '' : esc(sp.mau || '')], ['KL', sp.kl !== '' ? esc(String(sp.kl)) + ' g' : ''], ['KL quả', sp.klq !== '' ? esc(String(sp.klq)) + ' g' : ''],
+        ['Độ ẩm', sp.am !== '' && sp.am != null ? degree(+sp.am) : ''], ['Thu hồi', isNaN(+sp.thuhoi) ? 'X' : f2(+sp.thuhoi) + ' kg', true], ['Lưu lúc', esc(sp.savedAt || '')]]) +
         `<div class="detimg"><img id="detImg" alt="Phiếu thu hồi"></div>`;
     } else h += `<div class="lsempty" style="padding:12px">Xe này chưa làm thu hồi.</div>`;
     $('#detBody').innerHTML = h;
