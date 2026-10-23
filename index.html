@@ -1897,7 +1897,7 @@ async function readLocal(blob){
   sctx.save(); sctx.translate(W / 2, H / 2); sctx.rotate(-rad); sctx.scale(scale, scale);
   sctx.drawImage(bmp, -iw / 2, -ih / 2); sctx.restore();
   const img = sctx.getImageData(0, 0, W, H), d = img.data;
-  const gray = new Uint8Array(W * H), ink = new Uint8Array(W * H);
+  const gray = new Uint8Array(W * H), ink = new Uint8Array(W * H), raw = new Float32Array(W * H);
   const bgOf = background(d, W, H);   // nền giấy (ảnh chụp có bóng, ố vàng) -> chuẩn hoá về trắng
   // Mực bút màu: sắc xanh (b vượt r,g) hoặc đỏ/tím (r vượt g), làm mượt để khử viền màu giả do nén JPEG
   // sắc màu tính sau khi đưa nền (kể cả nền tô màu nhạt như cột Xanh/Nổi/Chín) về trắng theo từng kênh
@@ -1905,7 +1905,8 @@ async function readLocal(blob){
   const chB = new Float32Array(W * H), chR = new Float32Array(W * H), chBG = new Float32Array(W * H);
   for (let i = 0, p = 0; i < W * H; i++, p += 4){
     const r = d[p], g = d[p + 1], b = d[p + 2];
-    gray[i] = Math.min(255, ((r * 299 + g * 587 + b * 114) / 1000) * 255 / bgOf(i));
+    raw[i] = (r * 299 + g * 587 + b * 114) / 1000;
+    gray[i] = Math.min(255, raw[i] * 255 / bgOf(i));
     const rn = Math.min(255, r * 255 / bgR(i)), gn = Math.min(255, g * 255 / bgG(i)), bn = Math.min(255, b * 255 / bgB(i));
     chB[i] = bn - (rn + gn) / 2; chR[i] = rn - gn; chBG[i] = bn - gn;
   }
@@ -1933,7 +1934,25 @@ async function readLocal(blob){
   grid.hLines.forEach(L => { for (let y = Math.max(0, L.y0 - 1); y <= Math.min(H - 1, L.y1 + 1); y++) isLine.fill(1, y * W, y * W + W); });
   grid.bands.forEach(b => b.seps.forEach(s => { for (let y = b.y0; y <= b.y1; y++) for (let x = Math.max(0, s.x0 - 1); x <= Math.min(W - 1, s.x1 + 1); x++) isLine[y * W + x] = 1; }));
   const inkD = dilate(ink, W, H, Math.max(2, Math.round(2.2 * scale)));
+  // dòng đang chọn trong phần mềm (nền tối, chữ trắng): đảo màu để đọc được
+  // hàng có hơn một nửa điểm màu xám trung bình (thanh chọn) -> đảo màu cả hàng
+  const darkRow = new Uint8Array(H);
+  for (let y = 0; y < H; y++){ let c = 0; for (let x = 0; x < W; x += 2){ const v = raw[y * W + x]; if (v > 90 && v < 165) c++; } darkRow[y] = c > W / 4 ? 1 : 0; }
+  // chỉ nhận dải mỏng nằm giữa vùng sáng (thanh chọn của phần mềm), không đảo ảnh chụp tối / bóng đổ
+  const rowMed = y => { const v = []; for (let x = 0; x < W; x += 7) v.push(raw[y * W + x]); return median(v); };
+  for (let y = 0; y < H;){
+    if (!darkRow[y]){ y++; continue; }
+    let e = y; while (e < H && darkRow[e]) e++;
+    const ok = e - y < H * 0.09 && y > 2 && e < H - 2 && rowMed(Math.max(0, y - 3)) > 180 && rowMed(Math.min(H - 1, e + 2)) > 180;
+    if (!ok) darkRow.fill(0, y, e);
+    y = e;
+  }
+  // trong thanh chọn, ô đang sửa có nền trắng chữ đen: không đảo ô đó (trung bình ngang quanh điểm còn sáng)
+  const hMean = new Float32Array(W * H), R = Math.max(10, Math.round(14 * scale));
+  for (let y = 0; y < H; y++){ if (!darkRow[y]) continue; let acc = 0, o = y * W;
+    for (let x = -R; x < W; x++){ if (x + R < W) acc += raw[o + x + R]; if (x - R - 1 >= 0) acc -= raw[o + x - R - 1]; if (x >= 0) hMean[o + x] = acc / (Math.min(W - 1, x + R) - Math.max(0, x - R) + 1); } }
   for (let i = 0, p = 0; i < W * H; i++, p += 4){
+    if (darkRow[(i / W) | 0] && hMean[i] < 185 && !isLine[i]){ cd[p] = cd[p + 1] = cd[p + 2] = Math.min(255, Math.max(0, 255 - raw[i]) * 2); cd[p + 3] = 255; continue; }
     const v = isLine[i] || ink[i] || (inkD[i] && gray[i] > 90) ? 255 : gray[i];   // xoá nét bút + quầng mờ, giữ nét chữ in đậm
     cd[p] = cd[p + 1] = cd[p + 2] = v; cd[p + 3] = 255;
   }
@@ -1949,6 +1968,10 @@ async function readLocal(blob){
   if (!full.words.some(w => /\d/.test(w.t))) throw new Error('Không thấy chữ số nào trong ảnh');
   workerProgress = null;
   const words = full.words;
+
+  // Ảnh chụp màn hình phần mềm cân (cột Ngày vào / Giờ vào / Ngày ra / Giờ ra / Kiểu cân / Ghi chú)
+  const soft = softHeader(words);
+  if (soft) { progress(0.8, 'Đang đọc bảng phần mềm cân…'); return parseSoft(words, soft); }
 
   let rowsOut = [];
   const dataBands = grid.bands.filter(b => b.cells.length >= 4);
@@ -2304,6 +2327,105 @@ function applyHW(r, hw){
   if (got < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });   // chưa đủ 2 trong 3
 }
 
+/* ---------- Bảng của phần mềm cân (ảnh chụp màn hình) ----------
+   STT | Số xe | Khách hàng | Hàng Hóa | TL Lần 1 | TL Lần 2 | TL Hàng | Ngày vào | Giờ vào | Ngày ra | Giờ ra | Số chứng từ | Kiểu cân | Ghi chú
+   Bỏ Ngày vào, Giờ vào, Số chứng từ, Kiểu cân; giờ cân = Ngày ra + Giờ ra; TL thực = TL Hàng;
+   ghi chú "17X 25N 30C" -> Xanh / Nổi / Chín, phần còn lại -> Ghi chú */
+const SOFT_LABELS = { stt: 'stt', soxe: 'soxe', khach: 'khachhang', hang: 'hanghoa', tl1: 'tllan1', tl2: 'tllan2', tlh: 'tlhang',
+  ngayvao: 'ngayvao', giovao: 'giovao', ngayra: 'ngayra', giora: 'giora', chungtu: 'sochungtu', kieu: 'kieucan', ghichu: 'ghichu' };
+function softHeader(words){
+  const k = w => norm(w.t).replace(/[^a-z0-9]/g, '');
+  // dòng tiêu đề: có "kiểu cân" / "chứng từ" / "ngày vào"
+  const keys = words.filter(w => /^(kieu|kiu|kieucan|chung|chirng|chuong|sochungtu)$/.test(k(w))).sort((a, b) => a.cy - b.cy);
+  if (!keys.length) return null;
+  const hy = keys[0].cy, hh = keys[0].h || 20;
+  const line = words.filter(w => Math.abs(w.cy - hy) < hh * 0.8).sort((a, b) => a.x0 - b.x0);
+  const labs = [];
+  for (let i = 0; i < line.length;){
+    let best = null;
+    for (let n = 1; n <= 3 && i + n <= line.length; n++){
+      if (!k(line[i + n - 1])) continue;                           // không kéo nhãn qua dấu "|"
+      const txt = line.slice(i, i + n).map(k).join('').replace(/lan[li]$/, 'lan1').replace(/^s[il1]t$/, 'stt');
+      if (!txt) continue;
+      Object.entries(SOFT_LABELS).forEach(([f, lab]) => {
+        const tol = lab.length >= 7 ? 2 : 1, d = editDist(txt, lab, tol);
+        if (d <= tol && (/\d$/.test(lab) ? txt.slice(-1) === lab.slice(-1) : true) && (!best || d < best.d || (d === best.d && n > best.n))) best = { f, d, n };
+      });
+    }
+    if (!best){
+      const t = k(line[i]);
+      const pick = (a, b) => labs.some(l => l.f === a) ? b : a;
+      if (/^ngay$/.test(t)) best = { f: pick('ngayvao', 'ngayra'), n: 1 };
+      else if (/^gi.?o?$/.test(t)) best = { f: pick('giovao', 'giora'), n: 1 };
+    }
+    if (best && !labs.some(l => l.f === best.f)){
+      const ws = line.slice(i, i + best.n);
+      labs.push({ f: best.f, x0: Math.min(...ws.map(w => w.x0)), x1: Math.max(...ws.map(w => w.x1)) });
+      i += best.n;
+    } else i++;
+  }
+  const have = new Set(labs.map(l => l.f));
+  if (!(have.has('khach') && (have.has('tlh') || have.has('tl1')) && (have.has('giora') || have.has('ngayra')))) return null;
+  return { labs, y1: Math.max(...line.map(w => w.y1)), h: hh };
+}
+function parseSoft(words, hd){
+  const data = words.filter(w => w.cy > hd.y1 + 2);
+  const labs = hd.labs.sort((a, b) => a.x0 - b.x0);
+  // ranh giới cột: trong khoảng trống giữa 2 nhãn, chọn chỗ không có chữ của dòng dữ liệu nào đè lên
+  const cuts = [];
+  for (let i = 0; i + 1 < labs.length; i++){
+    const a = Math.round(labs[i].x1), b = Math.round(labs[i + 1].x0);
+    if (b <= a){ cuts.push((a + b) / 2); continue; }
+    const cov = new Int32Array(b - a + 1);
+    data.forEach(w => { for (let x = Math.max(a, Math.ceil(w.x0)); x <= Math.min(b, Math.floor(w.x1)); x++) cov[x - a]++; });
+    const mn = Math.min(...cov); let bs = 0, bl = -1, cs = -1;
+    for (let x = 0; x <= b - a + 1; x++){
+      if (x <= b - a && cov[x] === mn){ if (cs < 0) cs = x; }
+      else if (cs >= 0){ if (x - cs > bl){ bl = x - cs; bs = cs; } cs = -1; }
+    }
+    cuts.push(a + bs + bl / 2);
+  }
+  const colOf = w => { let i = 0; while (i < cuts.length && w.cx > cuts[i]) i++; return labs[i].f; };
+  // gom chữ thành dòng
+  const medH = median(data.map(w => w.h)) || hd.h, lines = [];
+  [...data].sort((a, b) => a.cy - b.cy).forEach(w => {
+    const L = lines.find(l => Math.abs(l.cy - w.cy) < medH * 0.6);
+    if (L){ L.ws.push(w); L.cy = (L.cy * (L.ws.length - 1) + w.cy) / L.ws.length; } else lines.push({ cy: w.cy, ws: [w] });
+  });
+  const out = [];
+  lines.forEach(L => {
+    const cell = {}; L.ws.forEach(w => { const f = colOf(w); (cell[f] = cell[f] || []).push(w); });
+    const txt = f => cell[f] ? joinWords(cell[f]) : '';
+    const n1 = numOf(txt('tl1')), n2 = numOf(txt('tl2')); let nh = numOf(txt('tlh'));
+    if (nh == null && n1 != null && n2 != null) nh = Math.abs(n1 - n2);
+    if (nh == null || nh <= 0) return;                                // xe chưa cân lần 2 / dòng rác
+    const kieu = norm(txt('kieu')), hang = cleanText(txt('hang'));
+    if (/xuat/.test(kieu)) return;                                    // xuất hàng: không phải cà tươi nhập
+    if (/nhan/.test(norm(hang)) && !/tuoi/.test(norm(hang))) return;  // cà nhân
+    const dm = (txt('ngayra') || txt('ngayvao')).match(reDate);
+    const tm = (txt('giora') || txt('giovao')).match(/(\d{1,2})[:.;,](\d{2})(?:[:.;,](\d{2}))?/);
+    // STT dính vào ô số xe: tách số đầu dòng ra
+    let sx = cleanText(txt('stt') + ' ' + txt('soxe')).toUpperCase(), stt = '';
+    const ms = sx.match(/^(\d{1,3}|IL|I1|1L|LL)\s+(.*\S.*)$/); if (ms && /\d/.test(ms[2])){ stt = ms[1].replace(/[IL]/g, '1'); sx = ms[2]; }
+    sx = sx.replace(/^([0-9OSI]{2})(?=[A-Z])/, m => m.replace(/O/g, '0').replace(/S/g, '5').replace(/I/g, '1'));
+    const r = { date: dm ? fixDate(dm) : '', stt, soxe: sx, hang, khach: cleanText(txt('khach')),
+      tl1: n1 != null ? fmtKg(n1) : '', tl2: n2 != null ? fmtKg(n2) : '', tlh: fmtKg(nh), bi: '', thuc: fmtKg(nh),
+      gio: tm ? [tm[1].padStart(2, '0'), tm[2], tm[3]].filter(Boolean).join(':') : '', flags: {} };
+    if (n1 != null && n2 != null && Math.abs(Math.abs(n1 - n2) - nh) > 0.5) r.flags.thuc = true; else r.flags.thucOk = true;
+    // ghi chú: 17X / 25N / 30C -> Xanh / Nổi / Chín; còn lại giữ làm ghi chú
+    let note = txt('ghichu'); const got = {};
+    note = note.replace(/(\d{1,3}(?:[.,]\d+)?)\s*([XNC])(?![A-Za-zÀ-ỹ])/gi, (m0, v, c) => { const f = { x: 'xanh', n: 'noi', c: 'chin' }[c.toLowerCase()]; if (got[f] == null && +v.replace(',', '.') <= 100){ got[f] = v.replace(',', '.'); return ' '; } return m0; });
+    note = note.replace(/^[\s\-–,;:.+]+|[\s\-–,;:+]+$/g, '').replace(/\s+/g, ' ').trim();
+    const pm = note.match(/^\(\s*([^()]*?)\s*\)?$/); if (pm) note = pm[1];
+    r.ghichu = note;
+    PF.forEach(f => { r[f] = got[f] != null ? fmtPctIn(+got[f]) : ''; });
+    if (PF.filter(f => r[f]).length < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });
+    if (!r.khach) r.flags.khach = true;
+    out.push(r);
+  });
+  return out;
+}
+
 // Dự phòng khi không có lưới: dùng giờ cân làm mốc từng dòng
 async function parseLoose(words, ctx){
   const times = words.filter(w => /^\d{1,2}[:.;]\d{2}([:.;]\d{2})?$/.test(w.t)).sort((a, b) => a.cy - b.cy);
@@ -2346,6 +2468,7 @@ async function geminiRead(blob, key, model){
   const b64 = await blobToB64(blob);
   const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
 Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô. Dòng "Đêm dd/mm/yyyy" là ca từ 15h ngày đó tới 15h hôm sau: xe có giờ cân trước 15:00 thì ngày cân là ngày hôm sau (dd+1).
+Ảnh cũng có thể là ảnh chụp màn hình phần mềm cân với các cột STT, Số xe, Khách hàng, Hàng Hóa, TL Lần 1, TL Lần 2, TL Hàng, Ngày vào, Giờ vào, Ngày ra, Giờ ra, Số chứng từ, Kiểu cân, Ghi chú. Khi đó: bỏ qua Ngày vào, Giờ vào, Số chứng từ; ngay = Ngày ra, gio_can = Giờ ra; tl_thuc = tl_hang = TL Hàng, tl_bi = 0; bỏ các dòng chưa có TL Lần 2 / TL Hàng, các dòng Kiểu cân "XUẤT HÀNG" và các dòng hàng hóa là cà nhân (không phải quả tươi); trong cột Ghi chú, các cụm dạng "17X", "25N", "30C" là xanh / nổi / chín, phần chữ còn lại (bỏ dấu ngoặc bao ngoài) là ghi_chu.
 Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"/"TỔNG CỘNG TẤT CẢ" và các ô tổng kết bên dưới bảng), theo đúng thứ tự từ trên xuống. Trả về JSON:
 {"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null,"ghi_chu":""}]}
 Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi/chin là số (có thể có phần thập phân), null nếu không ghi. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
