@@ -189,6 +189,8 @@ function luuLo(b, p, u) {
   const moi = lo.rows.map(r => Object.assign({}, r, { batch: lo.id, savedAt: lo.savedAt || '', savedBy: u.name }));
   ghiBang(b.tuoi, COT_TUOI, giu.concat(moi));
   let url = '';
+  // phiếu cũ của lô (có thể nằm ở thư mục ngày khác) luôn được thay / bỏ cho khớp dữ liệu
+  if (p.file && p.file.b64 || !moi.length) xoaTepTheoMa(lo.id, 'phieu-ca-tuoi_');
   if (p.file && p.file.b64) url = luuTep(p.file.date || (lo.rows[0] && lo.rows[0].date), p.file.name || ('phieu-ca-tuoi_' + lo.id + '.pdf'), p.file.b64, p.file.mime || 'application/pdf');
   return { ok: true, count: moi.length, fileUrl: url };
 }
@@ -200,8 +202,11 @@ function luuMau(b, p, u) {
   if (u.role !== QUYEN_TOAN && s.rid && ds.some(r => String(r.rid) === String(s.rid) && String(r.id) !== String(s.id)))
     return { ok: false, denied: true, error: 'Xe này đã có mẫu thu hồi — cần tài khoản Toàn quyền để làm lại' };
   const con = ds.filter(r => String(r.id) !== String(s.id) && (!s.rid || String(r.rid) !== String(s.rid)));
+  const thay = ds.filter(r => con.indexOf(r) < 0);
   con.push(s);
   ghiBang(b.thuhoi, COT_THUHOI, con);
+  // ảnh phiếu của mẫu bị thay: bỏ (lưu kèm ảnh mới thì bỏ cả ảnh cũ cùng mã)
+  thay.forEach(r => { if (String(r.id) !== String(s.id) || (p.file && p.file.b64)) xoaTepTheoMa(r.id, 'thu-hoi_'); });
   let url = '';
   if (p.file && p.file.b64) url = luuTep(s.date, p.file.name || ('thu-hoi_' + s.id + '.png'), p.file.b64, p.file.mime || 'image/png');
   return { ok: true, fileUrl: url };
@@ -212,18 +217,20 @@ function xoaMau(b, p) {
   const con = ds.filter(r => String(r.id) !== String(p.id));
   ghiBang(b.thuhoi, COT_THUHOI, con);
   let tep = 0;
-  bo.forEach(s => { tep += xoaTepMau(s); });     // xoá luôn ảnh phiếu thu hồi trên Drive
+  bo.forEach(s => { tep += xoaTepTheoMa(s.id, 'thu-hoi_'); });     // xoá luôn ảnh phiếu thu hồi trên Drive
   return { ok: true, removed: ds.length - con.length, files: tep };
 }
-// Ảnh phiếu thu hồi được lưu tên "thu-hoi_<tên>_<mã mẫu>.png" trong Phiếu/<năm-tháng-ngày>/
-function xoaTepMau(s) {
+// Bỏ (chuyển vào thùng rác) các tệp phiếu "<tiền tố>…_<mã>.pdf/.png" ở mọi thư mục ngày
+function xoaTepTheoMa(ma, tienTo) {
+  ma = String(ma || '').replace(/[^\w-]/g, '');
+  if (!ma) return 0;
   let n = 0;
   try {
-    const m = String(s.date || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/);
-    if (!m) return 0;
-    const thu = m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
-    const it = thuMucCon(thuMucCon(thuMucGoc(), 'Phiếu'), thu).getFiles(), duoi = '_' + s.id + '.png';
-    while (it.hasNext()) { const f = it.next(); const ten = f.getName(); if (ten.indexOf('thu-hoi_') === 0 && ten.slice(-duoi.length) === duoi) { f.setTrashed(true); n++; } }
+    const it = DriveApp.searchFiles("title contains '_" + ma + ".' and trashed = false");
+    while (it.hasNext()) {
+      const f = it.next(), ten = f.getName();
+      if (ten.indexOf(tienTo) === 0 && (ten.slice(-(ma.length + 5)) === '_' + ma + '.pdf' || ten.slice(-(ma.length + 5)) === '_' + ma + '.png')) { f.setTrashed(true); n++; }
+    }
   } catch (e) {}
   return n;
 }
