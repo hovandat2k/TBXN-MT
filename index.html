@@ -2441,7 +2441,9 @@ function softRow(txt){
     if (/xuat/.test(kieu)) return null;                               // xuất hàng: không phải cà tươi nhập
     if (/nhan/.test(norm(hang)) && !/tuoi/.test(norm(hang))) return null;  // cà nhân
     const dm = (txt('ngayra') || txt('ngayvao')).match(reDate);
-    const tm = (txt('giora') || txt('giovao')).match(/(\d{1,2})[:.;,](\d{2})(?:[:.;,](\d{2}))?/);
+    // phần mềm cân hiện giờ dạng "00.19:23…" = 19:23 (số trước dấu chấm không phải giờ)
+    const gt = txt('giora') || txt('giovao'), m2 = gt.match(/(\d{1,2})[.,](\d{2})[:;](\d{2})/);
+    const tm = m2 && +m2[2] <= 23 ? [null, m2[2], m2[3]] : gt.match(/(\d{1,2})[:.;,](\d{2})(?:[:.;,](\d{2}))?/);
     // STT dính vào ô số xe: tách số đầu dòng ra
     let sx = cleanText(txt('stt') + ' ' + txt('soxe')).toUpperCase(), stt = '';
     const ms = sx.match(/^(\d{1,3}|IL|I1|1L|LL)\s+(.*\S.*)$/); if (ms && /\d/.test(ms[2])){ stt = ms[1].replace(/[IL]/g, '1'); sx = ms[2]; }
@@ -2549,7 +2551,7 @@ async function geminiRead(blob, key, model){
   const b64 = await blobToB64(blob);
   const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
 Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô. Dòng "Đêm dd/mm/yyyy" là ca từ 15h ngày đó tới 15h hôm sau: xe có giờ cân trước 15:00 thì ngày cân là ngày hôm sau (dd+1).
-Ảnh cũng có thể là ảnh chụp màn hình phần mềm cân (có thể bị cắt mất dòng tiêu đề; nhận cột theo thứ tự) với các cột STT, Số xe, Khách hàng, Hàng Hóa, TL Lần 1, TL Lần 2, TL Hàng, Ngày vào, Giờ vào, Ngày ra, Giờ ra, Số chứng từ, Kiểu cân, Ghi chú. Khi đó: bỏ qua Ngày vào, Giờ vào, Số chứng từ; ngay = Ngày ra, gio_can = Giờ ra; tl_thuc = tl_hang = TL Hàng, tl_bi = 0; bỏ các dòng chưa có TL Lần 2 / TL Hàng, các dòng Kiểu cân "XUẤT HÀNG" và các dòng hàng hóa là cà nhân (không phải quả tươi); trong cột Ghi chú, các cụm dạng "17X", "25N", "30C" là xanh / nổi / chín, phần chữ còn lại (bỏ dấu ngoặc bao ngoài) là ghi_chu.
+Ảnh cũng có thể là ảnh chụp màn hình phần mềm cân (có thể bị cắt mất dòng tiêu đề; nhận cột theo thứ tự) với các cột STT, Số xe, Khách hàng, Hàng Hóa, TL Lần 1, TL Lần 2, TL Hàng, Ngày vào, Giờ vào, Ngày ra, Giờ ra, Số chứng từ, Kiểu cân, Ghi chú. Khi đó: bỏ qua Ngày vào, Giờ vào, Số chứng từ; ngay = Ngày ra, gio_can = Giờ ra (giờ hiện dạng "00.19:23…" nghĩa là 19:23); tl_thuc = tl_hang = TL Hàng, tl_bi = 0; bỏ các dòng chưa có TL Lần 2 / TL Hàng, các dòng Kiểu cân "XUẤT HÀNG" và các dòng hàng hóa là cà nhân (không phải quả tươi); trong cột Ghi chú, các cụm dạng "17X", "25N", "30C" là xanh / nổi / chín, phần chữ còn lại (bỏ dấu ngoặc bao ngoài) là ghi_chu.
 Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"/"TỔNG CỘNG TẤT CẢ" và các ô tổng kết bên dưới bảng), theo đúng thứ tự từ trên xuống. Trả về JSON:
 {"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null,"ghi_chu":""}]}
 Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi/chin là số (có thể có phần thập phân), null nếu không ghi. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
@@ -2769,6 +2771,26 @@ var APP = (() => {
     } catch(e){ lastErr = e.message; }
     finally { flushing = false; syncUI(); }
   }
+  /* Sửa dữ liệu đã đọc từ phần mềm cân trước đây: giờ "00.19:23" bị lưu thành 00:19:23 thay vì 19:23.
+     Nhận ra lô bị lỗi: mọi xe trong lô đều có giờ dạng 00:hh:mm (hh ≤ 23) — phiếu thật không thể toàn xe cân trong 1 giờ đầu ngày. */
+  let fixingTimes = false;
+  async function fixSoftTimes(){
+    if (!isAdmin() || fixingTimes) return;
+    fixingTimes = true;
+    try {
+      const lots = [...new Set(DB.rows.map(r => String(r.batch)))];
+      for (const b of lots){
+        const all = DB.rows.filter(r => String(r.batch) === b);
+        const ok = all.length >= 2 && all.every(r => { const m = String(r.gio || '').match(/^00:(\d{2}):(\d{2})$/); return m && +m[1] <= 23; })
+          && new Set(all.map(r => String(r.gio).slice(3, 5))).size > 1;
+        if (!ok) continue;
+        const keep = all.map(r => { const o = Object.assign({}, r, { gio: String(r.gio).slice(3) }); delete o.batch; delete o.savedAt; delete o.savedBy; return o; });
+        enqueue({ action: 'saveBatch', batch: { id: b, savedAt: (all[0] && all[0].savedAt) || nowStr(), rows: keep }, file: await lotPdfFile(b, keep) });
+        if (batchId && String(batchId) === b){ rows.forEach(r => { const m = String(r.gio || '').match(/^00:(\d{2}:\d{2})$/); if (m) r.gio = m[1]; }); save(); LS.set('tbxn_savedsig', batchId + sig()); renderTable(); }
+        toast(`🕒 Đã sửa giờ cân của ${all.length} xe (đọc từ phần mềm cân) — gộp lại theo đêm`, 4000);
+      }
+    } finally { fixingTimes = false; }
+  }
   async function pull(force = false){
     if (!gasUrl() || !AUTH || (!force && Date.now() - lastPull < 30000)) return;
     lastPull = Date.now();
@@ -2780,6 +2802,7 @@ var APP = (() => {
       Q.forEach(applyOp);                          // mục chưa gửi vẫn hiện
       saveDB(); if (j.folderUrl) LS.set('tbxn_gasfolder', j.folderUrl);
       lastErr = ''; changed();
+      fixSoftTimes();
     } catch(e){ lastErr = e.message; syncUI(); }
   }
   function syncUI(){
