@@ -3742,8 +3742,14 @@ var APP = (() => {
         return;
       }
       if (v === '' && sp && isNoSample(sp)){ enqueue({ action: 'deleteSample', id: String(sp.id) }); return; }   // bỏ "x"
-      if (!sp) throw new Error('xe này chưa có mẫu thu hồi (nhập "x" nếu không làm mẫu)');
-      const n = parseFloat(String(v).replace(',', '.')); if (isNaN(n)) throw new Error('thu hồi phải là số hoặc "x"');
+      const n = parseFloat(String(v).replace(',', '.')); if (isNaN(n) || n <= 0) throw new Error('thu hồi phải là số hoặc "x"');
+      if (!sp){                                             // chưa làm mẫu: nhập thẳng kết quả thu hồi
+        if (!r.rid) throw new Error('không tìm thấy xe');
+        const row = rowOf(r.rid) || {};
+        enqueue({ action: 'saveSample', sample: { id: 'M' + uid(), rid: String(r.rid), date: row.date || r.date || '', khach: row.khach || r.khach || '', soxe: row.soxe || r.soxe || '',
+          klTuoi: numv(row.thuc) != null ? numv(row.thuc) : '', mau: 'Nhập tay', kl: '', klq: '', am: '', thuhoi: n, cachtinh: 'Nhập thẳng kết quả', savedAt: nowStr() } });
+        return;
+      }
       enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { thuhoi: n, savedAt: nowStr() }) }); return;
     }
     if (!r.rid){                                           // mẫu ngoài danh sách
