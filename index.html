@@ -1991,6 +1991,8 @@ async function readLocal(blob){
   // Ảnh chụp màn hình phần mềm cân (cột Ngày vào / Giờ vào / Ngày ra / Giờ ra / Kiểu cân / Ghi chú)
   const soft = softHeader(words);
   if (soft) { progress(0.8, 'Đang đọc bảng phần mềm cân…'); return parseSoft(words, soft); }
+  const softNH = parseSoftNoHeader(words);      // bảng phần mềm cân bị cắt mất dòng tiêu đề
+  if (softNH) return softNH;
 
   let rowsOut = [];
   const dataBands = grid.bands.filter(b => b.cells.length >= 4);
@@ -2405,22 +2407,33 @@ function parseSoft(words, hd){
     cuts.push(a + bs + bl / 2);
   }
   const colOf = w => { let i = 0; while (i < cuts.length && w.cx > cuts[i]) i++; return labs[i].f; };
-  // gom chữ thành dòng
-  const medH = median(data.map(w => w.h)) || hd.h, lines = [];
+  const out = [];
+  softLines(data, hd.h).forEach(L => {
+    const cell = {}; L.ws.forEach(w => { const f = colOf(w); (cell[f] = cell[f] || []).push(w); });
+    const r = softRow(f => cell[f] ? joinWords(cell[f]) : '');
+    if (r) out.push(r);
+  });
+  return out;
+}
+// gom chữ thành dòng
+function softLines(data, h0){
+  const medH = median(data.map(w => w.h)) || h0 || 20, lines = [];
   [...data].sort((a, b) => a.cy - b.cy).forEach(w => {
     const L = lines.find(l => Math.abs(l.cy - w.cy) < medH * 0.6);
     if (L){ L.ws.push(w); L.cy = (L.cy * (L.ws.length - 1) + w.cy) / L.ws.length; } else lines.push({ cy: w.cy, ws: [w] });
   });
-  const out = [];
-  lines.forEach(L => {
-    const cell = {}; L.ws.forEach(w => { const f = colOf(w); (cell[f] = cell[f] || []).push(w); });
-    const txt = f => cell[f] ? joinWords(cell[f]) : '';
+  lines.forEach(L => L.ws.sort((a, b) => a.x0 - b.x0));
+  return lines;
+}
+// một dòng xe từ các ô (txt(cột) -> chữ); null nếu bỏ qua
+function softRow(txt){
+  {
     const n1 = numOf(txt('tl1')), n2 = numOf(txt('tl2')); let nh = numOf(txt('tlh'));
     if (nh == null && n1 != null && n2 != null) nh = Math.abs(n1 - n2);
-    if (nh == null || nh <= 0) return;                                // xe chưa cân lần 2 / dòng rác
+    if (nh == null || nh <= 0) return null;                           // xe chưa cân lần 2 / dòng rác
     const kieu = norm(txt('kieu')), hang = cleanText(txt('hang'));
-    if (/xuat/.test(kieu)) return;                                    // xuất hàng: không phải cà tươi nhập
-    if (/nhan/.test(norm(hang)) && !/tuoi/.test(norm(hang))) return;  // cà nhân
+    if (/xuat/.test(kieu)) return null;                               // xuất hàng: không phải cà tươi nhập
+    if (/nhan/.test(norm(hang)) && !/tuoi/.test(norm(hang))) return null;  // cà nhân
     const dm = (txt('ngayra') || txt('ngayvao')).match(reDate);
     const tm = (txt('giora') || txt('giovao')).match(/(\d{1,2})[:.;,](\d{2})(?:[:.;,](\d{2}))?/);
     // STT dính vào ô số xe: tách số đầu dòng ra
@@ -2440,9 +2453,52 @@ function parseSoft(words, hd){
     PF.forEach(f => { r[f] = got[f] != null ? fmtPctIn(+got[f]) : ''; });
     if (PF.filter(f => r[f]).length < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });
     if (!r.khach) r.flags.khach = true;
-    out.push(r);
+    return r;
+  }
+}
+/* Bảng phần mềm cân KHÔNG có dòng tiêu đề: nhận cột theo nội dung từng dòng
+   [STT] Số xe | Khách hàng | Hàng hóa (CÀ ARABICA…) | TL1 TL2 TL Hàng | Ngày vào Giờ vào | Ngày ra Giờ ra | [Số chứng từ] | NHẬP/XUẤT HÀNG | Ghi chú */
+function parseSoftNoHeader(words){
+  const K = w => norm(w.t).replace(/[^a-z0-9]/g, '');
+  const isDate = w => reDate.test(w.t), isTime = w => /^\d{1,2}[.:;,]\d{2}/.test(w.t) && /:/.test(w.t);
+  const isNum = w => /^\d{1,3}([.,]\d{3})+$|^\d{1,3}$/.test(w.t.replace(/[^\d.,]/g, '')) && /\d/.test(w.t) && !isDate(w) && !isTime(w);
+  const rows = []; let hits = 0;
+  softLines(words.map(w => Object.assign({}, w, { t: w.t.replace(/¢/g, 'C') }))).forEach(L => {
+    const ws = L.ws, di = ws.map((w, i) => isDate(w) ? i : -1).filter(i => i >= 0);
+    const ki = ws.findIndex((w, i) => /^(nhap|xuat|nhp|xut)$/.test(K(w)) && ws[i + 1] && /^h.?ng$|^hang$/.test(K(ws[i + 1])));
+    if (!di.length || ki < 0) return;
+    hits++;
+    const cell = {};
+    const put = (f, arr) => { cell[f] = arr.map(w => w.t).join(' '); };
+    // trước ngày vào: … số xe, khách, hàng hóa, rồi các số cân
+    const pre = ws.slice(0, di[0]);
+    let j = pre.length; const nums = [];
+    while (j > 0 && isNum(pre[j - 1]) && nums.length < 3){ nums.unshift(pre[j - 1]); j--; }
+    if (nums.length === 3){ put('tl1', [nums[0]]); put('tl2', [nums[1]]); put('tlh', [nums[2]]); }
+    else if (nums.length === 2){ put('tl1', [nums[0]]); put('tl2', [nums[1]]); }
+    else if (nums.length === 1) put('tl1', [nums[0]]);
+    const head = pre.slice(0, j);
+    // hàng hóa: từ chữ "CÀ" đứng trước ARABICA / ROBUSTA / NHÂN / QUẢ / TƯƠI (tên khách cũng có thể bắt đầu bằng "CÀ")
+    let hi = -1;
+    for (let i = head.length - 2; i >= 0; i--) if (/^.?ca?$/.test(K(head[i])) && K(head[i]).length <= 3 && /^(arabica|robusta|nhan|qua|tuoi|che|cherry)/.test(K(head[i + 1]))){ hi = i; break; }
+    const front = hi >= 0 ? head.slice(0, hi) : head;
+    if (hi >= 0) put('hang', head.slice(hi));
+    // số xe: cụm có dạng 49C 12345 / 49C-37604 / 26E00592 (có thể có STT đứng trước)
+    let pi = front.findIndex(w => /^[0-9OSI]{2}[A-Z][A-Z0-9]?([-.]?\d{3,5}(\.\d{2})?)?$/i.test(w.t.replace(/[,]/g, '')));
+    let pe = pi;
+    if (pi >= 0 && !/\d{3}/.test(front[pi].t.slice(3)) && front[pi + 1] && /^[\d.]{3,7}$/.test(front[pi + 1].t)) pe = pi + 1;
+    if (pi >= 0){ put('stt', front.slice(0, pi)); put('soxe', front.slice(pi, pe + 1)); put('khach', front.slice(pe + 1)); }
+    else put('khach', front);
+    // ngày / giờ vào, ngày / giờ ra
+    const timeAfter = i => { for (let k = i + 1; k < Math.min(ws.length, i + 3); k++) if (isTime(ws[k])) return ws[k]; return null; };
+    put('ngayvao', [ws[di[0]]]); const t0 = timeAfter(di[0]); if (t0) put('giovao', [t0]);
+    if (di[1] != null && di[1] < ki){ put('ngayra', [ws[di[1]]]); const t1 = timeAfter(di[1]); if (t1) put('giora', [t1]); }
+    put('kieu', ws.slice(ki, ki + 2));
+    put('ghichu', ws.slice(ki + 2));
+    const r = softRow(f => cell[f] || '');
+    if (r) rows.push(r);
   });
-  return out;
+  return hits >= 2 ? rows : null;
 }
 
 // Dự phòng khi không có lưới: dùng giờ cân làm mốc từng dòng
@@ -2487,7 +2543,7 @@ async function geminiRead(blob, key, model){
   const b64 = await blobToB64(blob);
   const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
 Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô. Dòng "Đêm dd/mm/yyyy" là ca từ 15h ngày đó tới 15h hôm sau: xe có giờ cân trước 15:00 thì ngày cân là ngày hôm sau (dd+1).
-Ảnh cũng có thể là ảnh chụp màn hình phần mềm cân với các cột STT, Số xe, Khách hàng, Hàng Hóa, TL Lần 1, TL Lần 2, TL Hàng, Ngày vào, Giờ vào, Ngày ra, Giờ ra, Số chứng từ, Kiểu cân, Ghi chú. Khi đó: bỏ qua Ngày vào, Giờ vào, Số chứng từ; ngay = Ngày ra, gio_can = Giờ ra; tl_thuc = tl_hang = TL Hàng, tl_bi = 0; bỏ các dòng chưa có TL Lần 2 / TL Hàng, các dòng Kiểu cân "XUẤT HÀNG" và các dòng hàng hóa là cà nhân (không phải quả tươi); trong cột Ghi chú, các cụm dạng "17X", "25N", "30C" là xanh / nổi / chín, phần chữ còn lại (bỏ dấu ngoặc bao ngoài) là ghi_chu.
+Ảnh cũng có thể là ảnh chụp màn hình phần mềm cân (có thể bị cắt mất dòng tiêu đề; nhận cột theo thứ tự) với các cột STT, Số xe, Khách hàng, Hàng Hóa, TL Lần 1, TL Lần 2, TL Hàng, Ngày vào, Giờ vào, Ngày ra, Giờ ra, Số chứng từ, Kiểu cân, Ghi chú. Khi đó: bỏ qua Ngày vào, Giờ vào, Số chứng từ; ngay = Ngày ra, gio_can = Giờ ra; tl_thuc = tl_hang = TL Hàng, tl_bi = 0; bỏ các dòng chưa có TL Lần 2 / TL Hàng, các dòng Kiểu cân "XUẤT HÀNG" và các dòng hàng hóa là cà nhân (không phải quả tươi); trong cột Ghi chú, các cụm dạng "17X", "25N", "30C" là xanh / nổi / chín, phần chữ còn lại (bỏ dấu ngoặc bao ngoài) là ghi_chu.
 Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"/"TỔNG CỘNG TẤT CẢ" và các ô tổng kết bên dưới bảng), theo đúng thứ tự từ trên xuống. Trả về JSON:
 {"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null,"ghi_chu":""}]}
 Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân cách hàng nghìn, ví dụ 41,926 = 41926). xanh/noi/chin là số (có thể có phần thập phân), null nếu không ghi. Giữ nguyên dấu tiếng Việt của tên khách hàng.`;
