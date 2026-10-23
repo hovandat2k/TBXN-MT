@@ -1128,7 +1128,7 @@ function drawSheet(mono, logo){
     if (!isMerged()){
       line(X0, y, XE, y);
       line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
-      txt(`Đêm ${gr.date || '…'}`, X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
+      txt(gr.date ? nightLabel(gr.date) : 'Đêm …', X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
       y += H_DATE; brk.push(y);
     }
     gr.rows.forEach((r, i) => {
@@ -1261,7 +1261,13 @@ function nightGroups(list){
   (list || rows).forEach(r => { const k = nightOf(r.date, r.gio); if (!idx.has(k)){ idx.set(k, g.length); g.push({ date: k, rows: [] }); } g[idx.get(k)].rows.push(r); });
   return g.sort((a, b) => nightKey(a.date) - nightKey(b.date));
 }
-const nightRange = () => { const n = nightGroups().map(x => x.date).filter(Boolean); return n.length ? 'Đêm ' + (n.length > 1 ? `${n[0]} – ${n[n.length - 1]}` : n[0]) : ''; };
+// "Đêm 21/10/2026 - Ngày 22/10/2026" (ca từ 15h ngày 21 tới 15h ngày 22)
+function nightLabel(d){
+  const m = String(d || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); if (!m) return 'Đêm ' + d;
+  const x = new Date(+m[3], +m[2] - 1, +m[1] + 1);
+  return `Đêm ${d} - Ngày ${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}/${x.getFullYear()}`;
+}
+const nightRange = () => { const n = nightGroups().map(x => x.date).filter(Boolean); return n.length ? (n.length > 1 ? `Đêm ${n[0]} – ${n[n.length - 1]}` : nightLabel(n[0])) : ''; };
 function sheetGroups(){
   const gs = isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : nightGroups();
   if (!sortLv.length) return gs;
@@ -3187,7 +3193,7 @@ var APP = (() => {
     return out.sort((a, b) => (tOf(a.date, a.gio) || 0) - (tOf(b.date, b.gio) || 0));
   }
   const LSX = SHEETS.ls = {
-    key: 'tbxn_ls', title: 'PHIẾU TỔNG HỢP MẪU', sub: '', rows: [],
+    key: 'tbxn_ls', title: 'PHIẾU TỔNG HỢP MẪU CÀ TƯƠI', sub: '', rows: [],
     exp: LS.get('tbxn_ls_exp', 'full'), grp: LS.get('tbxn_ls_grp', 'all'),
     sort: (v => Array.isArray(v) ? v.filter(x => x && x.key) : [])(LS.get('tbxn_ls_sort', [])),
     ids: { hot: '#lsHot', prev: '#lsPrev', levels: '#lsSortLevels', grp: '#lsGrpSeg' }, hits: [], W: 1, H: 1,
