@@ -795,7 +795,7 @@ const COLS_FULL = [
 const COLS_EDIT = COLS_FULL.flatMap(c => c[0] === 'khach' ? [c, ['ghichu','Ghi chú']] : [c]);
 const NUMF = new Set(['tl1','tl2','tlh','bi','thuc']);
 let rows = LS.get('tbxn_rows', []);
-let view = LS.get('tbxn_view', 'short');
+let view = 'short';   // luôn mở ở dạng bảng gọn ban đầu; "Tất cả cột" chỉ là xem tạm
 let expMode = LS.get('tbxn_exp', 'full');
 let uid = rows.reduce((m, r) => Math.max(m, r.id || 0), 0) + 1;
 const crops = {}; // id -> dataURL ảnh chữ viết tay (không lưu)
@@ -994,7 +994,7 @@ $('#tbl').addEventListener('click', e => {
 });
 function today(){ const d = new Date(); return [d.getDate(), d.getMonth() + 1].map(x => String(x).padStart(2, '0')).join('/') + '/' + d.getFullYear(); }
 
-document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => { view = b.dataset.v; LS.set('tbxn_view', view); renderTable(); }));
+document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => { view = b.dataset.v; renderTable(); }));
 $('#clearBtn').addEventListener('click', () => {
   if (!rows.length) return;
   if (!confirm('Xoá toàn bộ bảng?')) return;
