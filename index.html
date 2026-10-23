@@ -130,7 +130,7 @@ button:disabled{opacity:.5;cursor:default}
 .ghead input{width:130px;font-weight:800}
 .ghead .gsum{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600;text-align:right}
 .ghead .gsum b{color:var(--ink)}
-.rhead,.row{display:grid;grid-template-columns:30px minmax(0,1.15fr) minmax(0,1fr) 108px 66px 66px 66px 34px;gap:6px;align-items:start}
+.rhead,.row{display:grid;grid-template-columns:30px minmax(0,1.15fr) minmax(0,1fr) 84px 108px 66px 66px 66px 34px;gap:6px;align-items:start}
 .rhead{font-size:12px;font-weight:700;color:var(--muted);padding:0 2px 4px}
 .rhead span:nth-child(n+3){text-align:center}
 .row{padding:4px 2px;border-bottom:1px solid var(--line)}
@@ -454,9 +454,9 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
   .card{padding:13px;border-radius:18px}
   h1{font-size:18px}
   .rhead{display:none}
-  .row{grid-template-columns:24px minmax(0,1.3fr) repeat(3,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh kh d" ". gc gc gc gc ." ". tl x no c .";row-gap:4px;padding:6px 0}
+  .row{grid-template-columns:24px repeat(15,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh kh kh kh kh kh kh kh kh kh kh kh kh d" ". gc gc gc gc gc gc gc gc gc bi bi bi bi bi bi ." ". tl tl tl tl tl tl x x x no no no c c c .";row-gap:4px;column-gap:5px;padding:6px 0}
   .row .n{grid-area:n;padding-top:8px}
-  .row .ckh{grid-area:kh}.row .cgc{grid-area:gc}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .cc{grid-area:c}.row .del{grid-area:d;width:30px}
+  .row .ckh{grid-area:kh}.row .cgc{grid-area:gc;align-self:end}.row .cbi{grid-area:bi}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .cc{grid-area:c}.row .del{grid-area:d;width:30px}
   .cl{display:block}
   .stats{grid-template-columns:1fr 1fr 1fr;gap:8px}
   .stat.main{grid-column:1 / -1}
@@ -864,7 +864,7 @@ function renderTable(){
     box.innerHTML = gs.map((g, gi) => `
       <div class="grp">
         <div class="ghead">📅 Ngày cân <input class="fld gdate" data-g="${gi}" value="${esc(g.date)}" placeholder="dd/mm/yyyy"><span class="gsum" data-gs="${gi}"></span></div>
-        <div class="rhead"><span>#</span><span>Khách hàng</span><span>Ghi chú</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span>Chín %</span><span></span></div>
+        <div class="rhead"><span>#</span><span>Khách hàng</span><span>Ghi chú</span><span>TL Bì (kg)</span><span>TL thực (kg)</span><span>Xanh %</span><span>Nổi %</span><span>Chín %</span><span></span></div>
         ${g.rows.map((r, i) => rowHTML(r, i + 1)).join('')}
         <button type="button" class="addrow" data-add="${gi}">＋ Thêm dòng</button>
       </div>`).join('');
@@ -880,6 +880,7 @@ function rowHTML(r, n){
     <div class="ckh"><input class="fld ${r.flags.khach ? 'warn' : ''}" data-f="khach" value="${esc(r.khach)}" placeholder="Khách hàng">
       ${meta ? `<div class="meta">${meta}</div>` : ''}${hw}</div>
     <div class="cgc"><input class="fld" data-f="ghichu" value="${esc(r.ghichu ?? '')}" placeholder="Ghi chú"></div>
+    <div class="cbi"><span class="cl">TL Bì (kg)</span><input class="fld num ${r.flags.bi ? 'warn' : ''}" data-f="bi" value="${esc(r.bi ?? '')}" inputmode="decimal" placeholder="0"></div>
     <div class="ctl"><span class="cl">TL thực (kg)</span><input class="fld num ${r.flags.thuc ? 'warn' : r.flags.thucOk ? 'okv' : ''}" data-f="thuc" value="${esc(r.thuc)}" inputmode="decimal" placeholder="0"
       title="${r.flags.thuc ? 'Không khớp TL Hàng − TL Bì, hãy kiểm tra' : r.flags.thucOk ? 'Đã khớp TL Hàng − TL Bì' : ''}"></div>
     <div class="cx"><span class="cl">Xanh %</span><input class="fld pct ${r.flags.xanh ? 'warn' : ''}" data-f="xanh" value="${esc(r.xanh ?? '')}" inputmode="decimal" placeholder="–"></div>
@@ -947,7 +948,9 @@ $('#tbl').addEventListener('change', e => {
   if (!inp.dataset.f || !NUMF.has(inp.dataset.f)) return;
   const v = parseKg(inp.value); if (v == null) return;
   const host = inp.closest('[data-id]'); const r = rows.find(x => x.id === +host.dataset.id);
-  inp.value = r[inp.dataset.f] = fmtKg(v); save();
+  inp.value = r[inp.dataset.f] = fmtKg(v);
+  if (inp.dataset.f === 'bi'){ const h = parseKg(r.tlh); if (h != null && h - v > 0){ r.thuc = fmtKg(h - v); const t = host.querySelector('input[data-f="thuc"]'); if (t){ t.value = r.thuc; t.classList.remove('warn'); } delete r.flags.thuc; r.flags.thucOk = true; updateNumbers(); } }
+  save();
 });
 $('#tbl').addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !e.target.matches('input.fld')) return;
