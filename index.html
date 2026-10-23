@@ -302,6 +302,18 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 #thName{margin-top:6px}
 .thmulti{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
 .thmulti[hidden]{display:none}
+.thgrp{flex-basis:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.thgrp .gh{background:var(--soft);font-weight:800;font-size:13px;color:var(--brand);padding:7px 12px}
+.thgrp .gr{display:grid;grid-template-columns:22px minmax(0,1fr) auto 30px;gap:8px;align-items:center;padding:8px 6px 8px 12px;border-top:1px solid var(--line)}
+.thgrp .no{font-weight:800;color:var(--muted);font-size:13px}
+.thgrp .nm{display:flex;flex-direction:column;min-width:0}
+.thgrp .nm b{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thgrp .nm small{color:var(--muted);font-size:12.5px;font-weight:600}
+.thgrp .kg{font-weight:800;font-size:15px;white-space:nowrap}
+.thgrp .gr button{min-height:0;width:28px;height:28px;padding:0;border-radius:50%;color:var(--muted)}
+.thgrp .gr button .ic{width:14px;height:14px}
+.thgrp .gt{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--brand) 8%,transparent);font-size:14px;font-weight:700}
+.thgrp .gt b{font-size:16px;color:var(--brand)}
 .thmulti .chip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;font-size:13px;font-weight:700}
 .thmulti .chip small{color:var(--muted);font-weight:600}
 .thmulti .chip button{min-height:0;width:22px;height:22px;padding:0;border-radius:50%;color:var(--muted)}
@@ -3007,8 +3019,13 @@ var APP = (() => {
     const box = $('#thMulti'), main = selRow();
     box.hidden = !main || !main.rid || !canTH();
     if (box.hidden){ pickOpen = false; box.innerHTML = ''; return; }
-    const chips = extraRids.map(id => DB.rows.find(r => String(r.rid) === String(id))).filter(Boolean)
-      .map(r => `<span class="chip">${esc(rowLabel(r))}<small>${numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : ''}</small><button type="button" data-rmx="${esc(r.rid)}" title="Bỏ xe này" aria-label="Bỏ xe này">${IC('x')}</button></span>`).join('');
+    const ex = extraRids.map(id => DB.rows.find(r => String(r.rid) === String(id))).filter(Boolean);
+    const hm = r => String(r.gio || '').replace(/^(\d{1,2}:\d{2}).*$/, '$1');
+    const kgs = r => numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : '–';
+    const tot = [main, ...ex].reduce((a, r) => a + (numv(r.thuc) || 0), 0);
+    const chips = ex.length ? `<div class="thgrp"><div class="gh">Mẫu chung ${ex.length + 1} xe</div>` +
+      [main, ...ex].map((r, i) => `<div class="gr"><span class="no">${i + 1}</span><span class="nm"><b>${esc(rowLabel(r))}</b><small>${esc([r.soxe, hm(r)].filter(Boolean).join(' · '))}</small></span><span class="kg">${kgs(r)}</span>${i ? `<button type="button" class="ghost" data-rmx="${esc(r.rid)}" title="Bỏ xe này" aria-label="Bỏ xe này">${IC('x')}</button>` : '<span></span>'}</div>`).join('') +
+      `<div class="gt"><span>Tổng KL cà tươi</span><b>${fmtKg(tot)} kg</b></div></div>` : '';
     let pick = '';
     if (pickOpen){
       const on = new Set(extraRids.map(String));
@@ -3074,8 +3091,8 @@ var APP = (() => {
     const info = $('#thInfo'), rs = selRows();
     if (r){
       const tot = rs.reduce((a, x) => a + (numv(x.thuc) || 0), 0);
-      info.hidden = false;
-      info.innerHTML = `<span>KL cà tươi <b>${tot ? fmtKg(tot) + ' kg' : '–'}</b>${rs.length > 1 ? ` · ${rs.length} xe chung mẫu` : ''}</span>`;
+      info.hidden = rs.length > 1;                        // nhiều xe: danh sách bên dưới đã có từng xe và tổng
+      info.innerHTML = `<span>KL cà tươi <b>${tot ? fmtKg(tot) + ' kg' : '–'}</b></span>`;
     } else info.hidden = true;
     if (!pickOpen || !r) renderMulti();
     if (recalc) thCalc(false);
@@ -3296,14 +3313,15 @@ var APP = (() => {
     };
     const tag = `Ẩm ${degree(res.am)}`;
     m.font = `700 12px ${SANS}`; const tagW = m.measureText(tag).width + 22;
-    let nameFs = 22, title = name || 'Mẫu cà phê';
+    const g0 = t.rows && t.rows.length > 1 ? t.rows : null;
+    let nameFs = 22, title = g0 && g0.length > 2 ? `MẪU CHUNG ${g0.length} XE` : (name || 'Mẫu cà phê');
     m.font = `800 ${nameFs}px ${SANS}`;
     while (m.measureText(title).width > Wd - P * 2 - tagW * 2 - 10 && nameFs > 14){ nameFs--; m.font = `800 ${nameFs}px ${SANS}`; }
     const grp = t.rows && t.rows.length > 1 ? t.rows : null;
-    let sub = grp ? [grp.map(x => x.soxe).filter(Boolean).join(', '), row && row.date].filter(Boolean).join(' · ') : row ? [row.soxe, row.date].filter(Boolean).join(' · ') : '';
+    let sub = grp ? (row && row.date ? nightLabel(nightOf(row.date, row.gio)) : '') : row ? [row.soxe, row.date].filter(Boolean).join(' · ') : '';
     m.font = `600 13px ${SANS}`; while (sub.length > 8 && m.measureText(sub).width > Wd - P * 2) sub = sub.slice(0, -2).replace(/[ ,·]+$/, '') + '…';
     const klSum = grp ? grp.reduce((a, x) => a + (numv(x.thuc) || 0), 0) : null;
-    const klT = grp ? (klSum ? fmtKg(klSum) + ` kg · ${grp.length} xe` : '') : row && numv(row.thuc) != null ? fmtKg(numv(row.thuc)) + ' kg' : '';
+    const klT = grp ? (klSum ? fmtKg(klSum) + ' kg' : '') : row && numv(row.thuc) != null ? fmtKg(numv(row.thuc)) + ' kg' : '';
     const leftW = 128, FS = 16, LH = 22;
     const left = [['', f2(res.kl), ''], ['+', f2(res.klq / 2), 'sum'], ['', f2(res.tong), ''], ['', '', '']];
     const rich = res.lines.map(l => wrapRich(l, Wd - P * 2 - leftW - 14, FS));
@@ -3312,7 +3330,8 @@ var APP = (() => {
     const pc = grp ? (A => ({ x: A.x, n: A.n, c: A.c, have: A.x != null && A.n != null && A.c != null ? 3 : 0 }))(agg(grp.map(x => ({ thuc: String(x.thuc ?? ''), xanh: String(x.xanh ?? ''), noi: String(x.noi ?? ''), chin: String(x.chin ?? '') }))))
       : row ? pcts(row) : null, hasPc = pc && pc.have >= 2;
     const pcItems = hasPc ? [['Xanh', pc.x], ['Nổi', pc.n], ['Chín', pc.c]] : [];
-    const boxH = (klT ? 34 : 0) + (hasPc ? (klT ? 32 : 34) : 0);
+    const GL = 30, glH = grp ? grp.length * GL + 8 : 0;      // nhiều xe: mỗi xe một dòng trong khung
+    const boxH = glH + (klT ? 34 : 0) + (hasPc ? (klT ? 32 : 34) : 0);
     const headH = 38 + (sub ? 20 : 0), klH = boxH ? boxH + 10 : 0;
     const H = P + headH + 12 + klH + rowH.reduce((a, b) => a + b, 0) + 14 + 60 + P;
     const cv = mkCanvas(Wd * S, H * S), g = cv.getContext('2d'); g.scale(S, S);
@@ -3331,8 +3350,23 @@ var APP = (() => {
     if (boxH){
       g.fillStyle = C.kl; rr(P, y, Wd - P * 2, boxH, 10); g.fill(); if (mono){ g.lineWidth = 1.5; g.strokeStyle = '#000'; g.stroke(); }
       let yy = y;
+      if (grp){
+        yy += 6;
+        grp.forEach((x, i) => {
+          const cy = yy + GL / 2;
+          g.textAlign = 'left'; g.font = `700 13px ${SANS}`; g.fillStyle = C.soft; g.fillText(`${i + 1}.`, P + 14, cy);
+          g.font = `800 15px ${SANS}`; g.fillStyle = C.ink;
+          let nm = x.khach || '(không tên)'; while (nm.length > 3 && g.measureText(nm).width > Wd - P * 2 - 250) nm = nm.slice(0, -2) + '…';
+          g.fillText(nm, P + 36, cy); const nw = g.measureText(nm).width;
+          const hm = String(x.gio || '').replace(/^(\d{1,2}:\d{2}).*$/, '$1');
+          g.font = `600 12px ${SANS}`; g.fillStyle = C.soft; g.fillText([x.soxe, hm].filter(Boolean).join(' · '), P + 36 + nw + 10, cy + 1);
+          g.textAlign = 'right'; g.font = `700 15px ${SANS}`; g.fillStyle = C.ink; g.fillText(numv(x.thuc) != null ? fmtKg(numv(x.thuc)) + ' kg' : '–', Wd - P - 14, cy);
+          yy += GL;
+        });
+        yy += 2; g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + 12, yy - 1, Wd - P * 2 - 24, 1);
+      }
       if (klT){
-        g.textAlign = 'left'; g.font = `600 15px ${SANS}`; g.fillStyle = C.soft; g.fillText('KL cà tươi', P + 14, yy + 17.5);
+        g.textAlign = 'left'; g.font = `600 15px ${SANS}`; g.fillStyle = C.soft; g.fillText(grp ? 'Tổng KL cà tươi' : 'KL cà tươi', P + 14, yy + 17.5);
         g.textAlign = 'right'; g.font = `800 18px ${SANS}`; g.fillStyle = C.ink; g.fillText(klT, Wd - P - 14, yy + 17.5);
         yy += 34;
         if (hasPc){ g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + 12, yy - 1, Wd - P * 2 - 24, 1); }
