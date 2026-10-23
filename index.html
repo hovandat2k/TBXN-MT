@@ -228,6 +228,9 @@ button:disabled{opacity:.5;cursor:default}
 .actions.a5{grid-template-columns:repeat(5,1fr)}
 #lsDel{display:none}
 #lsDel.on{background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.rdelall{position:absolute;pointer-events:auto;top:8px;right:8px;min-height:0;padding:6px 12px;border-radius:999px;background:var(--warn);color:#fff;font-size:13px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.25);gap:6px}
+.rdelall .ic{width:15px;height:15px}
+.celled{position:absolute;z-index:4;box-sizing:border-box;border:2px solid var(--brand);border-radius:4px;background:#fff;color:#000;font:600 14px system-ui,sans-serif;text-align:center;padding:0 4px;outline:none;box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .rdel{position:absolute;pointer-events:auto;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;background:var(--warn);color:#fff;
   margin:-15px 0 0 -36px;transform:none!important;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff;display:grid;place-items:center;z-index:3}
 .rdel:active{filter:brightness(.9)}
@@ -1151,7 +1154,7 @@ function drawSheet(mono, logo){
       const note = noteOf.get(r) || [], h = rowH(r), pfH = valH(r);
       line(X0, y, XE, y);
       nxFill(y + 0.8, pfH - 1.6, F('#eef8f1'), h - 1.6);
-      hits.push({ y0: y, y1: y + h, r });
+      hits.push({ y0: y, y1: y + h, yp: y + pfH, r });
       cols.forEach(([f], k) => {
         const ls = cellText(r, f, i);
         const al = f === 'thuc' ? 'right' : 'center';
@@ -1418,7 +1421,7 @@ async function sheetPages(mono = false, fit = 1, ctx = null){
   if (!ctx) clearTimeout(expTimer);
   const cv = await makeCanvas(mono, ctx);
   const W = cv.cssW, H = cv.cssH, S = cv.S;
-  const land = W > 1100;                                   // phiếu nhiều cột: khổ ngang
+  const land = false;                                      // luôn khổ dọc (phiếu rộng thì thu nhỏ cho vừa ngang trang)
   const PW = land ? 841.89 : 595.28, PH = land ? 595.28 : 841.89, MG = 22;   // A4 (pt), lề ~8mm
   const k = Math.min((PW - MG * 2) / W, 1.2);               // pt trên mỗi px
   const maxH = (PH - MG * 2) / k * fit;          // fit < 1: chừa chỗ cho giấy Letter / đầu-chân trang khi in
@@ -2949,7 +2952,7 @@ var APP = (() => {
       const n0 = nightOf(main.date, main.gio), by = {};
       cand.forEach(r => { const k = nightOf(r.date, r.gio); (by[k] = by[k] || []).push(r); });
       const nights = Object.keys(by).sort((a, b) => (b === n0) - (a === n0) || nightKey(b) - nightKey(a));
-      pick = `<div class="thpick">${nights.length ? nights.map(n => `<div class="pg">Đêm ${esc(n)}</div>` + by[n].map(r => `<label><input type="checkbox" data-addx="${esc(r.rid)}"${on.has(String(r.rid)) ? ' checked' : ''}> ${esc(rowLabel(r))} <small>${esc([r.soxe, numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : ''].filter(Boolean).join(' · '))}</small></label>`).join('')).join('') : '<div class="lsempty" style="padding:10px">Không còn xe nào chưa làm thu hồi.</div>'}</div>`;
+      pick = `<div class="thpick">${nights.length ? nights.map(n => `<div class="pg">${esc(nightLabel(n))}</div>` + by[n].map(r => `<label><input type="checkbox" data-addx="${esc(r.rid)}"${on.has(String(r.rid)) ? ' checked' : ''}> ${esc(rowLabel(r))} <small>${esc([r.soxe, numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : ''].filter(Boolean).join(' · '))}</small></label>`).join('')).join('') : '<div class="lsempty" style="padding:10px">Không còn xe nào chưa làm thu hồi.</div>'}</div>`;
     }
     box.innerHTML = chips + `<button type="button" class="ghost addx" id="thAddX">${pickOpen ? 'Xong' : '＋ Thêm xe chung mẫu'}</button>` + pick;
   }
@@ -2976,7 +2979,7 @@ var APP = (() => {
     dates.forEach(d => {
       const list = byDate[d].sort((a, b) => tkey(a) - tkey(b)), cnt = {}, seen = {};
       list.forEach(r => { const n = rowLabel(r); cnt[n] = (cnt[n] || 0) + 1; });
-      h += `<optgroup label="Đêm ${esc(d || '?')} · còn ${list.length} xe">` +
+      h += `<optgroup label="${esc(d ? nightLabel(d) : 'Đêm ?')} · còn ${list.length} xe">` +
         list.map(r => { const n = rowLabel(r); seen[n] = (seen[n] || 0) + 1; return `<option value="${esc(r.rid)}">${esc(cnt[n] > 1 ? `${n} (${seen[n]})` : n)}</option>`; }).join('') + '</optgroup>';
     });
     h += '<option value="__free">✏️ Nhập tên khác…</option>';
@@ -3067,7 +3070,7 @@ var APP = (() => {
     $('#thSavedCard').hidden = !DB.samples.length;
     if (!DB.samples.length){ box.innerHTML = ''; return; }
     if (!nights.includes(svNight)) svNight = nights[0] || '';
-    selN.innerHTML = nights.map(n => `<option value="${esc(n)}"${n === svNight ? ' selected' : ''}>Đêm ${esc(n)} · ${DB.samples.filter(sp => sNight(sp) === n).length} mẫu</option>`).join('');
+    selN.innerHTML = nights.map(n => `<option value="${esc(n)}"${n === svNight ? ' selected' : ''}>${esc(nightLabel(n))} · ${DB.samples.filter(sp => sNight(sp) === n).length} mẫu</option>`).join('');
     const seen = new Set();
     const list = DB.samples.filter(sp => sNight(sp) === svNight).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))
       .filter(sp => { if (!sp.nhom) return true; if (seen.has(sp.nhom)) return false; seen.add(sp.nhom); return true; });
@@ -3374,7 +3377,7 @@ var APP = (() => {
     $('#lsDel').innerHTML = `<span class="i">${IC(on ? 'check' : 'trash')}</span>${on ? 'Xong' : 'Xoá'}`;
     if (!on || !LSX.hdr){ layer.innerHTML = ''; return; }
     const h = LSX.hdr, xe = h.xs[h.xs.length - 1], pct = (v, t) => (v / t * 100).toFixed(3) + '%';
-    layer.innerHTML = LSX.hits.map((x, i) => `<button type="button" class="rdel" data-i="${i}" title="Xoá dòng ${esc(x.r.khach || '')}" aria-label="Xoá dòng ${esc(x.r.khach || '')}"
+    layer.innerHTML = `<button type="button" class="rdelall" id="lsDelAll">${IC('trash')}Xoá tất cả ${LSX.rows.length} dòng</button>` + LSX.hits.map((x, i) => `<button type="button" class="rdel" data-i="${i}" title="Xoá dòng ${esc(x.r.khach || '')}" aria-label="Xoá dòng ${esc(x.r.khach || '')}"
       style="left:${pct(xe, h.W)};top:${pct((x.y0 + x.y1) / 2, h.H)}">${IC('x')}</button>`).join('');
   }
   function setLSRows(list, fr, sub){
@@ -3419,7 +3422,7 @@ var APP = (() => {
     const allDates = [...new Set([...DB.rows.map(rNight), ...free.map(sNight)])].filter(Boolean).sort((a, b) => nightKey(b) - nightKey(a));
     if (lsMode === 'day'){
       if (!allDates.includes(lsDate)) lsDate = allDates[0] || '';
-      ctl.innerHTML = `<select class="fld sel" id="lsDate">${allDates.map(d => { const n = DB.rows.filter(r => rNight(r) === d).length; return `<option value="${esc(d)}"${d === lsDate ? ' selected' : ''}>Đêm ${esc(d)}${n ? ` · ${n} xe` : ''}</option>`; }).join('')}</select>`;
+      ctl.innerHTML = `<select class="fld sel" id="lsDate">${allDates.map(d => { const n = DB.rows.filter(r => rNight(r) === d).length; return `<option value="${esc(d)}"${d === lsDate ? ' selected' : ''}>${esc(nightLabel(d))}${n ? ` · ${n} xe` : ''}</option>`; }).join('')}</select>`;
       setLSRows(DB.rows.filter(r => rNight(r) === lsDate), free.filter(sp => sNight(sp) === lsDate), '');
     } else if (lsMode === 'cus'){
       const names = [...new Set([...DB.rows.map(r => (r.khach || '').trim()), ...free.map(s => (s.khach || '').trim())].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
@@ -3472,12 +3475,88 @@ var APP = (() => {
   $('#lsPdf').addEventListener('click', () => download(null, LSX).catch(e => toast('Lỗi: ' + e.message)));
   $('#lsPrint').addEventListener('click', () => printSheet(LSX));
   // bấm vào dòng xe trên phiếu: xem chi tiết / phiếu thu hồi; chỗ khác: phóng to
+  let lsClickT = null;
   $('#lsPrev').addEventListener('click', e => {
     const img = e.currentTarget, y = e.offsetY / (img.clientHeight || 1) * LSX.H;
     const h = LSX.hits.find(x => y >= x.y0 && y < x.y1);
-    if (h && (h.r.rid || h.r.sid)){ openDetail(h.r.rid ? { rid: h.r.rid } : { sid: h.r.sid }); return; }
-    $('#zoomImg').src = img.src; $('#zoomDlg').showModal();
+    clearTimeout(lsClickT);
+    lsClickT = setTimeout(() => {                          // chờ xem có nháy đúp (sửa ô) không
+      if (h && (h.r.rid || h.r.sid)){ openDetail(h.r.rid ? { rid: h.r.rid } : { sid: h.r.sid }); return; }
+      $('#zoomImg').src = img.src; $('#zoomDlg').showModal();
+    }, isAdmin() ? 280 : 0);
   });
+  // Toàn quyền: nháy đúp vào một ô của phiếu tổng hợp để sửa ô đó
+  const CELL_LABEL = { soxe: 'Số xe', hang: 'Hàng hóa', khach: 'Khách hàng', tl1: 'TL Lần 1', tl2: 'TL Lần 2', tlh: 'TL Hàng', bi: 'TL Bì', thuc: 'TL Thực',
+    gio: 'Giờ cân', date: 'Giờ cân', xanh: 'Xanh (%)', noi: 'Nổi (%)', chin: 'Chín (%)', thuhoi: 'Thu hồi (kg)', ghichu: 'Ghi chú' };
+  $('#lsPrev').addEventListener('dblclick', e => {
+    clearTimeout(lsClickT);
+    if (!isAdmin() || !LSX.hdr) return;
+    const img = e.currentTarget, k = LSX.W / (img.clientWidth || 1), x = e.offsetX * k, y = e.offsetY * k;
+    const hit = LSX.hits.find(t => y >= t.y0 && y < t.y1); if (!hit) return;
+    const h = LSX.hdr, ci = h.xs.findIndex((v, i) => i < h.xs.length - 1 && x >= v && x < h.xs[i + 1]); if (ci < 0) return;
+    let f = h.cols[ci];
+    if (isPF(f) && y > hit.yp + 1) f = 'ghichu';            // dòng ghi chú dưới Xanh / Nổi / Chín
+    if (f === 'date') f = 'gio';
+    if (f === 'stt'){ toast('STT tự đánh số, không cần sửa'); return; }
+    let x0 = h.xs[ci], x1 = h.xs[ci + 1], y0 = hit.y0, y1 = hit.y1;
+    if (f === 'ghichu'){ const p0 = h.cols.findIndex(isPF), p1 = h.cols.length - 1 - [...h.cols].reverse().findIndex(isPF); x0 = h.xs[p0]; x1 = h.xs[p1 + 1]; y0 = hit.yp; }
+    else if (isPF(f)) y1 = hit.yp;
+    editCell(hit.r, f, { x0, x1, y0, y1 });
+  });
+  function editCell(r, f, box){
+    const pv = $('#lsPv .pvbox'); pv.querySelectorAll('.celled').forEach(n => n.remove());
+    const pct = (v, t) => (v / t * 100).toFixed(3) + '%';
+    const old = String(r[f] ?? '').trim();
+    const inp = document.createElement('input'); inp.className = 'celled'; inp.value = old;
+    if (NUMF.has(f) || isPF(f) || f === 'thuhoi') inp.inputMode = 'decimal';
+    Object.assign(inp.style, { left: pct(box.x0, LSX.W), top: pct(box.y0, LSX.H), width: pct(box.x1 - box.x0, LSX.W), height: pct(box.y1 - box.y0, LSX.H) });
+    pv.appendChild(inp); inp.focus(); inp.select();
+    let done = false;
+    const finish = async ok => {
+      if (done) return; done = true; inp.remove();
+      const v = inp.value.trim(); if (!ok || v === old) return;
+      const who = [r.khach, r.soxe].filter(Boolean).join(' · ') || 'dòng này';
+      if (!confirm(`Sửa “${CELL_LABEL[f] || f}” của ${who}\ntừ “${old || '(trống)'}” thành “${v || '(trống)'}”?`)) return;
+      try { await saveCell(r, f, v); toast(`✅ Đã sửa ${CELL_LABEL[f] || f} của ${r.khach || 'xe'}: ${v || '(trống)'}`, 3500); }
+      catch(err){ toast('Không sửa được: ' + (err.message || err)); }
+    };
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); finish(true); } else if (ev.key === 'Escape'){ ev.preventDefault(); finish(false); } });
+    inp.addEventListener('blur', () => finish(true));
+  }
+  async function saveCell(r, f, v){
+    const sp = r.rid ? sampleOf(r.rid) : (r.sid ? DB.samples.find(x => String(x.id) === String(r.sid)) : null);
+    const kgv = s => { const n = parseKg(s); return n == null ? '' : n; };
+    if (f === 'thuhoi'){
+      if (!sp) throw new Error('xe này chưa có mẫu thu hồi');
+      const n = parseFloat(String(v).replace(',', '.')); if (isNaN(n)) throw new Error('thu hồi phải là số');
+      enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { thuhoi: n, savedAt: nowStr() }) }); return;
+    }
+    if (!r.rid){                                           // mẫu ngoài danh sách
+      const map = { khach: 'khach', soxe: 'soxe', thuc: 'klTuoi' };
+      if (!sp || !map[f]) throw new Error('mẫu ngoài danh sách chỉ sửa được tên, số xe, KL');
+      enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { [map[f]]: f === 'thuc' ? kgv(v) : v }) }); return;
+    }
+    const row = rowOf(r.rid); if (!row) throw new Error('không tìm thấy xe');
+    const b = String(row.batch), all = DB.rows.filter(x => String(x.batch) === b);
+    const nr = Object.assign({}, row);
+    if (NUMF.has(f)) nr[f] = kgv(v); else if (isPF(f)) nr[f] = v === '' ? '' : v.replace(',', '.'); else nr[f] = f === 'soxe' ? v.toUpperCase() : v;
+    // giữ các khối lượng khớp nhau
+    const n1 = numv(nr.tl1), n2 = numv(nr.tl2), bi = numv(nr.bi) || 0;
+    if ((f === 'tl1' || f === 'tl2') && n1 != null && n2 != null){ nr.tlh = Math.abs(n1 - n2); nr.thuc = nr.tlh - bi; }
+    if ((f === 'tlh' || f === 'bi') && numv(nr.tlh) != null) nr.thuc = numv(nr.tlh) - bi;
+    const keep = all.map(x => { const o = Object.assign({}, String(x.rid) === String(r.rid) ? nr : x); delete o.batch; delete o.savedAt; delete o.savedBy; return o; });
+    enqueue({ action: 'saveBatch', batch: { id: b, savedAt: (all[0] && all[0].savedAt) || nowStr(), rows: keep }, file: await lotPdfFile(b, keep) });
+    // mẫu thu hồi của xe: cập nhật tên / số xe / ngày / KL cà tươi và ảnh phiếu
+    if (sp && ['khach', 'soxe', 'date', 'gio', 'thuc', 'tl1', 'tl2', 'tlh', 'bi', 'xanh', 'noi', 'chin'].includes(f)){
+      const sp2 = Object.assign({}, sp, { khach: nr.khach || sp.khach, soxe: nr.soxe || '', date: nr.date || sp.date, klTuoi: numv(nr.thuc) != null ? numv(nr.thuc) : sp.klTuoi });
+      enqueue({ action: 'saveSample', sample: sp2, file: await sampleImgFile(sp2, nr) });
+    }
+    // lô đang mở ở thẻ Cà tươi: cập nhật luôn
+    if (batchId && String(batchId) === b){
+      const lr = rows.find(x => String(x.rid) === String(r.rid));
+      if (lr){ ['khach','soxe','hang','ghichu','gio','date','xanh','noi','chin'].forEach(k => lr[k] = nr[k] == null ? '' : String(nr[k])); ['tl1','tl2','tlh','bi','thuc'].forEach(k => lr[k] = numv(nr[k]) != null ? fmtKg(numv(nr[k])) : ''); save(); LS.set('tbxn_savedsig', batchId + sig()); renderTable(); }
+    }
+  }
   // Sửa: mở lại lô cân ở thẻ Cà tươi (nhiều lô thì chọn lô)
   $('#lsEdit').addEventListener('click', () => {
     const lots = new Map();
@@ -3498,11 +3577,36 @@ var APP = (() => {
     if (lsDelMode) toast('Bấm dấu ✕ ở dòng cần xoá', 2500);
   });
   $('#lsDelLayer').addEventListener('click', e => {
+    if (e.target.closest('#lsDelAll')){ e.stopPropagation(); delMany(LSX.rows.slice()); return; }
     const btn = e.target.closest('.rdel'); if (!btn) return;
     e.stopPropagation();
     const hit = LSX.hits[+btn.dataset.i]; if (!hit) return;
     delRow(hit.r);
   });
+  // Xoá tất cả các dòng đang hiện trên phiếu (kèm mẫu thu hồi)
+  async function delMany(list){
+    if (!isAdmin() || !list.length) return;
+    const rids = new Set(list.filter(r => r.rid).map(r => String(r.rid)));
+    const sids = new Set(DB.samples.filter(sp => sp.rid && rids.has(String(sp.rid))).map(sp => String(sp.id)));
+    list.forEach(r => { if (!r.rid && r.sid) sids.add(String(r.sid)); });
+    const msg = [rids.size ? `${rids.size} xe cà tươi` : '', sids.size ? `${sids.size} mẫu thu hồi` : ''].filter(Boolean).join(' và ');
+    if (!confirm(`Xoá TẤT CẢ ${msg} đang hiện trên phiếu này?\nDữ liệu sẽ bị xoá khỏi Google Sheet và không khôi phục được.`)) return;
+    if (!confirm(`Xác nhận lần nữa: xoá vĩnh viễn ${msg}?`)) return;
+    sids.forEach(id => enqueue({ action: 'deleteSample', id }));
+    const lots = [...new Set(DB.rows.filter(r => rids.has(String(r.rid))).map(r => String(r.batch)))];
+    for (const b of lots){
+      const all = DB.rows.filter(r => String(r.batch) === b);
+      const keep = all.filter(r => !rids.has(String(r.rid))).map(r => { const o = Object.assign({}, r); delete o.batch; delete o.savedAt; delete o.savedBy; return o; });
+      enqueue({ action: 'saveBatch', batch: { id: b, savedAt: (all[0] && all[0].savedAt) || nowStr(), rows: keep }, file: await lotPdfFile(b, keep) });
+    }
+    if (batchId && lots.includes(String(batchId))){
+      rows = rows.filter(r => !rids.has(String(r.rid))); save();
+      if (!rows.length) newBatch(); else LS.set('tbxn_savedsig', batchId + sig());
+      renderTable();
+    }
+    lsDelMode = false; drawDelMarks();
+    toast(`🗑 Đã xoá ${msg}`, 3000);
+  }
   async function delRow(r){
     const sp = r.rid ? sampleOf(r.rid) : (r.sid ? DB.samples.find(x => String(x.id) === String(r.sid)) : null);
     const what = [r.khach || '(không tên)', r.soxe, [r.gio, r.date].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
