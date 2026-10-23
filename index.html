@@ -333,6 +333,13 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .tclist label.on{background:color-mix(in srgb,var(--brand) 12%,transparent)}
 .tclist .k{font-weight:800}.tclist .w{color:var(--muted);font-size:13px;text-align:right}.tclist .t{font-weight:800;color:var(--brand);min-width:64px;text-align:right}
 .tclist .s{grid-column:2 / -1;color:var(--muted);font-size:12px;margin-top:-4px}
+.tcman{margin-top:10px}
+.tcrow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:end}
+.tcrow .primary{min-height:42px;padding:8px 14px}
+@media (max-width:640px){.tcrow{grid-template-columns:1fr 1fr}.tcrow .tcn{grid-column:1 / -1}.tcrow .primary{grid-column:1 / -1}}
+.tclist .man .k::after{content:' (nhập tay)';font-weight:500;color:var(--muted);font-size:12px}
+.tclist .rm{min-height:0;width:26px;height:26px;padding:0;border-radius:50%;color:var(--muted)}
+.tclist .rm .ic{width:13px;height:13px}
 .tcsum{text-align:center;font-size:14px;color:var(--muted);margin-bottom:10px}
 .tcsum b{color:var(--brand);font-size:22px}
 .thprev{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;max-width:560px;margin:0 auto}
@@ -592,6 +599,15 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
         <div class="tcbar"><select class="fld sel" id="tcNight"></select>
           <button type="button" class="ghost small" id="tcAll">Chọn tất cả</button><button type="button" class="ghost small" id="tcNone">Bỏ chọn</button></div>
         <div class="tclist" id="tcList"></div>
+        <div class="tcman">
+          <div class="flbl" style="font-weight:800">Nhập tay</div>
+          <div class="tcrow">
+            <div class="tcn"><label class="flbl" for="tcName">Tên mẫu</label><input class="fld" id="tcName" placeholder="Không bắt buộc" autocomplete="off"></div>
+            <div><label class="flbl" for="tcKg">TL xe</label><div class="inp"><input class="fld num" id="tcKg" inputmode="decimal"><span class="unit">kg</span></div></div>
+            <div><label class="flbl" for="tcTh">Thu hồi</label><div class="inp"><input class="fld num" id="tcTh" inputmode="decimal"><span class="unit">kg</span></div></div>
+            <button type="button" class="primary" id="tcAdd">＋ Thêm</button>
+          </div>
+        </div>
       </div>
     </section>
     <section class="card" id="tcOut" hidden>
@@ -3072,6 +3088,10 @@ var APP = (() => {
   // Mẫu chung: không tính nữa, chọn các mẫu đã làm để lấy TB thu hồi có trọng số theo KL cà tươi
   let chungMode = LS.get('tbxn_mau', 2000) === 10000, tcNight = '';
   const tcSel = new Set();
+  let tcMan = LS.get('tbxn_tcman', []);                     // mẫu nhập tay: { id, khach, klTuoi, thuhoi } (chỉ lưu trên máy)
+  if (!Array.isArray(tcMan)) tcMan = [];
+  const saveMan = () => LS.set('tbxn_tcman', tcMan);
+  const tcAllSel = () => [...DB.samples.filter(sp => tcSel.has(String(sp.id)) && thNum(sp)), ...tcMan.filter(m => tcSel.has(m.id))];
   function setMode(chung){
     chungMode = chung; LS.set('tbxn_mau', chung ? 10000 : 2000);
     document.querySelectorAll('#mauSeg button').forEach(b => b.classList.toggle('on', (+b.dataset.mau === 10000) === chung));
@@ -3089,15 +3109,17 @@ var APP = (() => {
     $('#tcNight').innerHTML = nights.map(n => `<option value="${esc(n)}"${n === tcNight ? ' selected' : ''}>${esc(nightLabel(n))} · ${done.filter(sp => sNight(sp) === n).length} mẫu</option>`).join('') +
       `<option value="*"${tcNight === '*' ? ' selected' : ''}>Tất cả các đêm · ${done.length} mẫu</option>`;
     const list = done.filter(sp => tcNight === '*' || sNight(sp) === tcNight).sort((a, b) => String(a.khach).localeCompare(String(b.khach), 'vi'));
-    [...tcSel].forEach(id => { if (!done.some(sp => String(sp.id) === id)) tcSel.delete(id); });
-    $('#tcList').innerHTML = list.length ? list.map(sp => { const on = tcSel.has(String(sp.id)), w = numv(sp.klTuoi);
+    [...tcSel].forEach(id => { if (!done.some(sp => String(sp.id) === id) && !tcMan.some(m => m.id === id)) tcSel.delete(id); });
+    const manH = tcMan.map(m => { const on = tcSel.has(m.id);
+      return `<label class="man${on ? ' on' : ''}"><input type="checkbox" data-tc="${esc(m.id)}"${on ? ' checked' : ''}><span class="k">${esc(m.khach || 'Mẫu nhập tay')}</span><span class="w">${fmtKg(+m.klTuoi)} kg</span><span class="t">${f2(+m.thuhoi)} kg <button type="button" class="ghost rm" data-rmman="${esc(m.id)}" title="Bỏ mẫu nhập tay" aria-label="Bỏ mẫu nhập tay">${IC('x')}</button></span></label>`; }).join('');
+    $('#tcList').innerHTML = manH + (list.length ? list.map(sp => { const on = tcSel.has(String(sp.id)), w = numv(sp.klTuoi);
       return `<label class="${on ? 'on' : ''}"><input type="checkbox" data-tc="${esc(sp.id)}"${on ? ' checked' : ''}><span class="k">${esc(sp.khach || '(không tên)')}</span><span class="w">${w != null ? fmtKg(w) + ' kg' : '–'}</span><span class="t">${f2(+sp.thuhoi)} kg</span>
         <span class="s">${esc([sp.soxe, sp.mau, tcNight === '*' ? nightLabel(sNight(sp)) : ''].filter(Boolean).join(' · '))}</span></label>`; }).join('')
-      : '<div class="lsempty">Chưa có mẫu thu hồi nào đã làm.</div>';
+      : (tcMan.length ? '' : '<div class="lsempty">Chưa có mẫu thu hồi nào đã làm.</div>'));
     tcCalc();
   }
   function tcCalc(){
-    const sel = DB.samples.filter(sp => tcSel.has(String(sp.id)) && thNum(sp));
+    const sel = tcAllSel();
     if (!sel.length){ $('#tcOut').hidden = true; return null; }
     let ws = 0, wt = 0, miss = 0; sel.forEach(sp => { const w = numv(sp.klTuoi); if (w > 0){ ws += w; wt += w * +sp.thuhoi; } else miss++; });
     const avg = ws ? wt / ws : sel.reduce((a, sp) => a + +sp.thuhoi, 0) / sel.length;
@@ -3115,7 +3137,7 @@ var APP = (() => {
     const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
     let y = P;
     g.textAlign = 'center'; g.fillStyle = C.h; g.font = `800 22px ${SANS}`; g.fillText('MẪU CHUNG', Wd / 2, y + 14);
-    const nts = [...new Set(res.sel.map(sNight))].filter(Boolean).sort((a, b) => nightKey(a) - nightKey(b));
+    const nts = [...new Set(res.sel.filter(x => !x.man).map(sNight))].filter(Boolean).sort((a, b) => nightKey(a) - nightKey(b));
     g.font = `600 13px ${SANS}`; g.fillStyle = C.s; g.fillText([nts.length === 1 ? nightLabel(nts[0]) : nts.length ? `Đêm ${nts[0]} – ${nts[nts.length - 1]}` : '', `${n} mẫu`].filter(Boolean).join(' · '), Wd / 2, y + 38);
     y += 54; g.fillStyle = C.line; g.fillRect(P, y, Wd - P * 2, 2); y += 8;
     g.font = `700 12.5px ${SANS}`; g.fillStyle = C.s; g.textAlign = 'left'; g.fillText('Khách hàng', P + 6, y + 10); g.textAlign = 'right'; g.fillText('KL cà tươi', Wd - P - 120, y + 10); g.fillText('Thu hồi', Wd - P - 6, y + 10);
@@ -3123,7 +3145,7 @@ var APP = (() => {
     res.sel.forEach((sp, i) => {
       if (i % 2 === 0 && !mono){ g.fillStyle = C.bg; g.fillRect(P, y, Wd - P * 2, RH); }
       g.fillStyle = C.ink; g.textAlign = 'left'; g.font = `700 15px ${SANS}`;
-      let name = sp.khach || '(không tên)'; while (g.measureText(name).width > Wd - P * 2 - 250 && name.length > 3) name = name.slice(0, -2) + '…';
+      let name = sp.khach || (sp.man ? 'Mẫu nhập tay' : '(không tên)'); while (g.measureText(name).width > Wd - P * 2 - 250 && name.length > 3) name = name.slice(0, -2) + '…';
       g.fillText(name, P + 6, y + RH / 2); const nw = g.measureText(name).width;
       g.font = `500 12px ${SANS}`; g.fillStyle = C.s; g.fillText(sp.soxe || '', P + 6 + nw + 10, y + RH / 2 + 1);
       g.textAlign = 'right'; g.font = `600 15px ${SANS}`; g.fillStyle = C.ink; const w = numv(sp.klTuoi); g.fillText(w != null ? fmtKg(w) + ' kg' : '–', Wd - P - 120, y + RH / 2);
@@ -3138,6 +3160,23 @@ var APP = (() => {
     return cv;
   }
   $('#tcNight').addEventListener('change', e => { tcNight = e.target.value; renderChung(); });
+  function tcAddMan(){
+    const kg = parseKg($('#tcKg').value), th = parseFloat(String($('#tcTh').value).replace(',', '.'));
+    if (kg == null || kg <= 0){ $('#tcKg').classList.add('bad'); $('#tcKg').focus(); toast('Nhập TL xe'); return; }
+    if (isNaN(th) || th <= 0){ $('#tcTh').classList.add('bad'); $('#tcTh').focus(); toast('Nhập thu hồi'); return; }
+    const m = { id: 'T' + uid(), khach: $('#tcName').value.trim(), klTuoi: kg, thuhoi: th, man: true };
+    tcMan.push(m); tcSel.add(m.id); saveMan();
+    ['#tcName', '#tcKg', '#tcTh'].forEach(x => { $(x).value = ''; $(x).classList.remove('bad'); });
+    renderChung(); $('#tcName').focus();
+  }
+  $('#tcAdd').addEventListener('click', tcAddMan);
+  ['#tcName', '#tcKg', '#tcTh'].forEach((x, i, a) => $(x).addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); i < a.length - 1 ? $(a[i + 1]).focus() : tcAddMan(); } }));
+  $('#tcKg').addEventListener('change', e => { const v = parseKg(e.target.value); if (v != null) e.target.value = fmtKg(v); });
+  $('#tcList').addEventListener('click', e => {
+    const b = e.target.closest('[data-rmman]'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    tcMan = tcMan.filter(m => m.id !== b.dataset.rmman); tcSel.delete(b.dataset.rmman); saveMan(); renderChung();
+  });
   $('#tcList').addEventListener('change', e => { const c = e.target.closest('[data-tc]'); if (!c) return; c.checked ? tcSel.add(c.dataset.tc) : tcSel.delete(c.dataset.tc); c.closest('label').classList.toggle('on', c.checked); tcCalc(); });
   $('#tcAll').addEventListener('click', () => { $('#tcList').querySelectorAll('[data-tc]').forEach(c => tcSel.add(c.dataset.tc)); renderChung(); });
   $('#tcNone').addEventListener('click', () => { $('#tcList').querySelectorAll('[data-tc]').forEach(c => tcSel.delete(c.dataset.tc)); renderChung(); });
