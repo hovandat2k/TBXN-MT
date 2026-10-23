@@ -2530,7 +2530,7 @@ var APP = (() => {
     let t, c = '';
     if (!AUTH){ el.hidden = true; return; }
     if (lastErr){ t = `⚠️ ${Q.length ? Q.length + ' mục chưa lưu lên Drive — ' : ''}${lastErr}`; c = 'err'; }
-    else if (Q.length){ t = flushing ? '⏳ Đang lưu lên Google Drive…' : `📴 ${Q.length} mục chờ gửi lên Drive`; c = 'warn'; }
+    else if (Q.length && !flushing){ t = `📴 ${Q.length} mục chờ gửi lên Drive`; c = 'warn'; }   // đang gửi: không cần báo
     else { el.hidden = true; el.textContent = ''; return; }   // đã lưu xong: không hiện gì
     el.hidden = false; el.textContent = t; el.className = 'sync ' + c;
   }
