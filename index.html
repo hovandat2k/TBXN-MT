@@ -700,6 +700,40 @@ document.querySelectorAll('i[data-ic]').forEach(e => { e.outerHTML = IC(e.datase
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
+/* Sửa tên khách hàng đọc sai dấu / sai 1–2 chữ theo danh sách khách hàng đã lưu */
+const nameKey = s => norm(s).replace(/[^a-z0-9]+/g, ' ').trim();
+function editDist(a, b, max){
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++){
+    const cur = [i]; let best = i;
+    for (let j = 1; j <= b.length; j++){ cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); best = Math.min(best, cur[j]); }
+    if (best > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function fixNames(list){
+  const known = window.APP && APP.customerNames ? APP.customerNames() : null;   // Map key -> tên đã lưu
+  if (!known || !known.size) return 0;
+  let n = 0;
+  list.forEach(r => {
+    const name = String(r.khach || '').trim(), k = nameKey(name); if (!k) return;
+    let hit = known.get(k);
+    if (!hit){
+      // sai 1 chữ cái trong một từ dài (≥ 6 chữ), các từ khác giống hệt; tên ngắn không đoán để khỏi nhầm người
+      const w = k.split(' '), cands = new Set();
+      known.forEach((v, kk) => {
+        const w2 = kk.split(' '); if (w2.length !== w.length) return;
+        const diff = w.map((x, i) => [x, w2[i]]).filter(([x, y]) => x !== y);
+        if (diff.length === 1 && diff[0][0].length >= 6 && diff[0][1].length >= 6 && editDist(diff[0][0], diff[0][1], 1) <= 1) cands.add(v);
+      });
+      if (cands.size === 1) hit = [...cands][0];
+    }
+    if (hit && hit !== name){ r.khach = hit; if (r.flags) delete r.flags.khach; n++; }
+  });
+  return n;
+}
 const LS = {
   get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
@@ -1625,11 +1659,12 @@ async function handleImage(input){
     }
     const append = $('#appendChk').checked;
     if (!append){ rows = []; Object.keys(crops).forEach(k => delete crops[k]); if (window.APP) APP.newBatch(); }   // ảnh mới = lô cân mới
+    const fixed = fixNames(res.rows);           // tên gần giống khách hàng đã lưu -> dùng đúng tên cũ
     res.rows.forEach(r => { const nr = newRow(r); if (r.crop) crops[nr.id] = r.crop; delete nr.crop; rows.push(nr); });
     save(); renderTable();
     const warn = res.rows.filter(r => Object.keys(r.flags || {}).some(k => k !== 'thucOk')).length;
     const extra = stopped === 'cancel' ? ' Đã huỷ phần còn lại.' : failed ? ` ${failed} trang không đọc được.` : '';
-    progressDone(`✅ Đọc xong ${res.rows.length} dòng${res.via ? ' (' + res.via + ')' : ''}.` + (warn ? ` ${warn} dòng có ô viền vàng cần kiểm tra.` : '') + extra);
+    progressDone(`✅ Đọc xong ${res.rows.length} dòng${res.via ? ' (' + res.via + ')' : ''}.` + (fixed ? ` ${fixed} tên khách hàng đã chỉnh theo tên đã lưu.` : '') + (warn ? ` ${warn} dòng có ô viền vàng cần kiểm tra.` : '') + extra);
     setTimeout(() => $('#tableCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
   } catch(e){
     console.error(e);
@@ -3357,7 +3392,15 @@ var APP = (() => {
     showTab(['tuoi','th','ls'].includes(tab) ? tab : 'tuoi');
     changed(); flush(); pull(true);
   }
-  return { init, newBatch, saveBtnUI, pending, get DB(){ return DB; }, get Q(){ return Q; }, get AUTH(){ return AUTH; }, isAdmin, flush, pull, showTab, compute, drawTH };
+  // tên khách hàng đã lưu: mỗi cách viết (bỏ dấu) -> cách viết dùng nhiều nhất
+  function customerNames(){
+    const cnt = new Map();
+    [...DB.rows, ...DB.samples].forEach(x => { const t = String(x.khach || '').trim(); if (t) cnt.set(t, (cnt.get(t) || 0) + 1); });
+    const m = new Map();
+    [...cnt].sort((a, b) => b[1] - a[1]).forEach(([t]) => { const k = nameKey(t); if (k && !m.has(k)) m.set(k, t); });
+    return m;
+  }
+  return { init, newBatch, saveBtnUI, pending, customerNames, get DB(){ return DB; }, get Q(){ return Q; }, get AUTH(){ return AUTH; }, isAdmin, flush, pull, showTab, compute, drawTH };
 })();
 
 refreshAiTag();
