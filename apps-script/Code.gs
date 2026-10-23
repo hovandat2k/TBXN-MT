@@ -30,11 +30,11 @@ const COT_TUOI = [
 const COT_THUHOI = [
   ['id', 'Mã mẫu'], ['rid', 'Mã xe'], ['date', 'Ngày cân'], ['khach', 'Khách hàng'], ['soxe', 'Số xe'], ['klTuoi', 'KL cà tươi (kg)'],
   ['mau', 'Loại mẫu'], ['kl', 'KL (g)'], ['klq', 'KL quả (g)'], ['am', 'Độ ẩm'], ['thuhoi', 'Thu hồi (kg)'], ['cachtinh', 'Cách tính'],
-  ['savedAt', 'Lưu lúc'], ['savedBy', 'Người lưu']
+  ['savedAt', 'Lưu lúc'], ['savedBy', 'Người lưu'], ['nhom', 'Mẫu chung (mã nhóm)']
 ];
 const COT_USER = [['user', 'Tên đăng nhập'], ['pass', 'Mật khẩu'], ['role', 'Quyền'], ['name', 'Họ tên'], ['lock', 'Khoá']];
 // cột luôn để dạng chữ (tránh Sheets tự đổi ngày/giờ/số xe/mật khẩu)
-const CHU = ['batch', 'rid', 'date', 'gio', 'stt', 'soxe', 'hang', 'khach', 'ghichu', 'savedAt', 'savedBy', 'id', 'mau', 'cachtinh', 'user', 'pass', 'role', 'name', 'lock'];
+const CHU = ['nhom', 'batch', 'rid', 'date', 'gio', 'stt', 'soxe', 'hang', 'khach', 'ghichu', 'savedAt', 'savedBy', 'id', 'mau', 'cachtinh', 'user', 'pass', 'role', 'name', 'lock'];
 
 function doGet(e) { return tra({ ok: true, app: 'Cà tươi + Thu hồi', note: 'Máy chủ đang chạy. Hãy mở trang web để dùng.' }); }
 function doPost(e) {
