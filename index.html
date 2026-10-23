@@ -3043,9 +3043,10 @@ var APP = (() => {
     let h = `<option value="">${pend.length ? '— Chọn khách hàng / xe —' : (DB.rows.length ? '✅ Đã làm thu hồi hết các xe đã lưu' : '— Chưa có phiếu cà tươi nào được lưu —')}</option>`;
     dates.forEach(d => {
       const list = byDate[d].sort((a, b) => tkey(a) - tkey(b)), cnt = {}, seen = {};
-      list.forEach(r => { const n = rowLabel(r); cnt[n] = (cnt[n] || 0) + 1; });
+      const lab = r => [rowLabel(r), r.soxe, String(r.gio || '').replace(/^(\d{1,2}:\d{2}).*$/, '$1')].filter(Boolean).join(' · ');   // tên · biển số · giờ cân
+      list.forEach(r => { const n = lab(r); cnt[n] = (cnt[n] || 0) + 1; });
       h += `<optgroup label="${esc(d ? nightLabel(d) : 'Đêm ?')} · còn ${list.length} xe">` +
-        list.map(r => { const n = rowLabel(r); seen[n] = (seen[n] || 0) + 1; return `<option value="${esc(r.rid)}">${esc(cnt[n] > 1 ? `${n} (${seen[n]})` : n)}</option>`; }).join('') + '</optgroup>';
+        list.map(r => { const n = lab(r); seen[n] = (seen[n] || 0) + 1; return `<option value="${esc(r.rid)}">${esc(cnt[n] > 1 ? `${n} (${seen[n]})` : n)}</option>`; }).join('') + '</optgroup>';
     });
     h += '<option value="__free">✏️ Nhập tên khác…</option>';
     if (editSample) h = h.replace('</option>', `</option><option value="__edit">✏️ Sửa mẫu: ${esc(groupName(groupOf(editSample)) || editSample.khach || '(không tên)')}</option>`);
