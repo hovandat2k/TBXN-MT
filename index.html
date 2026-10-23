@@ -1052,7 +1052,7 @@ function cellText(r, f, i){
   let v = r[f] ?? '';
   if (NUMF.has(f)){ const n = parseKg(v); v = n == null ? String(v) : fmtKg(n); }
   else if (isPF(f)){ const n = pcts(r).v[f]; v = n == null ? '' : fmtPct(n); }
-  else if (f === 'thuhoi') v = v === '' || v == null || isNaN(+v) ? '' : fx2(+v);
+  else if (f === 'thuhoi') v = /^\s*x\s*$/i.test(v ?? '') ? 'x' : v === '' || v == null || isNaN(+v) ? '' : fx2(+v);   // "x" = không làm mẫu
   else if (f === 'stt' && (isLSX() || isMerged() || multiDay() || !String(v).trim())) v = String(i + 1);   // gộp ngày: đánh số liên tục
   v = String(v).trim();
   if (f === 'gio' && multiDay() && r.date) return v ? [v, r.date] : [r.date];
@@ -3097,7 +3097,7 @@ var APP = (() => {
     const seen = new Set();
     const list = DB.samples.filter(sp => sNight(sp) === svNight).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))
       .filter(sp => { if (!sp.nhom) return true; if (seen.has(sp.nhom)) return false; seen.add(sp.nhom); return true; });
-    box.innerHTML = `<div class="svlist">${list.map(sp => { const g = groupOf(sp), many = g.length > 1; return `<button type="button" class="svitem${isAdmin() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc((many ? groupName(g) : sp.khach) || '(không tên)')}</span><span class="v">${f2(+sp.thuhoi)} kg</span>${isAdmin() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
+    box.innerHTML = `<div class="svlist">${list.map(sp => { const g = groupOf(sp), many = g.length > 1; return `<button type="button" class="svitem${isAdmin() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc((many ? groupName(g) : sp.khach) || '(không tên)')}</span><span class="v">${isNaN(+sp.thuhoi) ? 'Không làm' : f2(+sp.thuhoi) + ' kg'}</span>${isAdmin() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
       <span class="m">${[many ? `${g.length} xe chung mẫu` : sp.soxe, sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', 'Lưu ' + (sp.savedAt || ''), isAdmin() ? sp.savedBy : ''].filter(Boolean).map(esc).join(' · ')}</span></button>`; }).join('')}</div>`;
   }
   $('#thSavedNight').addEventListener('change', e => { svNight = e.target.value; renderSaved(); });
@@ -3114,7 +3114,7 @@ var APP = (() => {
   // xoá mẫu (mẫu chung: xoá cho tất cả các xe trong nhóm)
   function delSampleGroup(sp){
     const grp = groupOf(sp), many = grp.length > 1;
-    if (!confirm(`Xoá mẫu thu hồi “${many ? groupName(grp) : sp.khach}” (${f2(+sp.thuhoi)} kg)${many ? ` của ${grp.length} xe` : ''} và ảnh phiếu thu hồi?${grp.some(x => x.rid) ? `\n${many ? 'Các xe' : 'Xe'} sẽ quay lại danh sách chưa làm thu hồi.` : ''}`)) return false;
+    if (!confirm(`Xoá mẫu thu hồi “${many ? groupName(grp) : sp.khach}” (${isNaN(+sp.thuhoi) ? 'không làm mẫu' : f2(+sp.thuhoi) + ' kg'})${many ? ` của ${grp.length} xe` : ''} và ảnh phiếu thu hồi?${grp.some(x => x.rid) ? `\n${many ? 'Các xe' : 'Xe'} sẽ quay lại danh sách chưa làm thu hồi.` : ''}`)) return false;
     if (editSample && grp.some(x => String(x.id) === String(editSample.id))) thClear(false);
     grp.forEach(x => enqueue({ action: 'deleteSample', id: String(x.id) }));
     toast(`🗑 Đã xoá mẫu ${many ? groupName(grp) : sp.khach || ''}`, 2500);
@@ -3381,7 +3381,8 @@ var APP = (() => {
     if (!n) return;
     document.querySelectorAll('#lsExpSeg button').forEach(b => b.classList.toggle('on', b.dataset.e === LSX.exp));
     fillSortOpts(LSX);
-    $('#lsCount').textContent = `${n} xe · ${LSX.rows.filter(r => r.thuhoi !== '').length} đã làm thu hồi`;
+    const nx = LSX.rows.filter(r => /^x$/i.test(String(r.thuhoi).trim())).length;
+    $('#lsCount').textContent = `${n} xe · ${LSX.rows.filter(r => r.thuhoi !== '' && !isNaN(+r.thuhoi)).length} đã làm thu hồi${nx ? ` · ${nx} không làm mẫu` : ''}`;
     try {
       const c = await makeCanvas(false, LSX); if (tok !== lsTok) return;
       LSX.hits = c.hits; LSX.W = c.cssW; LSX.H = c.cssH;
@@ -3546,12 +3547,23 @@ var APP = (() => {
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); finish(true); } else if (ev.key === 'Escape'){ ev.preventDefault(); finish(false); } });
     inp.addEventListener('blur', () => finish(true));
   }
+  const isNoSample = sp => sp && /^\s*x\s*$/i.test(String(sp.thuhoi ?? ''));
   async function saveCell(r, f, v){
     const sp = r.rid ? sampleOf(r.rid) : (r.sid ? DB.samples.find(x => String(x.id) === String(r.sid)) : null);
     const kgv = s => { const n = parseKg(s); return n == null ? '' : n; };
     if (f === 'thuhoi'){
-      if (!sp) throw new Error('xe này chưa có mẫu thu hồi');
-      const n = parseFloat(String(v).replace(',', '.')); if (isNaN(n)) throw new Error('thu hồi phải là số');
+      // "x": xe không làm mẫu — không tính vào TB thu hồi, không còn trong danh sách chưa làm
+      if (/^x$/i.test(v)){
+        if (sp){ enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { thuhoi: 'x', savedAt: nowStr() }) }); return; }
+        if (!r.rid) throw new Error('không tìm thấy xe');
+        const row = rowOf(r.rid) || {};
+        enqueue({ action: 'saveSample', sample: { id: 'M' + uid(), rid: String(r.rid), date: row.date || r.date || '', khach: row.khach || r.khach || '', soxe: row.soxe || r.soxe || '',
+          klTuoi: numv(row.thuc) != null ? numv(row.thuc) : '', mau: 'Không làm', kl: '', klq: '', am: '', thuhoi: 'x', cachtinh: 'Không làm mẫu', savedAt: nowStr() } });
+        return;
+      }
+      if (v === '' && sp && isNoSample(sp)){ enqueue({ action: 'deleteSample', id: String(sp.id) }); return; }   // bỏ "x"
+      if (!sp) throw new Error('xe này chưa có mẫu thu hồi (nhập "x" nếu không làm mẫu)');
+      const n = parseFloat(String(v).replace(',', '.')); if (isNaN(n)) throw new Error('thu hồi phải là số hoặc "x"');
       enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { thuhoi: n, savedAt: nowStr() }) }); return;
     }
     if (!r.rid){                                           // mẫu ngoài danh sách
@@ -3677,7 +3689,7 @@ var APP = (() => {
     const grp = groupOf(sp);
     if (sp){
       h += kv([...(grp.length > 1 ? [['Mẫu chung', `${grp.length} xe: ${esc(groupName(grp))}`]] : []), ['Loại mẫu', esc(sp.mau || '')], ['KL', sp.kl !== '' ? esc(String(sp.kl)) + ' g' : ''], ['KL quả', sp.klq !== '' ? esc(String(sp.klq)) + ' g' : ''],
-        ['Độ ẩm', sp.am !== '' && sp.am != null ? degree(+sp.am) : ''], ['Thu hồi', f2(+sp.thuhoi) + ' kg', true], ['Lưu lúc', esc(sp.savedAt || '')]]) +
+        ['Độ ẩm', sp.am !== '' && sp.am != null ? degree(+sp.am) : ''], ['Thu hồi', isNaN(+sp.thuhoi) ? 'Không làm mẫu (x)' : f2(+sp.thuhoi) + ' kg', true], ['Lưu lúc', esc(sp.savedAt || '')]]) +
         `<div class="detimg"><img id="detImg" alt="Phiếu thu hồi"></div>`;
     } else h += `<div class="lsempty" style="padding:12px">Xe này chưa làm thu hồi.</div>`;
     $('#detBody').innerHTML = h;
