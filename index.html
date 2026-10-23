@@ -225,8 +225,9 @@ button:disabled{opacity:.5;cursor:default}
 .actions.a5{grid-template-columns:repeat(5,1fr)}
 #lsDel{display:none}
 #lsDel.on{background:color-mix(in srgb,var(--warn) 14%,transparent)}
-.rdel{position:absolute;pointer-events:auto;width:28px;height:28px;min-height:0;padding:0;border-radius:50%;background:var(--warn);color:#fff;
-  transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff;display:grid;place-items:center}
+.rdel{position:absolute;pointer-events:auto;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;background:var(--warn);color:#fff;
+  margin:-15px 0 0 -36px;transform:none!important;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff;display:grid;place-items:center;z-index:3}
+.rdel:active{filter:brightness(.9)}
 .rdel .ic{width:15px;height:15px;stroke-width:3}
 .rdel:hover{filter:brightness(1.1)}
 body.role-admin #lsDel{display:flex}
@@ -401,6 +402,11 @@ body.role-xem .actions.a5{grid-template-columns:repeat(4,1fr)}
 .svitem .n{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .svitem .v{font-weight:800;color:var(--brand);font-size:15px;text-align:right}
 .svitem .m{grid-column:1/-1;color:var(--muted);font-size:12.5px;font-weight:500}
+.svitem.adm{grid-template-columns:1fr auto auto}
+.svitem.adm .m{grid-column:1/3}
+.svitem .svdel{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;color:var(--warn);grid-row:1/3;grid-column:3}
+.svitem .svdel:hover{background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.svitem .svdel .ic{width:17px;height:17px}
 #thSavedNight{width:auto;min-width:0;max-width:60%}
 .wrap[hidden]{display:none}
 /* dialogs */
@@ -2717,7 +2723,7 @@ var APP = (() => {
     $('#thKl').value = sp.kl ?? ''; $('#thKlq').value = +sp.klq ? sp.klq : ''; $('#thAm').value = sp.am ?? '';
     selChanged(false);
     const e = $('#thEdit'); e.hidden = false;
-    e.innerHTML = `<span>${IC('pencil')} Đang sửa mẫu lưu lúc <b>${esc(sp.savedAt || '')}</b>${sp.savedBy ? ' · ' + esc(sp.savedBy) : ''}</span><span class="sp"></span><button type="button" class="ghost" id="thEditCancel">Huỷ sửa</button>`;
+    e.innerHTML = `<span>${IC('pencil')} Đang sửa mẫu lưu lúc <b>${esc(sp.savedAt || '')}</b>${sp.savedBy && isAdmin() ? ' · ' + esc(sp.savedBy) : ''}</span><span class="sp"></span><button type="button" class="ghost" id="thEditCancel">Huỷ sửa</button>`;
     if (thCalc(false)) setTimeout(() => $('#thForm').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     setTimeout(() => $('#thKl').focus(), 300);
   }
@@ -2728,15 +2734,26 @@ var APP = (() => {
     const box = $('#thSaved'), selN = $('#thSavedNight');
     const nights = [...new Set(DB.samples.map(sNight))].filter(Boolean).sort((a, b) => nightKey(b) - nightKey(a));
     $('#thSavedCard').hidden = !DB.samples.length;
-    if (!DB.samples.length) return;
+    if (!DB.samples.length){ box.innerHTML = ''; return; }
     if (!nights.includes(svNight)) svNight = nights[0] || '';
     selN.innerHTML = nights.map(n => `<option value="${esc(n)}"${n === svNight ? ' selected' : ''}>Đêm ${esc(n)} · ${DB.samples.filter(sp => sNight(sp) === n).length} mẫu</option>`).join('');
     const list = DB.samples.filter(sp => sNight(sp) === svNight).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
-    box.innerHTML = `<div class="svlist">${list.map(sp => `<button type="button" class="svitem" data-sid="${esc(sp.id)}"><span class="n">${esc(sp.khach || '(không tên)')}</span><span class="v">${f2(+sp.thuhoi)} kg</span>
-      <span class="m">${[sp.soxe, sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', 'Lưu ' + (sp.savedAt || ''), sp.savedBy].filter(Boolean).map(esc).join(' · ')}</span></button>`).join('')}</div>`;
+    box.innerHTML = `<div class="svlist">${list.map(sp => `<button type="button" class="svitem${isAdmin() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc(sp.khach || '(không tên)')}</span><span class="v">${f2(+sp.thuhoi)} kg</span>${isAdmin() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
+      <span class="m">${[sp.soxe, sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', 'Lưu ' + (sp.savedAt || ''), isAdmin() ? sp.savedBy : ''].filter(Boolean).map(esc).join(' · ')}</span></button>`).join('')}</div>`;
   }
   $('#thSavedNight').addEventListener('change', e => { svNight = e.target.value; renderSaved(); });
-  $('#thSaved').addEventListener('click', e => { const b = e.target.closest('[data-sid]'); if (b) openDetail({ sid: b.dataset.sid }); });
+  $('#thSaved').addEventListener('click', e => {
+    const d = e.target.closest('[data-svdel]');
+    if (d){
+      e.stopPropagation();
+      const sp = DB.samples.find(x => String(x.id) === d.dataset.svdel); if (!sp || !isAdmin()) return;
+      if (!confirm(`Xoá mẫu thu hồi “${sp.khach}” (${f2(+sp.thuhoi)} kg) và ảnh phiếu thu hồi của mẫu này?${sp.rid ? '\nXe sẽ quay lại danh sách chưa làm thu hồi.' : ''}`)) return;
+      if (editSample && String(editSample.id) === String(sp.id)) thClear(false);
+      enqueue({ action: 'deleteSample', id: String(sp.id) }); toast(`🗑 Đã xoá mẫu ${sp.khach || ''}`, 2500);
+      return;
+    }
+    const b = e.target.closest('[data-sid]'); if (b) openDetail({ sid: b.dataset.sid });
+  });
   function thClear(keepSel){
     if (!keepSel) stopEdit();
     ['#thKl','#thKlq','#thAm'].forEach(s => { $(s).value = ''; $(s).classList.remove('bad'); });
@@ -3174,7 +3191,7 @@ var APP = (() => {
     $('#detBtns').innerHTML = sp
       ? `<button type="button" class="ghost" data-d="copy">${IC('copy')}Sao chép phiếu</button><button type="button" class="ghost" data-d="share">${IC('share')}Chia sẻ</button>` +
         (canTH() ? `<button type="button" class="primary" data-d="edit">${IC('pencil')}Sửa mẫu</button>` : '') +
-        (isAdmin() ? `<button type="button" class="ghost danger" data-d="del">${IC('trash')}Làm lại mẫu</button>` : '')
+        (isAdmin() ? `<button type="button" class="ghost danger" data-d="del">${IC('trash')}Xoá mẫu</button>` : '')
       : (r && canTH() ? `<button type="button" class="primary" data-d="do">${IC('scale')}Làm thu hồi xe này</button>` : '');
     $('#detDlg').showModal();
     if (sp){
@@ -3198,7 +3215,10 @@ var APP = (() => {
     if (b.dataset.d === 'edit'){ $('#detDlg').close(); if (sp) startEdit(sp); return; }
     if (b.dataset.d === 'del'){
       if (!isAdmin()){ toast('Cần tài khoản Toàn quyền'); return; }
-      if (sp && confirm(`Xoá mẫu thu hồi “${sp.khach}” (${f2(+sp.thuhoi)} kg)? Xe này sẽ quay lại danh sách chưa làm.`)){ enqueue({ action: 'deleteSample', id: String(sp.id) }); $('#detDlg').close(); }
+      if (sp && confirm(`Xoá mẫu thu hồi “${sp.khach}” (${f2(+sp.thuhoi)} kg) và ảnh phiếu thu hồi của mẫu này?${sp.rid ? '\nXe sẽ quay lại danh sách chưa làm thu hồi.' : ''}`)){
+        if (editSample && String(editSample.id) === String(sp.id)) thClear(false);
+        enqueue({ action: 'deleteSample', id: String(sp.id) }); $('#detDlg').close(); toast(`🗑 Đã xoá mẫu ${sp.khach || ''}`, 2500);
+      }
       return;
     }
     if (!detTH) return;

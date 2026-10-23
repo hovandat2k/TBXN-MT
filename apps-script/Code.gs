@@ -208,9 +208,24 @@ function luuMau(b, p, u) {
 }
 function xoaMau(b, p) {
   const ds = docBang(b.thuhoi, COT_THUHOI);
+  const bo = ds.filter(r => String(r.id) === String(p.id));
   const con = ds.filter(r => String(r.id) !== String(p.id));
   ghiBang(b.thuhoi, COT_THUHOI, con);
-  return { ok: true, removed: ds.length - con.length };
+  let tep = 0;
+  bo.forEach(s => { tep += xoaTepMau(s); });     // xoá luôn ảnh phiếu thu hồi trên Drive
+  return { ok: true, removed: ds.length - con.length, files: tep };
+}
+// Ảnh phiếu thu hồi được lưu tên "thu-hoi_<tên>_<mã mẫu>.png" trong Phiếu/<năm-tháng-ngày>/
+function xoaTepMau(s) {
+  let n = 0;
+  try {
+    const m = String(s.date || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/);
+    if (!m) return 0;
+    const thu = m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    const it = thuMucCon(thuMucCon(thuMucGoc(), 'Phiếu'), thu).getFiles(), duoi = '_' + s.id + '.png';
+    while (it.hasNext()) { const f = it.next(); const ten = f.getName(); if (ten.indexOf('thu-hoi_') === 0 && ten.slice(-duoi.length) === duoi) { f.setTrashed(true); n++; } }
+  } catch (e) {}
+  return n;
 }
 function danhSach(b, role) {
   const rows = docBang(b.tuoi, COT_TUOI), samples = docBang(b.thuhoi, COT_THUHOI);
