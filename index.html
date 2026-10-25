@@ -534,6 +534,16 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
     <div class="opt">
       <label class="switch"><input type="checkbox" id="appendChk"> Ghép thêm vào bảng hiện có</label>
     </div>
+    <div class="opt"><label class="switch"><input type="checkbox" id="dualChk"> Nhập kết hợp 2 dạng ảnh/PDF</label></div>
+    <div id="dualBox" hidden>
+      <p class="sub" style="margin:10px 0">Dạng 1 cung cấp thông tin cân. Dạng 2 bổ sung Xanh/Nổi/Chín và Ghi chú từ cột cuối, ghép theo từng xe.</p>
+      <label class="flbl" for="baseFiles">Dạng 1 — Phiếu cân / báo cáo</label>
+      <input class="fld" type="file" id="baseFiles" accept="image/*,application/pdf,.pdf" multiple>
+      <label class="flbl" for="noteFiles" style="margin-top:10px">Dạng 2 — Bảng phần mềm cân có cột ghi chú</label>
+      <input class="fld" type="file" id="noteFiles" accept="image/*,application/pdf,.pdf" multiple>
+      <button type="button" class="primary" id="dualRead" style="margin-top:10px">Đọc và ghép 2 dạng</button>
+    </div>
+    <p class="hint" id="dualReport" role="status" hidden></p>
     <div id="prog"><div class="bar"><i id="progBar"></i></div><div class="progrow"><div id="progTxt"></div><button type="button" class="ghost small" id="cancelBtn" hidden><i data-ic="x"></i>Huỷ</button></div></div>
     <details id="srcBox"><summary>Xem ảnh gốc</summary><img id="srcImg" alt="Ảnh đã dán"></details>
   </section>
@@ -1619,6 +1629,100 @@ $('#drop').addEventListener('drop', e => { const f = [...e.dataTransfer.files].f
 
 /* ---------- PDF: chuyển từng trang thành ảnh rồi đọc như ảnh ---------- */
 const isPdf = f => !!f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''));
+$('#dualChk').addEventListener('change', e => { $('#dualBox').hidden = !e.target.checked; });
+
+// Ghép bằng danh tính xe, không theo STT (STT khác nhau giữa hai báo cáo).
+function mergeSourceNotes(base, notes){
+  const plate = r => norm(r.soxe).replace(/[^a-z0-9]/g, '');
+  const day = r => { const m = String(r.date || '').match(reDate); return m ? fixDate(m) : ''; };
+  const time = r => { const m = String(r.gio || '').match(/(\d{1,2}):(\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; };
+  const weight = r => parseKg(r.tlh);
+  const proposals = new Map(); let unmatchedNotes = 0;
+  notes.forEach(s => {
+    let cand = base.filter(r => plate(s) ? plate(r) === plate(s) :
+      nameKey(s.khach) && nameKey(r.khach) === nameKey(s.khach) && day(s) && day(r) === day(s) && time(s) && time(r) === time(s));
+    if (day(s)) cand = cand.filter(r => !day(r) || day(r) === day(s));
+    if (time(s)) cand = cand.filter(r => !time(r) || time(r) === time(s));
+    if (cand.length > 1 && weight(s) != null) cand = cand.filter(r => weight(r) != null && Math.abs(weight(r) - weight(s)) < 0.5);
+    if (cand.length !== 1){ unmatchedNotes++; return; }
+    const r = cand[0];
+    if (!proposals.has(r)) proposals.set(r, []);
+    proposals.get(r).push(s);
+  });
+  let matched = 0, conflicts = 0;
+  const unresolved = [];
+  base.forEach(r => {
+    r.flags = Object.assign({}, r.flags);
+    const all = proposals.get(r) || [];
+    // Ảnh chồng nhau cùng nội dung có thể dùng; nội dung khác nhau phải kiểm tra.
+    const signatures = new Set(all.map(s => JSON.stringify([...PF.map(f => parsePct(s[f])), String(s.ghichu || '').trim()])));
+    if (all.length && signatures.size === 1){
+      const s = all[0]; PF.forEach(f => { r[f] = s[f] ?? ''; }); r.ghichu = s.ghichu || '';
+      const p = pcts(r);
+      PF.forEach(f => { if (p.have >= 2 && !p.bad && !s.flags?.[f]) delete r.flags[f]; else r.flags[f] = true; });
+      matched++;
+    } else {
+      if (all.length) conflicts++;
+      PF.forEach(f => r.flags[f] = true);
+      unresolved.push([r.soxe, r.khach, r.gio, r.date].filter(Boolean).join(' · '));
+    }
+  });
+  return { matched, conflicts, unmatchedNotes, unresolved };
+}
+
+async function readSourceFiles(files, notesOnly){
+  const out = []; let lastDate = '', lastPrintedDate = '';
+  for (const file of files){
+    if (!isPdf(file) && !file.type.startsWith('image/')) throw new Error('Chỉ nhận ảnh hoặc PDF');
+    check();
+    const pages = isPdf(file) ? await pdfToImages(file) : [file];
+    // Ngày cân ở đầu nhóm có thể chỉ xuất hiện trên trang trước trong cùng PDF.
+    lastDate = ''; lastPrintedDate = '';
+    for (let i = 0; i < pages.length; i++){
+      check(); job.t0 = Date.now(); job.extra = 0;
+      progPrefix = `${notesOnly ? 'Dạng 2' : 'Dạng 1'} · ${file.name} · trang ${i + 1}/${pages.length}: `;
+      const result = await readSheet(pages[i], { notesOnly });
+      if (!result.rows.length) throw new Error(`Không đọc được dòng xe trong ${file.name}, trang ${i + 1}`);
+      if (!notesOnly && isPdf(file)){
+        const dates = pages[i].printedDates || [];
+        if (dates.length) lastPrintedDate = dates[dates.length - 1];
+        else if (lastPrintedDate) result.rows.forEach(r => { r.date = lastPrintedDate; });
+      }
+      result.rows.forEach(r => { if (r.date) lastDate = r.date; else if (lastDate) r.date = lastDate; });
+      out.push(...result.rows);
+    }
+  }
+  return out;
+}
+$('#dualRead').addEventListener('click', async () => {
+  if (busy){ toast('Đang đọc tệp, vui lòng chờ…'); return; }
+  if (window.APP && !APP.isAdmin()) return;
+  const baseFiles = [...$('#baseFiles').files], noteFiles = [...$('#noteFiles').files];
+  if (!baseFiles.length || !noteFiles.length){ toast('Chọn tệp cho cả Dạng 1 và Dạng 2 trước'); return; }
+  busy = true; startJob();
+  const controls = ['#dualRead','#baseFiles','#noteFiles','#pasteBtn','#pickBtn','#dualChk'];
+  controls.forEach(s => $(s).disabled = true); $('#dualReport').hidden = true;
+  try {
+    const base = await readSourceFiles(baseFiles, false);
+    const notes = await readSourceFiles(noteFiles, true);
+    check();
+    const report = mergeSourceNotes(base, notes);
+    fixNames(base);
+    if (!$('#appendChk').checked){ rows = []; Object.keys(crops).forEach(k => delete crops[k]); if (window.APP) APP.newBatch(); }
+    base.forEach(r => { const nr = newRow(r); if (r.crop) crops[nr.id] = r.crop; delete nr.crop; rows.push(nr); });
+    save(); renderTable();
+    const message = `Đã nhập ${base.length} xe từ Dạng 1; ghép ${report.matched} xe từ Dạng 2. ` +
+      `${report.unresolved.length} xe chưa ghép được${report.conflicts ? ` (${report.conflicts} xe có ghi chú mâu thuẫn)` : ''}; ${report.unmatchedNotes} dòng Dạng 2 không tìm được xe duy nhất.`;
+    $('#dualReport').textContent = message + (report.unresolved.length ? ' Cần kiểm tra: ' + report.unresolved.join('; ') : '');
+    $('#dualReport').hidden = false;
+    progressDone('✅ ' + message);
+    $('#tableCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(e){
+    progress(1, (e instanceof StopErr ? '⏹ ' : '❌ ') + (e.message || e));
+    toast('Chưa ghép dữ liệu: ' + (e.message || e), 5000);
+  } finally { busy = false; progPrefix = ''; endJob(); controls.forEach(s => $(s).disabled = false); }
+});
+
 function handleFile(f){
   if (isPdf(f)) return handlePdf(f);
   if (f.type && !f.type.startsWith('image/')){ toast('Chỉ nhận ảnh hoặc tệp PDF'); return; }
@@ -1654,7 +1758,13 @@ async function pdfToImages(file){
     const c = mkCanvas(vp.width, vp.height), g = c.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
     await page.render({ canvasContext: g, viewport: vp }).promise;
-    out.push(await new Promise(r => c.toBlob(r, 'image/png')));
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    // Trang tiếp theo có thể chỉ có khoảng ngày báo cáo, không lặp “Ngày cân”.
+    try {
+      const text = (await page.getTextContent()).items.map(t => t.str || '').join(' ');
+      blob.printedDates = [...text.matchAll(/Ngày\s+cân\s*:\s*(\d{1,2})\s*[\/.-]\s*(\d{1,2})\s*[\/.-]\s*(\d{4})/gi)].map(m => fixDate(m));
+    } catch(e) { blob.printedDates = []; }
+    out.push(blob);
     page.cleanup();
   }
   doc.destroy();
@@ -1922,12 +2032,12 @@ function analyzeGrid(gray, ink, W, H){
   return { hLines, bands, dark };
 }
 
-async function readSheet(blob){
+async function readSheet(blob, options = {}){
   // Gemini (nếu có key) chạy song song với đọc trên máy để tiết kiệm thời gian
   const key = LS.get('tbxn_gkey', '');
-  const gemP = key ? geminiRead(blob, key, LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash').then(v => ({ v }), e => ({ e })) : null;
+  const gemP = key ? geminiRead(blob, key, LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash', options).then(v => ({ v }), e => ({ e })) : null;
   let local = [], localErr = null;
-  try { local = await readLocal(blob); }
+  try { local = await readLocal(blob, options); }
   catch(e){ if (job && job.cancelled) throw e; localErr = e; console.warn(e); }
   let rowsOut = local, via = 'đọc trên máy';
   if (gemP){
@@ -1946,7 +2056,7 @@ async function readSheet(blob){
   if (!rowsOut.length && localErr) throw localErr;
   return { rows: rowsOut, via };
 }
-async function readLocal(blob){
+async function readLocal(blob, options = {}){
   const bmp = await loadBitmap(blob);
   const iw = bmp.width, ih = bmp.height;
   let scale = iw < 1100 ? 2.5 : iw < 2000 ? 2 : iw < 3000 ? 1.3 : 1;
@@ -2038,6 +2148,7 @@ async function readLocal(blob){
   if (soft) { progress(0.8, 'Đang đọc bảng phần mềm cân…'); return parseSoft(words, soft); }
   const softNH = parseSoftNoHeader(words);      // bảng phần mềm cân bị cắt mất dòng tiêu đề
   if (softNH) return softNH;
+  if (options.notesOnly) throw new Error('Dạng 2 chưa nhận ra bảng phần mềm cân và cột ghi chú; hãy chọn ảnh rõ, đủ cột biển số và giờ ra');
 
   let rowsOut = [];
   const dataBands = grid.bands.filter(b => b.cells.length >= 4);
@@ -2586,7 +2697,7 @@ async function parseLoose(words, ctx){
    Gemini (tuỳ chọn) — đọc chữ viết tay chính xác hơn
    ========================================================================= */
 function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
-async function geminiRead(blob, key, model){
+async function geminiRead(blob, key, model, options = {}){
   const b64 = await blobToB64(blob);
   const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
 Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô. Dòng "Đêm dd/mm/yyyy" là ca từ 15h ngày đó tới 15h hôm sau: xe có giờ cân trước 15:00 thì ngày cân là ngày hôm sau (dd+1).
@@ -2601,7 +2712,7 @@ Khối lượng là số nguyên kg (dấu phẩy trong ảnh là dấu phân c�
     method: 'POST', signal: ctl.signal,
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
     body: JSON.stringify({
-      contents: [{ parts: [{ inline_data: { mime_type: blob.type || 'image/png', data: b64 } }, { text: prompt }] }],
+      contents: [{ parts: [{ inline_data: { mime_type: blob.type || 'image/png', data: b64 } }, { text: prompt + (options.notesOnly ? '\nĐây là DẠNG 2: chỉ lấy xanh/noi/chin và ghi_chu từ CỘT CUỐI CÙNG (Ghi chú). Không lấy từ chữ viết tay hoặc cột khác, không tự đoán tỷ lệ không ghi. Lấy so_xe, ngay (Ngày ra), gio_can (Giờ ra), tl_hang và khach_hang để đối chiếu xe; giữ null hoặc chuỗi trống nếu không đọc rõ. Không suy ra số xe bị che hoặc ghi chú bị cắt mất.' : '') }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0 }
     })
   }).catch(e => { throw new Error(job && job.cancelled ? 'Đã huỷ' : e.name === 'AbortError' ? 'phản hồi quá lâu' : 'không kết nối được tới Google'); })
