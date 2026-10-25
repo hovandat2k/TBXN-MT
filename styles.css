@@ -1,17 +1,17 @@
 :root{
-  --bg:#f4f7f5; --surface:#ffffff; --ink:#223d2e; --muted:#6c8173; --line:#dde8e1;
-  --brand:#319665; --brand-2:#8fd6a5; --accent:#62ba88; --btn:#d6efdf; --btn-ink:#17643e; --ok:#2c7a5a; --warn:#c0492f; --amber:#d99a1c;
-  --field:#fff; --soft:#f0f6f2; --shadow:0 8px 28px rgba(24,70,43,.055);
+  --bg:#f1f5fa; --surface:#ffffff; --ink:#172c46; --muted:#61748c; --line:#dce5f0;
+  --brand:#1764f5; --brand-2:#77b8ff; --accent:#3984ff; --btn:#1764f5; --btn-ink:#fff; --ok:#188264; --warn:#c34836; --amber:#ab700d;
+  --field:#fff; --soft:#edf3fb; --shadow:0 3px 16px rgba(18,43,76,.035);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0f1912; --surface:#16241a; --ink:#e3f3e6; --muted:#93b39b; --line:#25402c;
-    --brand:#7fd39a; --brand-2:#5cb878; --accent:#7fd39a; --btn:#7fd39a; --btn-ink:#0f1912; --field:#122016; --soft:#1b2c20; --shadow:0 6px 24px rgba(0,0,0,.35);
+    --bg:#0d1725; --surface:#152338; --ink:#e3ecf8; --muted:#a1b3cd; --line:#30415a;
+    --brand:#80b2ff; --brand-2:#4a88e9; --accent:#80b2ff; --btn:#337cf0; --btn-ink:#fff; --field:#111e30; --soft:#1c2e47; --shadow:0 3px 16px rgba(0,0,0,.15);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0f1912; --surface:#16241a; --ink:#e3f3e6; --muted:#93b39b; --line:#25402c;
-  --brand:#7fd39a; --brand-2:#5cb878; --accent:#7fd39a; --btn:#7fd39a; --btn-ink:#0f1912; --field:#122016; --soft:#1b2c20; --shadow:0 6px 24px rgba(0,0,0,.35);
+  --bg:#0d1725; --surface:#152338; --ink:#e3ecf8; --muted:#a1b3cd; --line:#30415a;
+  --brand:#80b2ff; --brand-2:#4a88e9; --accent:#80b2ff; --btn:#337cf0; --btn-ink:#fff; --field:#111e30; --soft:#1c2e47; --shadow:0 3px 16px rgba(0,0,0,.15);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);min-height:100%}
@@ -586,3 +586,122 @@ dialog{border:1px solid var(--line);border-radius:18px}
   .stat .v{font-size:21px}
 }
 @media (prefers-reduced-motion:reduce){button,.source-upload,.upload-drop{transition:none}}
+
+/* Horizontal workspace: coffee layout with a navy / blue palette. */
+body{padding:0 24px calc(32px + env(safe-area-inset-bottom));background:var(--bg)}
+.wrap{max-width:1400px}
+.appbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:36px;min-height:78px;
+  background:#14263e;color:#f0f5ff;width:auto;margin:0 -24px;
+  padding:env(safe-area-inset-top) 24px 0;border-bottom:1px solid #283c57;
+  box-shadow:0 0 0 100vmax #14263e;clip-path:inset(0 -100vmax)}
+.appbar header{padding:14px 0;gap:11px;min-width:0}
+.brand-mark{display:grid;place-items:center;width:38px;height:40px;border:1px solid #37557c;background:#1b3658;border-radius:10px;color:#83b9ff;flex:none}
+.brand-mark .ic{width:25px;height:25px}
+.brand-title h1{font-size:17px;letter-spacing:.015em;white-space:nowrap;color:#f3f7ff}
+.brand-title h1 span{color:#7da4d3;margin:0 2px}
+.brand-title p{margin:3px 0 0;font-size:10px;letter-spacing:.16em;color:#a1b5d0;font-weight:600}
+.header-tools{display:flex;align-items:center;gap:8px}
+.header-tools .hbtn{margin:0;width:36px;height:36px;background:transparent;border:1px solid #3c506e;border-radius:8px;box-shadow:none;color:#d6e5fa}
+.header-tools .hbtn .ic{width:18px;height:18px;color:inherit}
+.header-tools .hbtn:hover{background:#223d60}
+.appbar .tabs{display:flex;align-items:stretch;justify-self:start;align-self:stretch;margin:0;padding:0;gap:6px;border:0;border-radius:0;background:transparent;box-shadow:none}
+.appbar .tabs button{padding:0 18px;min-height:54px;border-radius:0;font-size:13px;font-weight:600;color:#bdcce0;border-bottom:3px solid transparent;box-shadow:none}
+.appbar .tabs button.on{background:#1e395d;color:#fff;border-bottom-color:#6faaff;box-shadow:none}
+.appbar .tabs button .ic{color:inherit;width:18px;height:18px}
+.appbar .tabs button:hover:not(.on){background:#1a304c;color:#fff}
+.workspace-heading{padding:25px 0 20px}
+.workspace-heading h2{margin:0;font-size:29px;line-height:1.3;font-weight:800;letter-spacing:-.04em}
+.workspace-heading p{margin:5px 0 0;font-size:13px;color:var(--muted)}
+.sync{margin:12px 0 -7px auto;border:1px solid var(--line);background:var(--surface);padding:5px 11px;font-size:11px;max-width:100%;white-space:normal;text-align:left}
+.card{border-radius:9px;padding:20px;margin-bottom:18px;box-shadow:var(--shadow)}
+.card h2{font-size:15px;letter-spacing:-.02em}
+button{border-radius:7px}
+.primary,:root[data-theme="dark"] .primary{background:var(--btn);color:var(--btn-ink);box-shadow:0 2px 5px rgba(18,70,160,.1)}
+.ghost,.small{border-radius:7px}
+.seg{border:1px solid var(--line);border-radius:7px;background:var(--soft);gap:2px;padding:3px}
+.seg button{border-radius:5px;font-size:12px}
+.seg button.on{color:var(--brand);box-shadow:0 1px 4px rgba(18,43,76,.07)}
+#importCard{padding:0;background:transparent;border:0;box-shadow:none}
+.seg.import-tabs{max-width:390px;width:100%;margin-bottom:15px;padding:0;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;gap:0}
+.import-tabs button{padding:12px 22px;min-height:43px;border-radius:6px 6px 0 0;border-bottom:2px solid transparent;font-size:13px}
+.import-tabs button.on{background:var(--surface);border:1px solid var(--line);border-bottom:2px solid var(--brand);box-shadow:none;color:var(--brand)}
+#singleBox{padding:18px;background:var(--surface);border:1px solid var(--line);border-radius:9px}
+#singleBox .upload-drop{min-height:145px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+#dualBox>.sub{margin:0 0 10px}
+.source-grid{gap:18px;margin-top:0}
+.source-upload{padding:16px;border-radius:9px}
+.source-upload.active-source{border-color:color-mix(in srgb,var(--brand) 50%,var(--line));box-shadow:none}
+.source-upload h3{font-size:14px;gap:10px;margin-bottom:12px}
+.source-step{width:29px;height:29px;border-radius:6px;background:var(--soft);color:var(--brand)}
+.source-upload .upload-drop,.upload-drop{border-radius:6px;border:1px dashed color-mix(in srgb,var(--brand) 43%,var(--line));background:color-mix(in srgb,var(--brand) 3%,var(--surface))}
+.source-upload .upload-drop{min-height:140px}
+.source-upload .pbtns{justify-content:center;gap:8px}
+.source-upload .pbtns button{flex:0 1 180px;border-radius:6px;min-height:36px}
+#dualRead{background:var(--btn);color:var(--btn-ink);border-radius:7px;box-shadow:none}
+.manual-entry{justify-content:flex-start;margin-top:14px;padding:0;border:0}
+#manualBtn{background:var(--surface);font-size:12px;min-height:36px;border-radius:6px}
+.opt{margin:12px 0 0;font-size:12px}
+.tbar{padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.ghead{border-radius:6px;background:var(--soft);padding:8px 10px;margin-bottom:9px}
+.rhead{padding-bottom:8px;color:var(--muted);font-size:11px}
+.row{padding:6px 2px}
+.fld{border-radius:6px;font-weight:500;border-color:var(--line)}
+.meta .fld{border-radius:5px}
+.row .ckh>.fld{font-weight:600}
+.row .n{font-weight:600;font-size:13px}
+.full,.full .fld{border-radius:6px}
+.full th{padding:10px 6px}
+.addrow{border-radius:5px;min-height:32px;margin-top:8px;color:var(--brand)}
+.stat,.lscard{border-radius:8px;background:var(--surface)}
+.stat.main,.lscard.main{background:var(--soft);color:var(--ink);border-color:var(--line);border-left:3px solid var(--brand)}
+.stat.main .l,.stat.main .v small,.lscard.main .l,.lscard.main .s{color:var(--muted)}
+.actions button{border-radius:7px}
+dialog,.lgbox{border-radius:12px}
+.dlg h3{letter-spacing:-.025em}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .primary,:root:not([data-theme="light"]) #dualRead{color:var(--btn-ink)}
+  :root:not([data-theme="light"]) .tabs button.on{color:#fff}
+}
+:root[data-theme="dark"] .tabs button.on{color:#fff}
+:root[data-theme="dark"] #dualRead{color:var(--btn-ink)}
+@media (max-width:1050px){
+  .appbar{gap:16px}
+  .appbar .tabs button{padding:0 12px;font-size:12px}
+  .brand-title h1{font-size:15px}
+}
+@media (max-width:780px){
+  body{padding:0 16px calc(28px + env(safe-area-inset-bottom))}
+  .appbar{grid-template-columns:1fr auto;gap:0 12px;margin:0 -16px;padding-left:16px;padding-right:16px}
+  .appbar header{padding:12px 0}
+  .appbar .tabs{grid-column:1 / -1;grid-row:2;display:flex;justify-self:stretch}
+  .appbar .tabs button{flex:1;min-height:45px;padding:8px 4px;font-size:12px}
+  .header-tools{grid-column:2;grid-row:1}
+  .workspace-heading{padding:21px 0 16px}
+  .workspace-heading h2{font-size:25px}
+  .source-grid{gap:12px}
+  .rhead{display:none}
+  .row{grid-template-columns:24px repeat(15,minmax(0,1fr)) 30px;grid-template-areas:"n kh kh kh kh kh kh kh kh kh kh kh kh kh kh kh d" ". gc gc gc gc gc gc gc gc gc bi bi bi bi bi bi ." ". tl tl tl tl tl tl x x x no no no c c c .";row-gap:4px;column-gap:5px;padding:6px 0}
+  .row .n{grid-area:n;padding-top:8px}
+  .row .ckh{grid-area:kh}.row .cgc{grid-area:gc;align-self:end}.row .cbi{grid-area:bi}.row .ctl{grid-area:tl}.row .cx{grid-area:x}.row .cn{grid-area:no}.row .cc{grid-area:c}.row .del{grid-area:d;width:30px}
+  .cl{display:block}
+}
+@media (max-width:640px){
+  body{padding-left:12px;padding-right:12px}
+  .appbar{margin:0 -12px;padding-left:12px;padding-right:12px}
+  .brand-title h1{font-size:14px}
+  .brand-title p{font-size:9px}
+  .brand-mark{width:31px;height:34px;border-radius:7px}
+  .brand-mark .ic{width:22px;height:22px}
+  .header-tools{gap:6px}
+  .header-tools .hbtn{width:32px;height:32px}
+  .card{padding:13px;border-radius:8px;margin-bottom:13px}
+  .workspace-heading p{font-size:12px}
+  .source-grid{grid-template-columns:1fr}
+  .source-upload{padding:13px}
+  .source-upload .upload-drop{min-height:117px}
+  #singleBox{padding:13px}
+  .seg.import-tabs{max-width:none}
+  .import-tabs button{padding:10px}
+  .tbar{gap:6px}
+  .stat,.lscard{background:var(--soft)}
+}

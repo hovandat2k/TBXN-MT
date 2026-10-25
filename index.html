@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#c9efd5">
+<meta name="theme-color" content="#14263e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>MẪU CÀ TƯƠI NHƯ TÙNG</title>
 <meta property="og:title" content="MẪU CÀ TƯƠI NHƯ TÙNG">
@@ -13,27 +13,33 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261025-compact">
+<link rel="stylesheet" href="styles.css?v=20261025-navy">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="wrap">
+  <div class="appbar">
   <header>
-    <img class="logo" src="icons/icon-192.png" alt="">
-    <div>
-      <h1>MẪU CÀ TƯƠI NHƯ TÙNG</h1>
+    <span class="brand-mark" aria-hidden="true"><i data-ic="sprout"></i></span>
+    <div class="brand-title">
+      <h1>CÀ TƯƠI <span>·</span> THU HỒI</h1>
+      <p>NHƯ TÙNG</p>
     </div>
-    <button class="hbtn" id="setBtn" aria-label="Cài đặt" title="Cài đặt"><i data-ic="settings"></i></button>
-    <button class="hbtn" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối"><i data-ic="theme"></i></button>
   </header>
   <nav class="tabs" id="tabs" role="tablist">
     <button type="button" role="tab" data-tab="tuoi" class="on"><i data-ic="sprout"></i>Cà tươi</button>
     <button type="button" role="tab" data-tab="th"><i data-ic="scale"></i>Thu hồi<span class="badge" id="thBadge" hidden></span></button>
     <button type="button" role="tab" data-tab="ls"><i data-ic="list"></i>Tổng hợp mẫu</button>
   </nav>
+  <div class="header-tools">
+    <button class="hbtn" id="setBtn" aria-label="Cài đặt" title="Cài đặt"><i data-ic="settings"></i></button>
+    <button class="hbtn" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối"><i data-ic="theme"></i></button>
+  </div>
+  </div>
   <button type="button" class="sync" id="syncSt" hidden></button>
 
   <div class="tab" id="tab-tuoi">
+  <div class="workspace-heading"><h2>Cà tươi</h2><p>Đọc phiếu cân và quản lý chất lượng</p></div>
   <!-- 1. Nhập ảnh -->
   <section class="card" id="importCard">
     <div class="seg import-tabs" id="readModeTabs" role="tablist" aria-label="Cách đọc phiếu">
@@ -133,6 +139,7 @@
 
   <!-- ===== Thu hồi ===== -->
   <div class="tab" id="tab-th" hidden>
+  <div class="workspace-heading"><h2>Thu hồi</h2><p>Phân tích mẫu và theo dõi tỷ lệ thu hồi</p></div>
     <section class="card" id="thForm">
       <div class="seg seg2" id="mauSeg"><button type="button" data-mau="2000" class="on">Mẫu riêng</button><button type="button" data-mau="10000">Mẫu chung</button></div>
       <div id="thRieng">
@@ -196,6 +203,7 @@
 
   <!-- ===== Lịch sử ===== -->
   <div class="tab" id="tab-ls" hidden>
+  <div class="workspace-heading"><h2>Tổng hợp mẫu</h2><p>Tra cứu và quản lý kết quả theo từng phiếu cân</p></div>
     <section class="card">
       <div class="tbar">
         <h2 style="margin:0">Tổng hợp mẫu</h2>
