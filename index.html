@@ -214,7 +214,7 @@
           <div class="sortbox"><span class="sl">Sắp xếp</span><div id="lsSortLevels" class="slevels"></div></div>
           <div class="seg" id="lsGrpSeg"><button type="button" data-g="all" class="on">Gộp các đêm</button><button type="button" data-g="day">Tách theo đêm</button></div></div>
         <div class="ls-editor" id="lsEditor" hidden>
-          <div class="editbar"><span id="lsEditStatus" role="status" hidden></span><button type="button" class="primary" id="lsSaveAll">Lưu toàn bảng</button><button type="button" class="ghost" id="lsCancelEdit">Huỷ sửa</button></div>
+          <div class="editbar"><span id="lsEditStatus" role="status" hidden></span><button type="button" class="primary" id="lsSaveAll">Lưu</button><button type="button" class="ghost" id="lsCancelEdit">Hủy</button></div>
           <p class="hint" id="lsEditError" role="alert"></p>
         </div>
         <div id="lsPv" class="pvwrap"><div class="pvbox" data-sheet="ls"><img id="lsPrev" alt="Phiếu tổng hợp mẫu" title="Bấm vào dòng xe để xem chi tiết"><div class="hot" id="lsHot"></div><div class="hot" id="lsDelLayer"></div><div class="ls-grid" id="lsGrid" hidden></div></div></div>
@@ -3699,7 +3699,7 @@ var APP = (() => {
       if (Q.length) toast(`Đã lưu bản cục bộ ${plan.count} dòng — còn ${Q.length} mục chờ gửi lên Drive`, 4500);
     } catch(e){ $('#lsEditError').textContent = 'Chưa lưu: ' + e.message; }
     finally {
-      lsSaving = false; $('#lsSaveAll').disabled = $('#lsCancelEdit').disabled = false; $('#lsSaveAll').textContent = 'Lưu toàn bảng';
+      lsSaving = false; $('#lsSaveAll').disabled = $('#lsCancelEdit').disabled = false; $('#lsSaveAll').textContent = 'Lưu';
       $('#lsGrid').querySelectorAll('textarea').forEach(el => el.disabled = false);
     }
   }
