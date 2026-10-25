@@ -876,8 +876,8 @@ function cmpRows(a, b){
   }
   return 0;   // bằng nhau ở mọi mức: giữ thứ tự gốc
 }
-/* Ca đêm: từ 15h ngày D đến trước 15h ngày D+1 thuộc “Đêm D” */
-const NIGHT_H = 15;
+/* Ca đêm: từ 17h ngày D đến trước 17h ngày D+1 thuộc “Đêm D” */
+const NIGHT_H = 17;
 function nightOf(date, gio){
   const m = String(date || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); if (!m) return String(date || '');
   const d = new Date(+m[3], +m[2] - 1, +m[1]), t = String(gio || '').match(/(\d{1,2})\s*:/);
@@ -891,7 +891,7 @@ function nightGroups(list){
   (list || rows).forEach(r => { const k = nightOf(r.date, r.gio); if (!idx.has(k)){ idx.set(k, g.length); g.push({ date: k, rows: [] }); } g[idx.get(k)].rows.push(r); });
   return g.sort((a, b) => nightKey(a.date) - nightKey(b.date));
 }
-// "Đêm 21/10/2026 - Ngày 22/10/2026" (ca từ 15h ngày 21 tới 15h ngày 22)
+// "Đêm 21/10/2026 - Ngày 22/10/2026" (ca từ 17h ngày 21 tới 17h ngày 22)
 function nightLabel(d){
   const m = String(d || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/); if (!m) return 'Đêm ' + d;
   const x = new Date(+m[3], +m[2] - 1, +m[1] + 1);
@@ -1927,7 +1927,7 @@ async function parseGrid(grid, words, ctx){
     r.stt = (r.stt.match(/\d+/) || [''])[0];
     const tm = r.gio.match(/(\d{1,2})[:.;](\d{2})(?:[:.;](\d{2}))?/);
     r.gio = tm ? [tm[1].padStart(2, '0'), tm[2], tm[3]].filter(Boolean).join(':') : cleanText(r.gio);
-    if (r._night && tm && +tm[1] < NIGHT_H && r.date) r.date = nextDay(r.date);   // dòng “Đêm D”: xe cân trước 15h thuộc ngày D+1
+    if (r._night && tm && +tm[1] < NIGHT_H && r.date) r.date = nextDay(r.date);   // dòng “Đêm D”: xe cân trước 17h thuộc ngày D+1
     delete r._night;
     out.push(r); dataIdx.push(i);
   }
@@ -2333,7 +2333,7 @@ function blobToB64(blob){ return new Promise((res, rej) => { const fr = new File
 async function geminiRead(blob, key, model, options = {}){
   const b64 = await blobToB64(blob);
   const prompt = `Ảnh là phiếu cân xe cà phê (bảng in, có thể nhiều "Ngày cân"). Mỗi dòng xe có số viết tay bằng bút ngay phía dưới ô "Giờ cân" gồm 2 hoặc 3 số kèm chữ: X = % xanh, N = % nổi, C = % chín (ví dụ "17X - 20N" nghĩa là xanh 17, nổi 20; "17X - 63C" nghĩa là xanh 17, chín 63).
-Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô. Dòng "Đêm dd/mm/yyyy" là ca từ 15h ngày đó tới 15h hôm sau: xe có giờ cân trước 15:00 thì ngày cân là ngày hôm sau (dd+1).
+Nếu bảng đã có sẵn các cột "Xanh (%)", "Nổi (%)", "Chín (%)" in sẵn thì lấy số trong các cột đó (dấu "–" nghĩa là trống); dòng chữ nghiêng nằm ngay dưới 3 cột này là ghi chú của dòng xe đó. Ngày cân có thể nằm ở dòng "Ngày cân : …" hoặc ngay dưới giờ cân trong cùng ô. Dòng "Đêm dd/mm/yyyy" là ca từ 17h ngày đó tới 17h hôm sau: xe có giờ cân trước 17:00 thì ngày cân là ngày hôm sau (dd+1).
 Ảnh cũng có thể là ảnh chụp màn hình phần mềm cân (có thể bị cắt mất dòng tiêu đề; nhận cột theo thứ tự) với các cột STT, Số xe, Khách hàng, Hàng Hóa, TL Lần 1, TL Lần 2, TL Hàng, Ngày vào, Giờ vào, Ngày ra, Giờ ra, Số chứng từ, Kiểu cân, Ghi chú. Khi đó: bỏ qua Ngày vào, Giờ vào, Số chứng từ; ngay = Ngày ra, gio_can = Giờ ra (giờ hiện dạng "00.19:23…" nghĩa là 19:23); tl_thuc = tl_hang = TL Hàng, tl_bi = 0; bỏ các dòng chưa có TL Lần 2 / TL Hàng, các dòng Kiểu cân "XUẤT HÀNG" và các dòng hàng hóa là cà nhân (không phải quả tươi); trong cột Ghi chú, các cụm dạng "17X", "25N", "30C" là xanh / nổi / chín, phần chữ còn lại (bỏ dấu ngoặc bao ngoài) là ghi_chu.
 Hãy trích xuất MỌI dòng xe (bỏ qua dòng "Tổng cộng"/"TỔNG CỘNG TẤT CẢ" và các ô tổng kết bên dưới bảng), theo đúng thứ tự từ trên xuống. Trả về JSON:
 {"rows":[{"ngay":"dd/mm/yyyy","stt":"","so_xe":"","hang_hoa":"","khach_hang":"","tl_lan1":0,"tl_lan2":0,"tl_hang":0,"tl_bi":0,"tl_thuc":0,"gio_can":"hh:mm:ss","xanh":null,"noi":null,"chin":null,"ghi_chu":""}]}
@@ -3420,7 +3420,7 @@ var APP = (() => {
   const lsSelCus = new Set(), lsSelXe = new Set();
   if (lsMode !== 'day' && lsMode !== 'cus') lsMode = 'opt';
   const sampleOf = rid => DB.samples.find(s => rid && String(s.rid) === String(rid));
-  // “Đêm D” = 15h ngày D → 15h ngày D+1
+  // “Đêm D” = 17h ngày D → 17h ngày D+1
   const rNight = r => nightOf(r.date, r.gio);
   const sNight = sp => {
     const r = sp.rid ? DB.rows.find(x => String(x.rid) === String(sp.rid)) : null;
