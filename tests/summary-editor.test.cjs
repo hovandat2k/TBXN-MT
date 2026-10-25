@@ -74,6 +74,17 @@ const clone = value => JSON.parse(JSON.stringify(value));
   const grid = context.parseSummaryPaste('"Khách\nDòng hai"\t"Ghi ""chú"""\r\nXe hai\t5000\r\n');
   assert.equal(grid.length, 2); assert.equal(grid[0][0], 'Khách\nDòng hai'); assert.equal(grid[0][1], 'Ghi "chú"'); assert.equal(grid[1][1], '5000');
 }
+{
+  const header = { cols: ['stt','khach','gio','xanh','noi','chin'], xs: [0,40,200,300,350,400,450], multiDay: true };
+  const original = [{ rid: 'R1', sid: '', khach: 'Demo' }];
+  const layout = context.summaryCellLayout(header, [{ r: original[0], y0: 100, yp: 140, y1: 180 }], original);
+  assert.equal(layout.length, 6); assert(!layout.some(c => c.f === 'stt' || c.f === 'date'));
+  assert.equal(layout.find(c => c.f === 'gio').withDate, true);
+  const note = layout.find(c => c.f === 'ghichu');
+  assert.equal(note.x0, 300); assert.equal(note.x1, 450); assert.equal(note.y0, 140); assert.equal(note.y1, 180);
+  assert.equal(layout.find(c => c.f === 'xanh').y1, 140);
+  assert.equal(layout.find(c => c.f === 'khach').y1, 180);
+}
 // Keyboard event uses actual production handler; no save on input/blur.
 const handlers = {}, cells = [];
 context.$ = () => ({ addEventListener: (type, callback) => { handlers[type] = callback; }, querySelectorAll: () => cells });
@@ -89,4 +100,12 @@ assert(prevented); assert.equal(textarea.value, 'First\n'); assert.equal(context
 let focused = false;
 cells.push(textarea, { dataset: { ri: '1', f: 'khach' }, focus() { focused = true; }, select() {} });
 handlers.keydown({ target: textarea, key: 'Enter', shiftKey: false, preventDefault() {} }); assert(focused);
+Object.assign(context, { fitSummaryCell() {}, summaryEditStatus() {} });
+const draftStart = html.indexOf('  function updateSummaryDraft('), draftEnd = html.indexOf("  $('#lsEdit').addEventListener", draftStart);
+vm.runInContext(html.slice(draftStart, draftEnd), context);
+vm.runInContext("lsEditor={original:[{gio:'23:30',date:'24/10/2026'}],drafts:[{gio:'23:30',date:'24/10/2026'}]};", context);
+context.updateSummaryDraft({ value: '23:31\n24/10/2026', matches: () => true, dataset: { ri: '0', f: 'gio', withDate: '1' }, classList: { toggle() {} } });
+assert.equal(vm.runInContext('lsEditor.drafts[0].gio',context), '23:31');
+assert.equal(vm.runInContext('lsEditor.drafts[0].date',context), '24/10/2026');
+assert(!html.includes('Shift + Enter: xuống dòng trong ô · Enter: ô bên dưới'), 'remove muted instructions');
 console.log('PASS: bulk plans, hidden rows, multiline text, validation, linked samples, Excel paste, Shift+Enter and Enter navigation.');
