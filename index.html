@@ -4115,7 +4115,7 @@ var APP = (() => {
     const el = e.target, text = e.clipboardData?.getData('text/plain') || '';
     if (!lsEditor || lsSaving || !el.matches('textarea') || el.readOnly || !text.includes('\t')) return;
     e.preventDefault();
-    const visibleCols = LSX.hdr.cols.filter(f => f !== 'stt').map(f => f === 'date' ? 'gio' : f);
+    const visibleCols = el.dataset.f === 'ghichu' ? ['ghichu'] : LSX.hdr.cols.filter(f => f !== 'stt').map(f => f === 'date' ? 'gio' : f);
     const matrix = parseSummaryPaste(text), ri = +el.dataset.ri, ci = visibleCols.indexOf(el.dataset.f);
     let skipped = 0;
     matrix.forEach((line, di) => line.forEach((value, dj) => {
