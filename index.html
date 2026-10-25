@@ -4192,7 +4192,7 @@ var APP = (() => {
         save(); LS.set('tbxn_savedsig', batchId + sig()); renderTable();
       }
       endSummaryEdit(); changed(); await flush();
-      toast(Q.length ? `Đã lưu bản cục bộ ${plan.count} dòng — còn ${Q.length} mục chờ gửi lên Drive` : `✅ Đã lưu toàn bảng (${plan.count} dòng thay đổi) lên Drive`, 4500);
+      if (Q.length) toast(`Đã lưu bản cục bộ ${plan.count} dòng — còn ${Q.length} mục chờ gửi lên Drive`, 4500);
     } catch(e){ $('#lsEditError').textContent = 'Chưa lưu: ' + e.message; }
     finally {
       lsSaving = false; $('#lsSaveAll').disabled = $('#lsCancelEdit').disabled = false; $('#lsSaveAll').textContent = 'Lưu toàn bảng';
