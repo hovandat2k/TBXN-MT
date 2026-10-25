@@ -90,6 +90,8 @@ const element = selector => {
   return elements.get(selector);
 };
 Object.assign(context, { $: element, window: {}, busy: false, rows: [{ id: 'existing' }], crops: {}, progress() {}, toast() {}, endJob() {}, startJob() {}, StopErr: class StopErr extends Error {} });
+context.IMPORT_CONTROLS = ['#dualRead','#baseFiles','#noteFiles','#pasteBtn','#pickBtn'];
+context.sourceFiles = source => [...element(source === 'base' ? '#baseFiles' : '#noteFiles').files];
 const pipelineStart = html.indexOf("$('#dualRead').addEventListener('click'");
 const pipelineEnd = html.indexOf('\n\nfunction handleFile', pipelineStart);
 vm.runInContext(html.slice(pipelineStart, pipelineEnd), context);
