@@ -417,9 +417,9 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .dethead button{width:36px;height:36px;min-height:0;padding:0}
 #detBody h4{margin:14px 0 6px;font-size:15.5px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:15.5px;background:var(--soft);border-radius:12px;padding:10px 12px}
-.kv .k{color:var(--muted);font-weight:600}
-.kv .v{font-weight:600;font-variant-numeric:tabular-nums;word-break:break-word}
-.kv .v.b{font-weight:800;color:var(--btn-ink);font-size:17px}
+.kv .k{color:color-mix(in srgb,var(--ink) 80%,var(--muted));font-weight:600}
+.kv .v{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;word-break:break-word}
+.kv .v.b{font-weight:800;color:var(--ink);font-size:17px}
 .detimg{margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
 .detimg img{display:block;width:100%;height:auto}
 .detbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
