@@ -3534,6 +3534,7 @@ var APP = (() => {
   }
   function renderLS(){
     if (lsEditor) return;
+    $('#lsGrpSeg').style.display = lsMode === 'day' ? 'none' : '';
     document.querySelectorAll('#lsSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === lsMode));
     const ctl = $('#lsCtl');
     if (!DB.rows.length && !DB.samples.length){
