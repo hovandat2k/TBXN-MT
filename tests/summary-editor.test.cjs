@@ -100,6 +100,21 @@ assert(prevented); assert.equal(textarea.value, 'First\n'); assert.equal(context
 let focused = false;
 cells.push(textarea, { dataset: { ri: '1', f: 'khach' }, focus() { focused = true; }, select() {} });
 handlers.keydown({ target: textarea, key: 'Enter', shiftKey: false, preventDefault() {} }); assert(focused);
+{
+  const box = (x,y,w,h,extra={}) => ({ matches:()=>true, getBoundingClientRect:()=>({left:x,top:y,right:x+w,bottom:y+h,width:w,height:h}), focus(){this.focused=true;}, select(){this.selected=true;}, scrollIntoView(){}, ...extra });
+  const left=box(0,0,100,80), green=box(100,0,50,40), floating=box(150,0,50,40), note=box(100,40,150,40), below=box(100,80,50,40), right=box(250,0,60,80);
+  const grid=[left,green,floating,note,below,right];
+  assert.equal(context.summaryArrowTarget(green,grid,'ArrowDown'),note,'down enters merged note');
+  assert.equal(context.summaryArrowTarget(note,grid,'ArrowLeft'),left,'left uses adjacent tall cell');
+  assert.equal(context.summaryArrowTarget(note,grid,'ArrowRight'),right);
+  assert.equal(context.summaryArrowTarget(below,grid,'ArrowUp'),note);
+  assert.equal(context.summaryArrowTarget(left,grid,'ArrowLeft'),null,'stay at edge');
+  assert.equal(context.summaryArrowTarget(green,[green,box(100,40,50,40,{disabled:true})],'ArrowDown'),null);
+  cells.splice(0,cells.length,...grid);
+  handlers.keydown({target:green,key:'ArrowDown',preventDefault(){}}); assert(note.focused&&note.selected);
+  note.focused=false;
+  handlers.keydown({target:green,key:'ArrowDown',shiftKey:true,preventDefault(){throw Error('preserve selection');}}); assert(!note.focused);
+}
 Object.assign(context, { fitSummaryCell() {}, summaryEditStatus() {} });
 const draftStart = html.indexOf('  function updateSummaryDraft('), draftEnd = html.indexOf("  $('#lsEdit').addEventListener", draftStart);
 vm.runInContext(html.slice(draftStart, draftEnd), context);
