@@ -606,7 +606,7 @@ body{padding:0 24px calc(32px + env(safe-area-inset-bottom));background:var(--bg
 .header-tools .hbtn .ic{width:18px;height:18px;color:inherit}
 .header-tools .hbtn:hover{background:#223d60}
 .appbar .tabs{display:flex;align-items:stretch;justify-self:start;align-self:stretch;margin:0;padding:0;gap:6px;border:0;border-radius:0;background:transparent;box-shadow:none}
-.appbar .tabs button{padding:0 18px;min-height:54px;border-radius:0;font-size:13px;font-weight:600;color:#bdcce0;border-bottom:3px solid transparent;box-shadow:none}
+.appbar .tabs button{padding:0 18px;min-height:54px;border-radius:0;font-size:18px;font-weight:700;text-transform:uppercase;color:#bdcce0;border-bottom:3px solid transparent;box-shadow:none}
 .appbar .tabs button.on{background:#1e395d;color:#fff;border-bottom-color:#6faaff;box-shadow:none}
 .appbar .tabs button .ic{color:inherit;width:18px;height:18px}
 .appbar .tabs button:hover:not(.on){background:#1a304c;color:#fff}
@@ -667,7 +667,7 @@ dialog,.lgbox{border-radius:12px}
 :root[data-theme="dark"] #dualRead{color:var(--btn-ink)}
 @media (max-width:1050px){
   .appbar{gap:16px}
-  .appbar .tabs button{padding:0 12px;font-size:12px}
+  .appbar .tabs button{padding:0 12px;font-size:16px}
   .brand-title h1{font-size:15px}
 }
 @media (max-width:780px){
@@ -675,7 +675,7 @@ dialog,.lgbox{border-radius:12px}
   .appbar{grid-template-columns:1fr auto;gap:0 12px;margin:0 -16px;padding-left:16px;padding-right:16px}
   .appbar header{padding:12px 0}
   .appbar .tabs{grid-column:1 / -1;grid-row:2;display:flex;justify-self:stretch}
-  .appbar .tabs button{flex:1;min-height:45px;padding:8px 4px;font-size:12px}
+  .appbar .tabs button{flex:1;min-height:45px;padding:8px 4px;font-size:14px}
   .header-tools{grid-column:2;grid-row:1}
   .workspace-heading{padding:21px 0 16px}
   .workspace-heading h2{font-size:25px}
@@ -706,3 +706,7 @@ dialog,.lgbox{border-radius:12px}
   .tbar{gap:6px}
   .stat,.lscard{background:var(--soft)}
 }
+
+/* Tab labels stay prominent at every screen size. */
+#readModeTabs button,#lsSeg button{font-size:15px;font-weight:700;text-transform:uppercase}
+@media(max-width:640px){#readModeTabs button,#lsSeg button{font-size:13px}}
