@@ -3058,6 +3058,23 @@ function parseSummaryPaste(text){
   return grid;
 }
 
+function summaryArrowTarget(current, cells, key){
+  const a = current.getBoundingClientRect(), horizontal = key === 'ArrowLeft' || key === 'ArrowRight';
+  let best = null, bestScore = Infinity;
+  cells.forEach(cell => {
+    if (cell === current || cell.readOnly || cell.disabled) return;
+    const b = cell.getBoundingClientRect(); if (!b.width || !b.height) return;
+    const overlap = horizontal ? Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) : Math.min(a.right, b.right) - Math.max(a.left, b.left);
+    if (overlap <= 1) return;
+    const gap = key === 'ArrowLeft' ? a.left - b.right : key === 'ArrowRight' ? b.left - a.right : key === 'ArrowUp' ? a.top - b.bottom : b.top - a.bottom;
+    if (gap < -2) return;
+    const cross = horizontal ? Math.abs((a.top + a.bottom - b.top - b.bottom) / 2) : Math.abs((a.left + a.right - b.left - b.right) / 2);
+    const score = Math.max(0, gap) * 1000 + cross;
+    if (score < bestScore){ best = cell; bestScore = score; }
+  });
+  return best;
+}
+
 function summaryCellLayout(header, hits, original){
   const cells = [], p0 = header.cols.findIndex(isPF), p1 = header.cols.length - 1 - [...header.cols].reverse().findIndex(isPF);
   hits.forEach(hit => {
@@ -4099,6 +4116,12 @@ var APP = (() => {
     if (!lsEditor || lsSaving || e.isComposing) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); saveSummaryTable(); return; }
     const el = e.target; if (!el.matches('textarea') || el.readOnly) return;
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey){
+      e.preventDefault();
+      const next = summaryArrowTarget(el, [...$('#lsGrid').querySelectorAll('textarea:not([readonly])')], e.key);
+      if (next){ next.focus(); next.select(); next.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+      return;
+    }
     if (e.key === 'Enter' && e.shiftKey){
       e.preventDefault(); el.setRangeText('\n', el.selectionStart, el.selectionEnd, 'end'); updateSummaryDraft(el); return;
     }
