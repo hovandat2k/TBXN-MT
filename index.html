@@ -229,6 +229,20 @@ button:disabled{opacity:.5;cursor:default}
 .rdelall{position:absolute;pointer-events:auto;top:8px;right:8px;min-height:0;padding:6px 12px;border-radius:999px;background:var(--warn);color:#fff;font-size:13px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.25);gap:6px}
 .rdelall .ic{width:15px;height:15px}
 .celled{position:absolute;z-index:4;box-sizing:border-box;border:2px solid var(--brand);border-radius:4px;background:#fff;color:#000;font:600 14px system-ui,sans-serif;text-align:center;padding:0 4px;outline:none;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.ls-editor[hidden]{display:none}
+.ls-editor .editbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.ls-editor .editbar span{flex:1;font-size:13px;color:var(--muted)}
+.ls-grid{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px}
+.ls-grid table{border-collapse:separate;border-spacing:0;min-width:2100px;width:100%;font-size:13px}
+.ls-grid th{position:sticky;top:0;background:var(--soft);z-index:2;padding:8px;white-space:nowrap}
+.ls-grid td{border-top:1px solid var(--line);border-right:1px solid var(--line);padding:0;vertical-align:top;min-width:100px}
+.ls-grid td:first-child,.ls-grid th:first-child{position:sticky;left:0;background:var(--soft);min-width:42px;text-align:center;padding:8px;z-index:1}
+.ls-grid th:first-child{z-index:3}
+.ls-grid textarea{display:block;width:100%;min-height:58px;resize:vertical;border:2px solid transparent;border-radius:0;background:var(--field);color:var(--ink);padding:7px;font:inherit;line-height:1.4;white-space:pre-wrap}
+.ls-grid textarea:focus{outline:none;border-color:var(--brand)}
+.ls-grid textarea.dirty{background:color-mix(in srgb,var(--brand) 14%,var(--field))}
+.ls-grid textarea[readonly]{background:var(--soft);color:var(--muted)}
+.ls-grid td.wide{min-width:180px}
 .rdel{position:absolute;pointer-events:auto;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;background:var(--warn);color:#fff;
   margin:-15px 0 0 -36px;transform:none!important;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff;display:grid;place-items:center;z-index:3}
 .rdel:active{filter:brightness(.9)}
@@ -676,6 +690,12 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
           <div class="sortbox"><span class="sl">Sắp xếp</span><div id="lsSortLevels" class="slevels"></div></div>
           <div class="seg" id="lsGrpSeg"><button type="button" data-g="all" class="on">Gộp các đêm</button><button type="button" data-g="day">Tách theo đêm</button></div></div>
         <div id="lsPv" class="pvwrap"><div class="pvbox" data-sheet="ls"><img id="lsPrev" alt="Phiếu tổng hợp mẫu" title="Bấm vào dòng xe để xem chi tiết"><div class="hot" id="lsHot"></div><div class="hot" id="lsDelLayer"></div></div></div>
+        <div class="ls-editor" id="lsEditor" hidden>
+          <div class="editbar"><span id="lsEditStatus" role="status"></span><button type="button" class="primary" id="lsSaveAll">Lưu toàn bảng</button><button type="button" class="ghost" id="lsCancelEdit">Huỷ sửa</button></div>
+          <p class="sub" style="margin-bottom:8px">Shift + Enter: xuống dòng trong ô · Enter: ô bên dưới · Tab: ô kế tiếp · Có thể dán vùng ô từ Excel. STT tự đánh số.</p>
+          <div class="ls-grid" id="lsGrid"></div>
+          <p class="hint" id="lsEditError" role="alert"></p>
+        </div>
         <div class="actions a5">
           <button type="button" class="ghost" id="lsCopy"><span class="i"><i data-ic="copy"></i></span>Sao chép ảnh</button>
           <button type="button" class="ghost" id="lsShare"><span class="i"><i data-ic="share"></i></span>Chia sẻ</button>
@@ -1107,7 +1127,7 @@ function cellText(r, f, i){
   if (f === 'gio' && multiDay() && r.date) return v ? [v, r.date] : [r.date];
   if (f === 'date'){ const t = String(r.gio ?? '').trim(); return t && v ? [t, v] : [t || v]; }   // phiếu rút gọn: giờ cân trên, ngày cân dưới
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
-  return [v];
+  return v.split(/\r?\n/);
 }
 async function makeCanvas(mono = false, ctx = null){
   try { if (document.fonts){ await Promise.race([Promise.all([document.fonts.load('800 22px "Be Vietnam Pro"'), document.fonts.load('600 15px "Be Vietnam Pro"')]), new Promise(r => setTimeout(r, 1500))]); } } catch(e){}
@@ -1139,18 +1159,20 @@ function drawSheet(mono, logo){
   const noteW = iP0 < 0 ? 0 : widths.slice(iP0, iP1 + 1).reduce((a, b) => a + b, 0) - PADX * 2;
   const wrapNote = t => {
     m.font = `400 ${NOTE_FS}px ${SERIF}`;
-    const out = []; let cur = '';
-    String(t).split(/\s+/).filter(Boolean).forEach(wd => {
-      const tt = cur ? cur + ' ' + wd : wd;
-      if (m.measureText(tt).width <= noteW || !cur) cur = tt; else { out.push(cur); cur = wd; }
+    const out = [];
+    String(t).split(/\r?\n/).forEach(paragraph => {
+      let cur = '';
+      paragraph.split(/\s+/).filter(Boolean).forEach(wd => {
+        const tt = cur ? cur + ' ' + wd : wd;
+        if (m.measureText(tt).width <= noteW || !cur) cur = tt; else { out.push(cur); cur = wd; }
+      });
+      out.push(cur);
     });
-    if (cur) out.push(cur);
-    if (out.length > 3){ out.length = 3; out[2] = out[2].replace(/\s*\S*$/, '') + '…'; }
     return out;
   };
   // ô ghi chú cao bằng ô Xanh/Nổi/Chín phía trên (ghi chú dài nhiều dòng thì cao thêm)
   const noteH = n => Math.max(TOP_H, n * NOTE_LH + 12);
-  const rowH = r => { const n = (noteOf.get(r) || []).length; return n ? Math.max(H_ROW, TOP_H + noteH(n), 2 * noteH(n) * (n === 1)) : H_ROW; };
+  const rowH = r => { const n = (noteOf.get(r) || []).length, textH = Math.max(...cols.map(([f]) => cellText(r, f, 0).length)) * LH + 18; return Math.max(textH, n ? Math.max(H_ROW, TOP_H + noteH(n), 2 * noteH(n) * (n === 1)) : H_ROW); };
   const valH = r => { const n = (noteOf.get(r) || []).length, h = rowH(r); return n ? (n === 1 ? h / 2 : h - noteH(n)) : h; };
   const noteOf = new Map();
   rows.forEach(r => { const t = String(r.ghichu ?? '').trim(); noteOf.set(r, t && iP0 >= 0 ? wrapNote(t) : []); });
@@ -2844,12 +2866,104 @@ $('#setSave').addEventListener('click', async () => {
 /* =========================================================================
    LƯU TRỮ + ĐỒNG BỘ GOOGLE DRIVE (qua Apps Script) · THU HỒI · LỊCH SỬ
    ========================================================================= */
+const SUMMARY_FIELDS = ['date','gio','soxe','khach','tl1','tl2','tlh','bi','thuc','xanh','noi','chin','ghichu','thuhoi'];
+const summaryValue = v => String(v ?? '').replace(/\r\n?/g, '\n').trim();
+const summaryEditable = (r, f) => !!r.rid || ['khach','soxe','thuc','thuhoi'].includes(f);
+// Chuẩn bị mọi thay đổi trước khi ghi: một lô chỉ gửi một lần, giữ các xe ngoài bộ lọc.
+function planSummaryEdits(drafts, originals, db, at, newId){
+  const changedRows = new Map(), samples = new Map(), deletes = new Set();
+  let count = 0;
+  drafts.forEach((draft, index) => {
+    const before = originals[index];
+    if (!before || draft.rid !== before.rid || draft.sid !== before.sid) throw new Error('Danh sách sửa không hợp lệ');
+    const fields = SUMMARY_FIELDS.filter(f => summaryEditable(before, f) && summaryValue(draft[f]) !== summaryValue(before[f]));
+    if (!fields.length) return;
+    count++;
+    const fail = text => { throw new Error(`Dòng ${index + 1}: ${text}`); };
+    const r = before.rid ? db.rows.find(x => String(x.rid) === String(before.rid)) : null;
+    const sp = before.rid ? db.samples.find(x => String(x.rid) === String(before.rid)) : db.samples.find(x => String(x.id) === String(before.sid));
+    if (before.rid && !r || !before.rid && !sp) fail('Xe hoặc mẫu không còn tồn tại; hãy tải lại bảng');
+    const nr = r ? { ...r } : null;
+    let ns = sp ? { ...sp } : null, sampleChanged = false;
+    fields.forEach(f => {
+      const v = summaryValue(draft[f]);
+      if (!['khach','soxe','ghichu'].includes(f) && /\n/.test(v)) fail(`${f}: số, ngày và giờ phải nằm trên một dòng`);
+      let value = v;
+      if (NUMF.has(f)){
+        value = v === '' ? '' : parseKg(v);
+        if (value === null || typeof value === 'number' && !Number.isFinite(value)) fail(`${f}: khối lượng không hợp lệ`);
+      } else if (isPF(f)){
+        value = v === '' ? '' : parsePct(v);
+        if (value === null || value !== '' && (value < 0 || value > 100)) fail(`${f}: phần trăm phải từ 0 đến 100`);
+      } else if (f === 'date' && v){
+        const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/), d = m && new Date(+m[3], +m[2] - 1, +m[1]);
+        if (!m || d.getFullYear() !== +m[3] || d.getMonth() !== +m[2] - 1 || d.getDate() !== +m[1]) fail('Ngày cân phải là ngày hợp lệ, dạng dd/mm/yyyy');
+        value = fixDate(m);
+      } else if (f === 'gio' && v){
+        const m = v.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+        if (!m || +m[1] > 23 || +m[2] > 59 || +(m[3] || 0) > 59) fail('Giờ cân phải có dạng HH:mm hoặc HH:mm:ss');
+        value = [m[1].padStart(2, '0'), m[2], m[3]].filter(x => x !== undefined).join(':');
+      } else if (f === 'thuhoi'){
+        if (v === ''){
+          if (sp && /^x$/i.test(String(sp.thuhoi))) deletes.add(String(sp.id));
+          else if (sp) fail('Dùng Xoá mẫu nếu muốn bỏ kết quả thu hồi đã lưu');
+          return;
+        }
+        value = /^x$/i.test(v) ? 'x' : parsePct(v);
+        if (value !== 'x' && !(value > 0 && Number.isFinite(value))) fail('Thu hồi phải là số lớn hơn 0 hoặc x');
+        if (!ns) ns = { id: newId(), rid: before.rid || '', date: nr?.date || before.date || '', khach: nr?.khach || before.khach || '', soxe: nr?.soxe || before.soxe || '', klTuoi: nr?.thuc ?? '', mau: value === 'x' ? 'Không làm' : 'Nhập tay', kl: '', klq: '', am: '', cachtinh: value === 'x' ? 'Không làm mẫu' : 'Nhập thẳng kết quả' };
+        ns.thuhoi = value;
+        sampleChanged = true;
+        return;
+      }
+      if (nr) nr[f] = value;
+      else { ns[{ khach: 'khach', soxe: 'soxe', thuc: 'klTuoi' }[f]] = value; sampleChanged = true; }
+    });
+    if (nr){
+      const a = numForSummary(nr.tl1), b = numForSummary(nr.tl2), bi = numForSummary(nr.bi) || 0;
+      if (!fields.includes('tlh') && fields.some(f => f === 'tl1' || f === 'tl2') && a != null && b != null) nr.tlh = Math.abs(a - b);
+      if (!fields.includes('thuc') && fields.some(f => ['tl1','tl2','tlh','bi'].includes(f)) && numForSummary(nr.tlh) != null) nr.thuc = numForSummary(nr.tlh) - bi;
+      if (numForSummary(nr.thuc) < 0) fail('TL thực không được âm');
+      if (fields.some(isPF)){
+        const p = pcts(nr); if (p.bad) fail('Xanh + Nổi + Chín phải bằng 100%');
+        if (p.auto) nr[p.auto] = p.v[p.auto];
+      }
+      if (fields.some(f => f !== 'thuhoi')) changedRows.set(String(nr.rid), nr);
+      if (ns && fields.some(f => f !== 'ghichu' && f !== 'thuhoi')) { Object.assign(ns, { khach: nr.khach, soxe: nr.soxe, date: nr.date, klTuoi: nr.thuc }); sampleChanged = true; }
+    }
+    if (ns && sampleChanged && !deletes.has(String(ns.id))) samples.set(String(ns.id), { ...ns, savedAt: at });
+  });
+  const batchIds = new Set([...changedRows.values()].map(r => String(r.batch)));
+  const batches = [...batchIds].map(id => ({ action: 'saveBatch', batch: { id, savedAt: at, rows: db.rows.filter(r => String(r.batch) === id).map(r => {
+    const o = { ...(changedRows.get(String(r.rid)) || r) }; delete o.batch; delete o.savedAt; delete o.savedBy; return o;
+  }) } }));
+  return { count, batches, samples: [...samples.values()], deletes: [...deletes], changedRows: [...changedRows.values()] };
+}
+function numForSummary(v){ return v === '' || v == null ? null : parseKg(v); }
+
+// Excel/Sheets trích vùng ô có thể đặt nội dung nhiều dòng trong dấu nháy kép.
+function parseSummaryPaste(text){
+  const grid = [[]]; let value = '', quoted = false;
+  const put = () => { grid[grid.length - 1].push(value); value = ''; };
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (c === '"' && (quoted || value === '')){
+      if (quoted && text[i + 1] === '"'){ value += '"'; i++; } else quoted = !quoted;
+    } else if (!quoted && c === '\t') put();
+    else if (!quoted && (c === '\n' || c === '\r')){ if (c === '\r' && text[i + 1] === '\n') i++; put(); grid.push([]); }
+    else value += c;
+  }
+  put(); if (grid.length > 1 && grid[grid.length - 1].length === 1 && grid[grid.length - 1][0] === '') grid.pop();
+  return grid;
+}
+
 var APP = (() => {
   const DBK = 'tbxn_db', QK = 'tbxn_q';
   let DB = LS.get(DBK, null) || { rows: [], samples: [] };
   let Q = LS.get(QK, []);
   let batchId = LS.get('tbxn_batch', null);
   let flushing = false, lastErr = '', lastPull = 0;
+  let lsEditor = null, lsSaving = false;
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const pad = n => String(n).padStart(2, '0');
   const nowStr = () => { const d = new Date(); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -2912,7 +3026,7 @@ var APP = (() => {
         const op = Q[0];
         try { const j = await api(op.action, op); if (j.folderUrl) LS.set('tbxn_gasfolder', j.folderUrl); }
         catch(e){
-          if (e.net || e.auth || /máy chủ/i.test(e.message)) throw e;   // mất mạng / hết đăng nhập: dừng, gửi lại sau
+          if (op.retainOnError || e.net || e.auth || /máy chủ/i.test(e.message)) throw e;   // giữ các mục lưu toàn bảng để thử lại, không bỏ âm thầm
           toast('⚠️ Drive từ chối 1 mục: ' + e.message, 5000);                  // lỗi dữ liệu: bỏ mục đó để không kẹt hàng đợi
         }
         Q.shift(); saveQ(); syncUI();
@@ -2942,6 +3056,7 @@ var APP = (() => {
     } finally { fixingTimes = false; }
   }
   async function pull(force = false){
+    if (lsEditor) return; // Không thay dữ liệu nền trong lúc sửa bản nháp.
     if (!gasUrl() || !AUTH || (!force && Date.now() - lastPull < 30000)) return;
     lastPull = Date.now();
     try {
@@ -2972,6 +3087,10 @@ var APP = (() => {
   /* ---------------- Tabs ---------------- */
   let tab = LS.get('tbxn_tab', 'tuoi');
   function showTab(t){
+    if (lsEditor && t !== 'ls'){
+      if (lsSaving || !confirm('Bảng tổng hợp đang được sửa. Bỏ các thay đổi chưa lưu?')) return;
+      endSummaryEdit();
+    }
     if (!isAdmin()) t = isViewer() ? 'ls' : 'th';   // tài khoản Thu hồi chỉ dùng thẻ Thu hồi; Chỉ xem: Tổng hợp mẫu
     tab = t; LS.set('tbxn_tab', t);
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
@@ -3041,12 +3160,14 @@ var APP = (() => {
     } catch(e){ console.warn(e); return null; }
   }
   // Ảnh phiếu thu hồi của một mẫu, vẽ lại theo dữ liệu xe mới
-  async function sampleImgFile(sp, row){
+  async function sampleImgFile(sp, row, allRows = DB.rows, allSamples = DB.samples){
     if (!gasUrl()) return null;
     const kl = +sp.kl, klq = +sp.klq || 0, am = +sp.am, mau = sp.mau === 'Mẫu chung' ? 10000 : 2000;
     if (!(kl > 0 && am > 0)) return null;
-    const res = computeWith(mau, kl, klq, am); if (!res || res.error) return null;
-    const blob = await new Promise(r => drawTH({ res, row, name: sp.khach, mau }, true).toBlob(r, 'image/png'));
+    const res = savedRecoveryResult(sp); if (!res || res.error) return null;
+    const group = sp.nhom ? allSamples.filter(s => String(s.nhom) === String(sp.nhom)) : [];
+    const groupRows = group.length > 1 ? group.map(s => allRows.find(r => String(r.rid) === String(s.rid)) || { khach: s.khach, soxe: s.soxe, date: s.date, thuc: s.klTuoi }) : null;
+    const blob = await new Promise(r => drawTH({ res, row: groupRows ? groupRows[0] : row, rows: groupRows, name: groupRows ? groupName(group) : sp.khach, mau }, true).toBlob(r, 'image/png'));
     return { b64: await blobToB64(blob), mime: 'image/png', name: `thu-hoi_${(sp.khach || 'mau').replace(/[^\p{L}\p{N}]+/gu, '_')}_${sp.id}.png` };
   }
 
@@ -3712,6 +3833,7 @@ var APP = (() => {
     setLSRows(L.list, L.fr, '');
   }
   function renderLS(){
+    if (lsEditor) return;
     document.querySelectorAll('#lsSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === lsMode));
     const ctl = $('#lsCtl');
     if (!DB.rows.length && !DB.samples.length){
@@ -3801,92 +3923,125 @@ var APP = (() => {
     let x0 = h.xs[ci], x1 = h.xs[ci + 1], y0 = hit.y0, y1 = hit.y1;
     if (f === 'ghichu'){ const p0 = h.cols.findIndex(isPF), p1 = h.cols.length - 1 - [...h.cols].reverse().findIndex(isPF); x0 = h.xs[p0]; x1 = h.xs[p1 + 1]; y0 = hit.yp; }
     else if (isPF(f)) y1 = hit.yp;
-    editCell(hit.r, f, { x0, x1, y0, y1 });
+    startSummaryEdit();
+    const ri = lsEditor && lsEditor.drafts.findIndex(r => hit.r.rid ? r.rid === hit.r.rid : r.sid === hit.r.sid);
+    if (ri >= 0) $('#lsGrid').querySelector(`textarea[data-ri="${ri}"][data-f="${f}"]`)?.focus();
   });
-  function editCell(r, f, box){
-    const pv = $('#lsPv .pvbox'); pv.querySelectorAll('.celled').forEach(n => n.remove());
-    const pct = (v, t) => (v / t * 100).toFixed(3) + '%';
-    const old = String(r[f] ?? '').trim();
-    const inp = document.createElement('input'); inp.className = 'celled'; inp.value = old;
-    if (NUMF.has(f) || isPF(f) || f === 'thuhoi') inp.inputMode = 'decimal';
-    Object.assign(inp.style, { left: pct(box.x0, LSX.W), top: pct(box.y0, LSX.H), width: pct(box.x1 - box.x0, LSX.W), height: pct(box.y1 - box.y0, LSX.H) });
-    pv.appendChild(inp); inp.focus(); inp.select();
-    let done = false;
-    const finish = async ok => {
-      if (done) return; done = true; inp.remove();
-      const v = inp.value.trim(); if (!ok || v === old) return;
-      const who = [r.khach, r.soxe].filter(Boolean).join(' · ') || 'dòng này';
-      if (!confirm(`Sửa “${CELL_LABEL[f] || f}” của ${who}\ntừ “${old || '(trống)'}” thành “${v || '(trống)'}”?`)) return;
-      try { await saveCell(r, f, v); toast(`✅ Đã sửa ${CELL_LABEL[f] || f} của ${r.khach || 'xe'}: ${v || '(trống)'}`, 3500); }
-      catch(err){ toast('Không sửa được: ' + (err.message || err)); }
-    };
-    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); finish(true); } else if (ev.key === 'Escape'){ ev.preventDefault(); finish(false); } });
-    inp.addEventListener('blur', () => finish(true));
+  const SUMMARY_COLS = [['date','Ngày cân'],['gio','Giờ cân'],['soxe','Số xe'],['khach','Khách hàng'],['tl1','TL Lần 1'],['tl2','TL Lần 2'],['tlh','TL Hàng'],['bi','TL Bì'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)'],['ghichu','Ghi chú'],['thuhoi','Thu hồi (kg)']];
+  const summaryControls = () => [...document.querySelectorAll('#lsSeg button,#lsCtl input,#lsCtl select,#lsCtl button,#lsRefresh,#lsExpSeg button,#lsGrpSeg button')];
+  function startSummaryEdit(){
+    if (!isAdmin()){ toast('Cần tài khoản Toàn quyền'); return; }
+    if (lsEditor || !LSX.rows.length) return;
+    clearTimeout(lsClickT); lsDelMode = false; drawDelMarks();
+    const original = inSheet(LSX, () => sheetGroups().flatMap(g => g.rows).map(r => ({ ...r })));
+    lsEditor = { original, drafts: original.map(r => ({ ...r })) };
+    $('#lsEditor').hidden = false; $('#lsPv').hidden = true;
+    $('#lsSheet .actions').style.display = 'none'; summaryControls().forEach(el => el.disabled = true);
+    $('#lsEditError').textContent = '';
+    $('#lsGrid').innerHTML = '<table><thead><tr><th>STT</th>' + SUMMARY_COLS.map(([, label]) => `<th>${label}</th>`).join('') + '</tr></thead><tbody>' + original.map((r, ri) =>
+      `<tr><td>${ri + 1}</td>` + SUMMARY_COLS.map(([f, label]) => `<td${['khach','ghichu'].includes(f) ? ' class="wide"' : ''}><textarea data-ri="${ri}" data-f="${f}" aria-label="${label}, dòng ${ri + 1}"${summaryEditable(r, f) ? '' : ' readonly tabindex="-1"'}>${esc(r[f] ?? '')}</textarea></td>`).join('') + '</tr>').join('') + '</tbody></table>';
+    $('#lsGrid').querySelectorAll('textarea').forEach(fitSummaryCell); summaryEditStatus();
+    $('#lsGrid').querySelector('textarea:not([readonly])')?.focus();
   }
-  const isNoSample = sp => sp && /^\s*x\s*$/i.test(String(sp.thuhoi ?? ''));
-  async function saveCell(r, f, v){
-    const sp = r.rid ? sampleOf(r.rid) : (r.sid ? DB.samples.find(x => String(x.id) === String(r.sid)) : null);
-    const kgv = s => { const n = parseKg(s); return n == null ? '' : n; };
-    if (f === 'thuhoi'){
-      // "x": xe không làm mẫu — không tính vào TB thu hồi, không còn trong danh sách chưa làm
-      if (/^x$/i.test(v)){
-        if (sp){ enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { thuhoi: 'x', savedAt: nowStr() }) }); return; }
-        if (!r.rid) throw new Error('không tìm thấy xe');
-        const row = rowOf(r.rid) || {};
-        enqueue({ action: 'saveSample', sample: { id: 'M' + uid(), rid: String(r.rid), date: row.date || r.date || '', khach: row.khach || r.khach || '', soxe: row.soxe || r.soxe || '',
-          klTuoi: numv(row.thuc) != null ? numv(row.thuc) : '', mau: 'Không làm', kl: '', klq: '', am: '', thuhoi: 'x', cachtinh: 'Không làm mẫu', savedAt: nowStr() } });
-        return;
-      }
-      if (v === '' && sp && isNoSample(sp)){ enqueue({ action: 'deleteSample', id: String(sp.id) }); return; }   // bỏ "x"
-      const n = parseFloat(String(v).replace(',', '.')); if (isNaN(n) || n <= 0) throw new Error('thu hồi phải là số hoặc "x"');
-      if (!sp){                                             // chưa làm mẫu: nhập thẳng kết quả thu hồi
-        if (!r.rid) throw new Error('không tìm thấy xe');
-        const row = rowOf(r.rid) || {};
-        enqueue({ action: 'saveSample', sample: { id: 'M' + uid(), rid: String(r.rid), date: row.date || r.date || '', khach: row.khach || r.khach || '', soxe: row.soxe || r.soxe || '',
-          klTuoi: numv(row.thuc) != null ? numv(row.thuc) : '', mau: 'Nhập tay', kl: '', klq: '', am: '', thuhoi: n, cachtinh: 'Nhập thẳng kết quả', savedAt: nowStr() } });
-        return;
-      }
-      enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { thuhoi: n, savedAt: nowStr() }) }); return;
-    }
-    if (!r.rid){                                           // mẫu ngoài danh sách
-      const map = { khach: 'khach', soxe: 'soxe', thuc: 'klTuoi' };
-      if (!sp || !map[f]) throw new Error('mẫu ngoài danh sách chỉ sửa được tên, số xe, KL');
-      enqueue({ action: 'saveSample', sample: Object.assign({}, sp, { [map[f]]: f === 'thuc' ? kgv(v) : v }) }); return;
-    }
-    const row = rowOf(r.rid); if (!row) throw new Error('không tìm thấy xe');
-    const b = String(row.batch), all = DB.rows.filter(x => String(x.batch) === b);
-    const nr = Object.assign({}, row);
-    if (NUMF.has(f)) nr[f] = kgv(v); else if (isPF(f)) nr[f] = v === '' ? '' : v.replace(',', '.'); else nr[f] = f === 'soxe' ? v.toUpperCase() : v;
-    // giữ các khối lượng khớp nhau
-    const n1 = numv(nr.tl1), n2 = numv(nr.tl2), bi = numv(nr.bi) || 0;
-    if ((f === 'tl1' || f === 'tl2') && n1 != null && n2 != null){ nr.tlh = Math.abs(n1 - n2); nr.thuc = nr.tlh - bi; }
-    if ((f === 'tlh' || f === 'bi') && numv(nr.tlh) != null) nr.thuc = numv(nr.tlh) - bi;
-    const keep = all.map(x => { const o = Object.assign({}, String(x.rid) === String(r.rid) ? nr : x); delete o.batch; delete o.savedAt; delete o.savedBy; return o; });
-    enqueue({ action: 'saveBatch', batch: { id: b, savedAt: (all[0] && all[0].savedAt) || nowStr(), rows: keep }, file: await lotPdfFile(b, keep) });
-    // mẫu thu hồi của xe: cập nhật tên / số xe / ngày / KL cà tươi và ảnh phiếu
-    if (sp && ['khach', 'soxe', 'date', 'gio', 'thuc', 'tl1', 'tl2', 'tlh', 'bi', 'xanh', 'noi', 'chin'].includes(f)){
-      const sp2 = Object.assign({}, sp, { khach: nr.khach || sp.khach, soxe: nr.soxe || '', date: nr.date || sp.date, klTuoi: numv(nr.thuc) != null ? numv(nr.thuc) : sp.klTuoi });
-      enqueue({ action: 'saveSample', sample: sp2, file: await sampleImgFile(sp2, nr) });
-    }
-    // lô đang mở ở thẻ Cà tươi: cập nhật luôn
-    if (batchId && String(batchId) === b){
-      const lr = rows.find(x => String(x.rid) === String(r.rid));
-      if (lr){ ['khach','soxe','hang','ghichu','gio','date','xanh','noi','chin'].forEach(k => lr[k] = nr[k] == null ? '' : String(nr[k])); ['tl1','tl2','tlh','bi','thuc'].forEach(k => lr[k] = numv(nr[k]) != null ? fmtKg(numv(nr[k])) : ''); save(); LS.set('tbxn_savedsig', batchId + sig()); renderTable(); }
-    }
+  function fitSummaryCell(el){ el.style.height = 'auto'; el.style.height = Math.max(58, el.scrollHeight + 4) + 'px'; }
+  function summaryEditStatus(){
+    if (!lsEditor) return;
+    const n = lsEditor.drafts.reduce((sum, r, i) => sum + SUMMARY_FIELDS.filter(f => summaryValue(r[f]) !== summaryValue(lsEditor.original[i][f])).length, 0);
+    $('#lsEditStatus').textContent = `${lsEditor.drafts.length} dòng · ${n} ô thay đổi${n ? ' — chưa lưu' : ''}`;
   }
-  // Sửa: mở lại lô cân ở thẻ Cà tươi (nhiều lô thì chọn lô)
-  $('#lsEdit').addEventListener('click', () => {
-    const lots = new Map();
-    LSX.rows.forEach(r => { const row = r.rid && rowOf(r.rid); if (row && row.batch) lots.set(row.batch, (lots.get(row.batch) || 0) + 1); });
-    if (!lots.size){ toast('Phiếu chỉ có mẫu ngoài danh sách — bấm vào dòng trên phiếu để xem / làm lại mẫu', 4000); return; }
-    if (lots.size === 1){ openLot([...lots.keys()][0]); return; }
-    detSample = null; detTH = null; $('#detDlg').dataset.rid = '';
-    $('#detTitle').textContent = 'Chọn lô cân cần sửa';
-    $('#detBody').innerHTML = `<p class="hint">Các xe trên phiếu thuộc ${lots.size} lô cân. Chọn lô để mở lại ở thẻ Cà tươi, sửa xong bấm 💾 Lưu.<br>Sửa mẫu thu hồi: bấm vào dòng xe trên phiếu.</p><div class="lotpick">${
-      [...lots].map(([b, n]) => { const all = DB.rows.filter(r => r.batch === b); return `<button type="button" class="ghost" data-openlot="${esc(b)}"><span>Lô lưu lúc <b>${esc(all[0].savedAt || '')}</b></span><span>${n}/${all.length} xe</span></button>`; }).join('')}</div>`;
-    $('#detBtns').innerHTML = '';
-    $('#detDlg').showModal();
+  function endSummaryEdit(){
+    lsEditor = null; $('#lsEditor').hidden = true; $('#lsPv').hidden = false;
+    $('#lsSheet .actions').style.display = ''; summaryControls().forEach(el => el.disabled = false);
+  }
+  function updateSummaryDraft(el){
+    if (!lsEditor || lsSaving || el.readOnly || !el.matches('textarea[data-ri]')) return;
+    const i = +el.dataset.ri, f = el.dataset.f;
+    lsEditor.drafts[i][f] = el.value.replace(/\r\n?/g, '\n');
+    el.classList.toggle('dirty', summaryValue(el.value) !== summaryValue(lsEditor.original[i][f]));
+    fitSummaryCell(el); summaryEditStatus(); $('#lsEditError').textContent = '';
+  }
+  $('#lsEdit').addEventListener('click', startSummaryEdit);
+  $('#lsGrid').addEventListener('input', e => updateSummaryDraft(e.target));
+  $('#lsGrid').addEventListener('keydown', e => {
+    if (!lsEditor || lsSaving || e.isComposing) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); saveSummaryTable(); return; }
+    const el = e.target; if (!el.matches('textarea') || el.readOnly) return;
+    if (e.key === 'Enter' && e.shiftKey){
+      e.preventDefault(); el.setRangeText('\n', el.selectionStart, el.selectionEnd, 'end'); updateSummaryDraft(el); return;
+    }
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      const next = [...$('#lsGrid').querySelectorAll(`textarea[data-f="${el.dataset.f}"]:not([readonly])`)].find(x => +x.dataset.ri > +el.dataset.ri);
+      if (next){ next.focus(); next.select(); }
+    } else if (e.key === 'Tab'){
+      const cells = [...$('#lsGrid').querySelectorAll('textarea:not([readonly])')], next = cells[cells.indexOf(el) + (e.shiftKey ? -1 : 1)];
+      if (next){ e.preventDefault(); next.focus(); next.select(); }
+    }
   });
+  $('#lsGrid').addEventListener('paste', e => {
+    const el = e.target, text = e.clipboardData?.getData('text/plain') || '';
+    if (!lsEditor || lsSaving || !el.matches('textarea') || el.readOnly || !text.includes('\t')) return;
+    e.preventDefault();
+    const matrix = parseSummaryPaste(text), ri = +el.dataset.ri, ci = SUMMARY_COLS.findIndex(([f]) => f === el.dataset.f);
+    let skipped = 0;
+    matrix.forEach((line, di) => line.forEach((value, dj) => {
+      const col = SUMMARY_COLS[ci + dj], target = col && $('#lsGrid').querySelector(`textarea[data-ri="${ri + di}"][data-f="${col[0]}"]`);
+      if (!target || target.readOnly){ skipped++; return; }
+      target.value = value; updateSummaryDraft(target);
+    }));
+    if (skipped) toast(`${skipped} ô ngoài bảng hoặc chỉ đọc không được dán`);
+  });
+  $('#lsCancelEdit').addEventListener('click', () => {
+    if (lsSaving || !lsEditor) return;
+    const dirty = lsEditor.drafts.some((r, i) => SUMMARY_FIELDS.some(f => summaryValue(r[f]) !== summaryValue(lsEditor.original[i][f])));
+    if (dirty && !confirm('Bỏ toàn bộ thay đổi chưa lưu trong bảng tổng hợp?')) return;
+    endSummaryEdit(); renderLS();
+  });
+  window.addEventListener('beforeunload', e => {
+    if (lsEditor && lsEditor.drafts.some((r, i) => SUMMARY_FIELDS.some(f => summaryValue(r[f]) !== summaryValue(lsEditor.original[i][f])))) { e.preventDefault(); e.returnValue = ''; }
+  });
+  $('#lsSaveAll').addEventListener('click', saveSummaryTable);
+  async function saveSummaryTable(){
+    if (!isAdmin() || !lsEditor || lsSaving) return;
+    const editor = lsEditor; let plan;
+    try { plan = planSummaryEdits(editor.drafts, editor.original, DB, nowStr(), () => 'M' + uid()); }
+    catch(e){ $('#lsEditError').textContent = e.message; return; }
+    if (!plan.count){ endSummaryEdit(); renderLS(); toast('Bảng không có thay đổi'); return; }
+    lsSaving = true; $('#lsSaveAll').disabled = $('#lsCancelEdit').disabled = true;
+    $('#lsSaveAll').textContent = 'Đang lưu…'; $('#lsGrid').querySelectorAll('textarea').forEach(el => el.disabled = true);
+    try {
+      const ops = [];
+      for (const op of plan.batches){ op.file = await lotPdfFile(op.batch.id, op.batch.rows); ops.push(op); }
+      plan.deletes.forEach(id => ops.push({ action: 'deleteSample', id }));
+      const updatedRows = DB.rows.map(r => plan.changedRows.find(x => String(x.rid) === String(r.rid)) || r);
+      const updatedSamples = DB.samples.map(s => plan.samples.find(x => String(x.id) === String(s.id)) || s).filter(s => !plan.deletes.includes(String(s.id)));
+      plan.samples.filter(s => !updatedSamples.some(x => String(x.id) === String(s.id))).forEach(s => updatedSamples.push(s));
+      const sampleWrites = new Map(plan.samples.map(s => [String(s.id), s]));
+      plan.samples.filter(s => s.nhom).forEach(s => { const leader = updatedSamples.find(x => String(x.nhom) === String(s.nhom)); if (leader) sampleWrites.set(String(leader.id), leader); });
+      for (const sp of sampleWrites.values()){
+        const row = updatedRows.find(r => String(r.rid) === String(sp.rid));
+        const leader = sp.nhom && updatedSamples.find(x => String(x.nhom) === String(sp.nhom));
+        ops.push({ action: 'saveSample', sample: sp, file: !leader || String(leader.id) === String(sp.id) ? await sampleImgFile(sp, row, updatedRows, updatedSamples) : null });
+      }
+      // Ghi toàn bộ kế hoạch vào hàng đợi một lần, không ghi khi rời từng ô.
+      if (!isAdmin() || lsEditor !== editor) throw new Error('Phiên chỉnh sửa đã thay đổi; hãy đăng nhập và thử lại');
+      const wasSaved = batchId && LS.get('tbxn_savedsig', '') === batchId + sig();
+      ops.forEach(op => { op.retainOnError = true; applyOp(op); }); saveDB(); Q.push(...ops); saveQ();
+      if (wasSaved){
+        rows.forEach(r => {
+          const nr = plan.changedRows.find(x => String(x.rid) === String(r.rid)); if (!nr) return;
+          SUMMARY_FIELDS.filter(f => f !== 'thuhoi').forEach(f => { r[f] = NUMF.has(f) ? kgs(nr[f]) : str(nr[f]); });
+        });
+        save(); LS.set('tbxn_savedsig', batchId + sig()); renderTable();
+      }
+      endSummaryEdit(); changed(); await flush();
+      toast(Q.length ? `Đã lưu bản cục bộ ${plan.count} dòng — còn ${Q.length} mục chờ gửi lên Drive` : `✅ Đã lưu toàn bảng (${plan.count} dòng thay đổi) lên Drive`, 4500);
+    } catch(e){ $('#lsEditError').textContent = 'Chưa lưu: ' + e.message; }
+    finally {
+      lsSaving = false; $('#lsSaveAll').disabled = $('#lsCancelEdit').disabled = false; $('#lsSaveAll').textContent = 'Lưu toàn bảng';
+      $('#lsGrid').querySelectorAll('textarea').forEach(el => el.disabled = false);
+    }
+  }
   // Xoá (chỉ Toàn quyền): bấm Xoá để hiện dấu ✕ ở từng dòng, bấm ✕ xoá đúng dòng đó (kèm mẫu thu hồi của xe)
   $('#lsDel').addEventListener('click', () => {
     if (!isAdmin()){ toast('Cần tài khoản Toàn quyền'); return; }
@@ -3952,6 +4107,12 @@ var APP = (() => {
   let detSample = null, detTH = null;
   const kv = items => `<div class="kv">${items.filter(x => x[1] !== '' && x[1] != null).map(([k, v, b]) => `<div class="k">${k}</div><div class="v${b ? ' b' : ''}">${v}</div>`).join('')}</div>`;
   function computeWith(mau, kl, klq, am){ const old = MAU; MAU = mau; try { return compute('', kl, klq, am); } finally { MAU = old; } }
+  function savedRecoveryResult(sp){
+    if (!(+sp.kl > 0 && +sp.am > 0) || !thNum(sp)) return null;
+    const res = computeWith(sp.mau === 'Mẫu chung' ? 10000 : 2000, +sp.kl, +sp.klq || 0, +sp.am);
+    if (!res.error && r2(res.E) !== +sp.thuhoi){ res.E = +sp.thuhoi; res.lines[3] = `Thu hồi đã chỉnh: <b>${f2(+sp.thuhoi)} Kg</b>`; }
+    return res;
+  }
   async function openDetail({ rid, sid }){
     const sp = sid ? DB.samples.find(x => String(x.id) === String(sid)) : sampleOf(rid);
     const r = rid ? rowOf(rid) : (sp && sp.rid ? rowOf(sp.rid) : null);
@@ -3983,7 +4144,7 @@ var APP = (() => {
     $('#detDlg').showModal();
     if (sp){
       const kl = +sp.kl, klq = +sp.klq || 0, am = +sp.am;
-      const res = kl > 0 && am > 0 ? computeWith(sp.mau === 'Mẫu chung' ? 10000 : 2000, kl, klq, am) : null;
+      const res = savedRecoveryResult(sp);
       if (res && !res.error){
         const rowFor = x => rowOf(x.rid) || (x.soxe || x.date ? { soxe: x.soxe, date: x.date, thuc: x.klTuoi, khach: x.khach } : null);
         detTH = { res, row: r || rowFor(sp), rows: grp.length > 1 ? grp.map(rowFor).filter(Boolean) : null, name: grp.length > 1 ? groupName(grp) : sp.khach, mau: sp.mau === 'Mẫu chung' ? 10000 : 2000 };
@@ -4048,6 +4209,10 @@ var APP = (() => {
     setTimeout(() => ($('#lgUser').value ? $('#lgPass') : $('#lgUser')).focus(), 50);
   }
   function logout(expired){
+    if (lsEditor && !expired){
+      if (lsSaving || !confirm('Bảng tổng hợp đang được sửa. Bỏ các thay đổi chưa lưu và đăng xuất?')) return;
+      endSummaryEdit();
+    }
     if (!expired && Q.length && !confirm(`Còn ${Q.length} mục chưa gửi lên Google Drive. Vẫn đăng xuất? (các mục này sẽ được gửi khi đăng nhập lại)`)) return;
     const u = AUTH && AUTH.user;
     AUTH = null; saveAuth(null);
