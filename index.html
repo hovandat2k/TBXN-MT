@@ -562,6 +562,18 @@ $('#tbl').addEventListener('change', e => {
   save();
 });
 $('#tbl').addEventListener('keydown', e => {
+  if (e.isComposing) return;
+  if (e.target.matches('input.fld[data-f]') && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey){
+    e.preventDefault();
+    const current = e.target, cells = [...document.querySelectorAll('#tbl input.fld[data-f]')].filter(el => !el.disabled && !el.readOnly);
+    let next;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown'){
+      const column = cells.filter(el => el.dataset.f === current.dataset.f), i = column.indexOf(current);
+      next = column[i + (e.key === 'ArrowDown' ? 1 : -1)];
+    } else next = summaryArrowTarget(current, cells, e.key);
+    if (next){ next.focus(); next.select(); next.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    return;
+  }
   if (e.key !== 'Enter' || !e.target.matches('input.fld')) return;
   e.preventDefault();
   const all = [...document.querySelectorAll('#tbl input.fld')];
