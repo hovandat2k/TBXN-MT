@@ -1,10 +1,10 @@
 {
-  "name": "MẪU CÀ TƯƠI NHƯ TÙNG",
+  "name": "Mẫu cà tươi",
   "short_name": "Mẫu cà tươi",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f4fbf6",
-  "theme_color": "#c9efd5",
+  "background_color": "#f1f5fa",
+  "theme_color": "#14263e",
   "icons": [
     {
       "src": "icons/icon-192.png",
