@@ -151,10 +151,8 @@ button:disabled{opacity:.5;cursor:default}
 .hw{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11.5px;color:var(--muted);font-weight:600}
 .hw img{height:30px;max-width:100%;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
 .hw .rd{white-space:nowrap}
-.meta .sx{cursor:text;border-radius:4px;padding:0 2px;margin:0 -2px}
-.meta .sx:hover{background:var(--soft)}
-.meta input.sxin{font:inherit;font-size:12.5px;width:110px;padding:1px 6px;border:1px solid var(--brand);border-radius:6px;background:var(--surface);color:var(--ink)}
-.meta{font-size:11.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:5px;margin-top:4px}
+.meta .fld{font-size:12.5px;padding:4px 6px;border-radius:7px;font-weight:500}
 .note{font-size:12px;color:var(--muted);margin-top:4px;text-align:right}
 .note.w{color:var(--amber);font-weight:600}
 .addrow{margin-top:4px;width:100%;border:1.5px dashed var(--line);color:var(--muted);min-height:0;height:28px;padding:0 10px;font-size:12.5px;border-radius:9px}
@@ -931,11 +929,13 @@ function renderTable(){
 function rowHTML(r, n){
   const crop = crops[r.id];
   const hw = crop ? `<div class="hw" title="Chữ viết tay đọc được">✍️ <img src="${crop}" data-zoom="1" alt=""><span class="rd">${esc(r.hwText || '')}</span></div>` : '';
-  const meta = [r.soxe ? `<span class="sx" data-sx="${r.id}">${esc(r.soxe)}</span>` : '', esc(r.gio || '')].filter(Boolean).join(' · ');
   return `<div class="row" data-id="${r.id}">
     <div class="n">${n}</div>
     <div class="ckh"><input class="fld ${r.flags.khach ? 'warn' : ''}" data-f="khach" value="${esc(r.khach)}" placeholder="Khách hàng">
-      ${meta ? `<div class="meta">${meta}</div>` : ''}${hw}</div>
+      <div class="meta">
+        <input class="fld" data-f="soxe" value="${esc(r.soxe || '')}" placeholder="Biển số xe" aria-label="Biển số xe" autocomplete="off">
+        <input class="fld" data-f="gio" value="${esc(r.gio || '')}" placeholder="Giờ cân" aria-label="Giờ cân" title="Giờ cân (HH:mm hoặc HH:mm:ss)" autocomplete="off">
+      </div>${hw}</div>
     <div class="cgc"><input class="fld" data-f="ghichu" value="${esc(r.ghichu ?? '')}" placeholder="Ghi chú"></div>
     <div class="cbi"><span class="cl">TL Bì (kg)</span><input class="fld num ${r.flags.bi ? 'warn' : ''}" data-f="bi" value="${esc(r.bi ?? '')}" inputmode="decimal" placeholder="0"></div>
     <div class="ctl"><span class="cl">TL thực (kg)</span><input class="fld num ${r.flags.thuc ? 'warn' : r.flags.thucOk ? 'okv' : ''}" data-f="thuc" value="${esc(r.thuc)}" inputmode="decimal" placeholder="0"
@@ -1018,21 +1018,6 @@ $('#tbl').addEventListener('keydown', e => {
   const f = e.target.dataset.f;
   const next = all.slice(i + 1).find(x => x.dataset.f === f) || all[i + 1];
   if (next){ next.focus(); next.select(); } else e.target.blur();
-});
-$('#tbl').addEventListener('dblclick', e => {
-  const sp = e.target.closest('.sx'); if (!sp) return;
-  const r = rows.find(x => x.id === +sp.dataset.sx); if (!r) return;
-  const inp = document.createElement('input'); inp.className = 'sxin'; inp.value = r.soxe || ''; inp.setAttribute('aria-label', 'Biển số xe');
-  sp.replaceWith(inp); inp.focus(); inp.select();
-  let done = false;
-  const finish = ok => {
-    if (done) return; done = true;
-    if (ok){ const v = inp.value.trim().toUpperCase(); if (v !== (r.soxe || '')){ r.soxe = v; save(); scheduleExport(); if (window.APP) APP.saveBtnUI(); } }
-    const n = document.createElement('span'); n.className = 'sx'; n.dataset.sx = r.id; n.textContent = r.soxe || '';
-    if (inp.isConnected) inp.replaceWith(n);
-  };
-  inp.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter'){ ev.preventDefault(); finish(true); } else if (ev.key === 'Escape'){ ev.preventDefault(); finish(false); } });
-  inp.addEventListener('blur', () => finish(true));
 });
 $('#tbl').addEventListener('focusin', e => { if (e.target.matches('input.fld')) setTimeout(() => e.target.select(), 0); });
 $('#tbl').addEventListener('click', e => {
