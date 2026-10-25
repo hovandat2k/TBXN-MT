@@ -44,7 +44,7 @@ h1{font-size:20px;margin:0;font-weight:800;letter-spacing:-.01em;line-height:1.2
 .hbtn .ic{width:21px;height:21px;color:var(--brand)}
 .tabs button .ic{width:18px;height:18px;margin-right:2px}
 .tabs button.on .ic{color:var(--brand)}
-#drop .big .ic{width:42px;height:42px;color:var(--brand);margin:0 auto;stroke-width:1.6}
+.upload-drop .big .ic{width:42px;height:42px;color:var(--brand);margin:0 auto;stroke-width:1.6}
 .actions button .i{display:grid;place-items:center;height:24px}
 .actions button .i .ic{width:22px;height:22px}
 .actions .ghost .i{color:var(--brand)}
@@ -81,13 +81,24 @@ button:disabled{opacity:.5;cursor:default}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .primary{color:#0f1912}}
 
 /* ===== Paste zone ===== */
-#drop{border:2px dashed color-mix(in srgb,var(--brand) 55%,transparent);border-radius:16px;padding:20px 14px;text-align:center;
+.upload-drop{border:2px dashed color-mix(in srgb,var(--brand) 55%,transparent);border-radius:16px;padding:20px 14px;text-align:center;
   background:color-mix(in srgb,var(--brand) 6%,transparent);cursor:pointer;transition:background .15s,border-color .15s;outline:none}
-#drop:focus-visible,#drop.over{background:color-mix(in srgb,var(--brand) 14%,transparent);border-color:var(--brand)}
-#drop .big{font-size:30px;line-height:1}
-#drop .t{font-weight:800;font-size:16px;margin-top:6px}
-#drop .t kbd{font:inherit;font-size:13px;background:var(--surface);border:1px solid var(--line);border-bottom-width:2.5px;border-radius:7px;padding:1px 7px;margin:0 2px}
-#drop .s{color:var(--muted);font-size:13px;margin-top:2px}
+.upload-drop:focus-visible,.upload-drop.over{background:color-mix(in srgb,var(--brand) 14%,transparent);border-color:var(--brand)}
+.upload-drop .big{font-size:30px;line-height:1}
+.upload-drop .t{font-weight:800;font-size:16px;margin-top:6px}
+.upload-drop .t kbd{font:inherit;font-size:13px;background:var(--surface);border:1px solid var(--line);border-bottom-width:2.5px;border-radius:7px;padding:1px 7px;margin:0 2px}
+.upload-drop .s{color:var(--muted);font-size:13px;margin-top:2px}
+.seg.import-tabs{display:grid;grid-template-columns:1fr 1fr;margin-bottom:14px}
+.import-pane[hidden]{display:none}
+.source-upload{padding:12px;border:1px solid var(--line);border-radius:16px;margin-top:12px}
+.source-upload.active-source{border-color:var(--brand)}
+.source-upload h3{font-size:14px;margin:0 0 10px;color:var(--ink)}
+.source-files{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.source-file{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.source-file span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.source-file button{min-height:28px;padding:3px 7px;font-size:12px;flex:none}
+.manual-entry{border-top:1px solid var(--line);padding-top:12px;margin-top:14px;display:flex;justify-content:flex-end}
+#dualRead{width:100%;margin-top:14px}
 .pbtns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .pbtns button{flex:1 1 0}
 .opt{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13.5px;color:var(--muted);flex-wrap:wrap}
@@ -535,7 +546,12 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
   <div class="tab" id="tab-tuoi">
   <!-- 1. Nhập ảnh -->
   <section class="card">
-    <div id="drop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh / PDF phiếu cân">
+    <div class="seg import-tabs" id="readModeTabs" role="tablist" aria-label="Cách đọc phiếu">
+      <button type="button" role="tab" id="readSingleTab" data-read="single" class="on" aria-selected="true" aria-controls="singleBox">Đọc 1 nguồn</button>
+      <button type="button" role="tab" id="readDualTab" data-read="dual" aria-selected="false" aria-controls="dualBox" tabindex="-1">Ghép 2 nguồn</button>
+    </div>
+    <div class="import-pane" id="singleBox" role="tabpanel" aria-labelledby="readSingleTab">
+    <div class="upload-drop" id="drop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh / PDF phiếu cân">
       <div class="big"><i data-ic="image"></i></div>
       <div class="t">Nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> để dán ảnh</div>
     </div>
@@ -543,20 +559,36 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
     <div class="pbtns">
       <button type="button" class="primary" id="pasteBtn"><i data-ic="paste"></i>Dán ảnh</button>
       <button type="button" class="ghost" id="pickBtn"><i data-ic="folder"></i>Chọn ảnh/PDF</button>
-      <button type="button" class="ghost" id="manualBtn"><i data-ic="pencil"></i>Nhập tay</button>
     </div>
-    <div class="opt">
-      <label class="switch"><input type="checkbox" id="appendChk"> Ghép thêm vào bảng hiện có</label>
     </div>
-    <div class="opt"><label class="switch"><input type="checkbox" id="dualChk"> Nhập kết hợp 2 dạng ảnh/PDF</label></div>
-    <div id="dualBox" hidden>
-      <p class="sub" style="margin:10px 0">Dạng 1 cung cấp thông tin cân. Dạng 2 bổ sung Xanh/Nổi/Chín và Ghi chú từ cột cuối, ghép theo từng xe.</p>
-      <label class="flbl" for="baseFiles">Dạng 1 — Phiếu cân / báo cáo</label>
-      <input class="fld" type="file" id="baseFiles" accept="image/*,application/pdf,.pdf" multiple>
-      <label class="flbl" for="noteFiles" style="margin-top:10px">Dạng 2 — Bảng phần mềm cân có cột ghi chú</label>
-      <input class="fld" type="file" id="noteFiles" accept="image/*,application/pdf,.pdf" multiple>
-      <button type="button" class="primary" id="dualRead" style="margin-top:10px">Đọc và ghép 2 dạng</button>
+    <div class="import-pane" id="dualBox" role="tabpanel" aria-labelledby="readDualTab" hidden>
+      <p class="sub">Chọn khung trước khi nhấn Ctrl + V. Mỗi nguồn nhận ảnh hoặc PDF, có thể thêm nhiều tệp.</p>
+      <div class="source-upload active-source" id="baseUpload" data-source="base">
+        <h3>1. Phiếu cân / báo cáo — thông tin cân</h3>
+        <div class="upload-drop" id="baseDrop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh/PDF nguồn phiếu cân">
+          <div class="big"><i data-ic="image"></i></div>
+          <div class="t">Nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> để dán ảnh</div>
+          <div class="s" id="baseSourceStatus" aria-live="polite">Đang nhận ảnh dán · Chưa chọn tệp</div>
+        </div>
+        <input type="file" id="baseFiles" accept="image/*,application/pdf,.pdf" multiple hidden>
+        <div class="pbtns"><button type="button" class="primary" id="basePaste"><i data-ic="paste"></i>Dán ảnh</button><button type="button" class="ghost" id="basePick"><i data-ic="folder"></i>Chọn ảnh/PDF</button></div>
+        <div class="source-files" id="baseFileList"></div>
+      </div>
+      <div class="source-upload" id="notesUpload" data-source="notes">
+        <h3>2. Bảng ghi chú — Xanh / Nổi / Chín và Ghi chú</h3>
+        <div class="upload-drop" id="notesDrop" tabindex="0" role="button" aria-label="Dán hoặc chọn ảnh/PDF nguồn ghi chú">
+          <div class="big"><i data-ic="image"></i></div>
+          <div class="t">Nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> để dán ảnh</div>
+          <div class="s" id="notesSourceStatus" aria-live="polite">Chưa chọn tệp</div>
+        </div>
+        <input type="file" id="noteFiles" accept="image/*,application/pdf,.pdf" multiple hidden>
+        <div class="pbtns"><button type="button" class="primary" id="notesPaste"><i data-ic="paste"></i>Dán ảnh</button><button type="button" class="ghost" id="notesPick"><i data-ic="folder"></i>Chọn ảnh/PDF</button></div>
+        <div class="source-files" id="notesFileList"></div>
+      </div>
+      <button type="button" class="primary" id="dualRead">Đọc và ghép 2 nguồn</button>
     </div>
+    <div class="manual-entry"><button type="button" class="ghost" id="manualBtn"><i data-ic="pencil"></i>Nhập tay</button></div>
+    <div class="opt"><label class="switch"><input type="checkbox" id="appendChk"> Ghép thêm vào bảng hiện có</label></div>
     <p class="hint" id="dualReport" role="status" hidden></p>
     <div id="prog"><div class="bar"><i id="progBar"></i></div><div class="progrow"><div id="progTxt"></div><button type="button" class="ghost small" id="cancelBtn" hidden><i data-ic="x"></i>Huỷ</button></div></div>
     <details id="srcBox"><summary>Xem ảnh gốc</summary><img id="srcImg" alt="Ảnh đã dán"></details>
@@ -1620,13 +1652,85 @@ $('#resetBtn').addEventListener('click', () => {
    Nhận ảnh: Ctrl+V, nút Dán, chọn file, kéo thả
    ========================================================================= */
 let busy = false;
+let readMode = 'single', activeDualSource = 'base';
+const dualSources = { base: [], notes: [] };
+const IMPORT_CONTROLS = ['#pasteBtn','#pickBtn','#file','#manualBtn','#appendChk','#readSingleTab','#readDualTab','#dualRead','#baseFiles','#noteFiles','#basePaste','#basePick','#notesPaste','#notesPick'];
+function setImportBusy(value){ IMPORT_CONTROLS.forEach(s => $(s).disabled = value); }
+function sourceFiles(source){ return dualSources[source].slice(); }
+function updateSourceStatus(){
+  ['base','notes'].forEach(source => {
+    $('#' + source + 'Upload').classList.toggle('active-source', activeDualSource === source);
+    $('#' + source + 'SourceStatus').textContent = (activeDualSource === source ? 'Đang nhận ảnh dán · ' : '') + (dualSources[source].length ? `${dualSources[source].length} tệp đã chọn` : 'Chưa chọn tệp');
+  });
+}
+function activateSource(source){ activeDualSource = source; updateSourceStatus(); }
+function renderSourceFiles(source){
+  $('#' + source + 'FileList').innerHTML = dualSources[source].map((file, i) => `<div class="source-file"><span title="${esc(file.name || 'Ảnh đã dán')}">${i + 1}. ${esc(file.name || 'Ảnh đã dán')}</span><button type="button" class="ghost" data-remove-source="${i}" aria-label="Bỏ tệp ${i + 1} khỏi ${source === 'base' ? 'phiếu cân' : 'ghi chú'}">${IC('x')}Bỏ</button></div>`).join('');
+  updateSourceStatus();
+}
+function addSourceFiles(source, files){
+  if (busy){ toast('Đang đọc tệp, vui lòng chờ…'); return; }
+  const accepted = [...files].filter(f => f && (f.type.startsWith('image/') || isPdf(f)));
+  if (!accepted.length){ toast('Chỉ nhận ảnh hoặc PDF'); return; }
+  dualSources[source].push(...accepted); activateSource(source); renderSourceFiles(source);
+  $('#dualReport').hidden = true;
+}
+function setReadMode(mode){
+  if (busy) return;
+  readMode = mode === 'dual' ? 'dual' : 'single'; LS.set('tbxn_readmode', readMode);
+  $('#singleBox').hidden = readMode !== 'single'; $('#dualBox').hidden = readMode !== 'dual';
+  $('#dualReport').hidden = readMode !== 'dual' || !$('#dualReport').textContent;
+  document.querySelectorAll('#readModeTabs button').forEach(b => {
+    const on = b.dataset.read === readMode; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
+  });
+}
+document.querySelectorAll('#readModeTabs button').forEach(b => {
+  b.addEventListener('click', () => setReadMode(b.dataset.read));
+  b.addEventListener('keydown', e => {
+    if (busy || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+    e.preventDefault(); const mode = e.key === 'Home' ? 'single' : e.key === 'End' ? 'dual' : readMode === 'single' ? 'dual' : 'single';
+    setReadMode(mode); $(mode === 'single' ? '#readSingleTab' : '#readDualTab').focus();
+  });
+});
+['base','notes'].forEach(source => {
+  const panel = $('#' + source + 'Upload'), drop = $('#' + source + 'Drop'), input = $(source === 'base' ? '#baseFiles' : '#noteFiles');
+  panel.addEventListener('focusin', () => activateSource(source));
+  panel.addEventListener('click', () => activateSource(source));
+  drop.addEventListener('click', () => { activateSource(source); drop.focus(); });
+  drop.addEventListener('keydown', e => { if (!busy && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); input.click(); } });
+  $('#' + source + 'Pick').addEventListener('click', () => { if (!busy){ activateSource(source); input.click(); } });
+  input.addEventListener('change', e => { addSourceFiles(source, e.target.files); e.target.value = ''; });
+  $('#' + source + 'Paste').addEventListener('click', async () => {
+    if (busy) return;
+    activateSource(source);
+    try {
+      if (!navigator.clipboard?.read) throw new Error('nosupport');
+      const items = await navigator.clipboard.read(), files = [];
+      for (const item of items){
+        const type = item.types.find(t => t.startsWith('image/') || t === 'application/pdf');
+        if (type){ const blob = await item.getType(type); files.push(new File([blob], `anh-dan-${Date.now()}-${files.length + 1}.${type === 'application/pdf' ? 'pdf' : 'png'}`, { type })); }
+      }
+      if (files.length) addSourceFiles(source, files); else toast('Bộ nhớ tạm không có ảnh/PDF');
+    } catch(e){ toast('Hãy chọn khung rồi nhấn Ctrl+V, hoặc dùng Chọn ảnh/PDF'); }
+  });
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); if (!busy){ activateSource(source); drop.classList.add('over'); } }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => addSourceFiles(source, e.dataTransfer.files));
+  $('#' + source + 'FileList').addEventListener('click', e => {
+    const button = e.target.closest('[data-remove-source]'); if (!button || busy) return;
+    dualSources[source].splice(+button.dataset.removeSource, 1); renderSourceFiles(source); $('#dualReport').hidden = true;
+  });
+});
+setReadMode(LS.get('tbxn_readmode', 'single'));
 document.addEventListener('paste', e => {
   if (window.APP && !APP.isAdmin()) return;                // tài khoản Thu hồi không dán ảnh phiếu cân
+  if ($('#tab-tuoi').hidden) return;
   const items = [...(e.clipboardData ? e.clipboardData.items : [])];
   const it = items.find(i => i.type.startsWith('image/') || i.type === 'application/pdf');
   if (!it) return;                              // dán chữ vào ô nhập vẫn hoạt động bình thường
   e.preventDefault();
-  handleFile(it.getAsFile());
+  if (readMode === 'dual') addSourceFiles(activeDualSource, [it.getAsFile()]);
+  else handleFile(it.getAsFile());
 });
 $('#pasteBtn').addEventListener('click', async () => {
   try {
@@ -1651,7 +1755,6 @@ $('#drop').addEventListener('drop', e => { const f = [...e.dataTransfer.files].f
 
 /* ---------- PDF: chuyển từng trang thành ảnh rồi đọc như ảnh ---------- */
 const isPdf = f => !!f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''));
-$('#dualChk').addEventListener('change', e => { $('#dualBox').hidden = !e.target.checked; });
 
 // Ghép bằng danh tính xe, không theo STT (STT khác nhau giữa hai báo cáo).
 function mergeSourceNotes(base, notes){
@@ -1719,10 +1822,10 @@ async function readSourceFiles(files, notesOnly){
 $('#dualRead').addEventListener('click', async () => {
   if (busy){ toast('Đang đọc tệp, vui lòng chờ…'); return; }
   if (window.APP && !APP.isAdmin()) return;
-  const baseFiles = [...$('#baseFiles').files], noteFiles = [...$('#noteFiles').files];
+  const baseFiles = sourceFiles('base'), noteFiles = sourceFiles('notes');
   if (!baseFiles.length || !noteFiles.length){ toast('Chọn tệp cho cả Dạng 1 và Dạng 2 trước'); return; }
   busy = true; startJob();
-  const controls = ['#dualRead','#baseFiles','#noteFiles','#pasteBtn','#pickBtn','#dualChk'];
+  const controls = IMPORT_CONTROLS;
   controls.forEach(s => $(s).disabled = true); $('#dualReport').hidden = true;
   try {
     const base = await readSourceFiles(baseFiles, false);
@@ -1795,9 +1898,9 @@ async function pdfToImages(file){
 async function handlePdf(file){
   if (busy){ toast('Đang đọc tệp trước, vui lòng chờ…'); return; }
   let imgs;
-  try { busy = true; startJob(); imgs = await pdfToImages(file); }
+  try { busy = true; setImportBusy(true); startJob(); imgs = await pdfToImages(file); }
   catch(e){ console.error(e); progress(1, (job && job.cancelled ? '⏹ Đã huỷ.' : '❌ ' + (e.message || e))); if (!(job && job.cancelled)) toast('❌ ' + (e.message || 'Không đọc được PDF')); return; }
-  finally { busy = false; endJob(); }
+  finally { busy = false; setImportBusy(false); endJob(); }
   if (!imgs.length){ toast('PDF không có trang nào'); return; }
   return handleImage(imgs);
 }
@@ -1824,7 +1927,7 @@ $('#cancelBtn').addEventListener('click', () => {
 async function handleImage(input){
   if (busy){ toast('Đang đọc ảnh trước, vui lòng chờ…'); return; }
   busy = true; startJob();
-  ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = true);
+  setImportBusy(true);
   const pages = Array.isArray(input) ? input : [input];
   const res = { rows: [], via: '' };
   let stopped = null, failed = 0;
@@ -1868,7 +1971,7 @@ async function handleImage(input){
     if (!(e instanceof StopErr)) toast('❌ ' + (e.message || 'Không đọc được ảnh'), 4500);
   } finally {
     busy = false; progPrefix = ''; endJob();
-    ['#pasteBtn','#pickBtn'].forEach(s => $(s).disabled = false);
+    setImportBusy(false);
   }
 }
 
