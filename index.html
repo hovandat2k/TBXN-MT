@@ -241,17 +241,17 @@ button:disabled{opacity:.5;cursor:default}
 .rdelall .ic{width:15px;height:15px}
 .celled{position:absolute;z-index:4;box-sizing:border-box;border:2px solid var(--brand);border-radius:4px;background:#fff;color:#000;font:600 14px system-ui,sans-serif;text-align:center;padding:0 4px;outline:none;box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .ls-editor[hidden]{display:none}
-.ls-editor .editbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.ls-editor .editbar{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
 .ls-editor .editbar span{flex:1;font-size:13px;color:var(--muted)}
-.ls-grid{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px}
-.ls-grid table{border-collapse:separate;border-spacing:0;min-width:2100px;width:100%;font-size:13px}
-.ls-grid th{position:sticky;top:0;background:var(--soft);z-index:2;padding:8px;white-space:nowrap}
-.ls-grid td{border-top:1px solid var(--line);border-right:1px solid var(--line);padding:0;vertical-align:top;min-width:100px}
-.ls-grid td:first-child,.ls-grid th:first-child{position:sticky;left:0;background:var(--soft);min-width:42px;text-align:center;padding:8px;z-index:1}
-.ls-grid th:first-child{z-index:3}
-.ls-grid textarea{display:block;width:100%;min-height:58px;resize:vertical;border:2px solid transparent;border-radius:0;background:var(--field);color:var(--ink);padding:7px;font:inherit;line-height:1.4;white-space:pre-wrap}
+.ls-grid{position:absolute;inset:0;pointer-events:none}
+.ls-grid[hidden]{display:none}
+.summary-editing #lsHot button{pointer-events:none}
+.ls-grid textarea{position:absolute;display:block;box-sizing:border-box;resize:none;border:1px solid transparent;border-radius:0;background:#fff;color:#000;padding:0 1px;font-family:"Times New Roman",Times,serif;line-height:1.13;text-align:center;white-space:pre-wrap;overflow:auto;scrollbar-width:none;pointer-events:auto}
+.ls-grid textarea::-webkit-scrollbar{display:none}
+.ls-grid textarea::placeholder{color:#9b9;opacity:1}
+.ls-grid textarea.pf{background:#eef8f1}
 .ls-grid textarea:focus{outline:none;border-color:var(--brand)}
-.ls-grid textarea.dirty{background:color-mix(in srgb,var(--brand) 14%,var(--field))}
+.ls-grid textarea.dirty{box-shadow:inset 0 0 0 1px #5cbf7f}
 .ls-grid textarea[readonly]{background:var(--soft);color:var(--muted)}
 .ls-grid td.wide{min-width:180px}
 .rdel{position:absolute;pointer-events:auto;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;background:var(--warn);color:#fff;
@@ -721,13 +721,11 @@ dialog::backdrop{background:rgba(12,35,20,.45)}
         <div class="sortbar">
           <div class="sortbox"><span class="sl">Sắp xếp</span><div id="lsSortLevels" class="slevels"></div></div>
           <div class="seg" id="lsGrpSeg"><button type="button" data-g="all" class="on">Gộp các đêm</button><button type="button" data-g="day">Tách theo đêm</button></div></div>
-        <div id="lsPv" class="pvwrap"><div class="pvbox" data-sheet="ls"><img id="lsPrev" alt="Phiếu tổng hợp mẫu" title="Bấm vào dòng xe để xem chi tiết"><div class="hot" id="lsHot"></div><div class="hot" id="lsDelLayer"></div></div></div>
         <div class="ls-editor" id="lsEditor" hidden>
-          <div class="editbar"><span id="lsEditStatus" role="status"></span><button type="button" class="primary" id="lsSaveAll">Lưu toàn bảng</button><button type="button" class="ghost" id="lsCancelEdit">Huỷ sửa</button></div>
-          <p class="sub" style="margin-bottom:8px">Shift + Enter: xuống dòng trong ô · Enter: ô bên dưới · Tab: ô kế tiếp · Có thể dán vùng ô từ Excel. STT tự đánh số.</p>
-          <div class="ls-grid" id="lsGrid"></div>
+          <div class="editbar"><span id="lsEditStatus" role="status" hidden></span><button type="button" class="primary" id="lsSaveAll">Lưu toàn bảng</button><button type="button" class="ghost" id="lsCancelEdit">Huỷ sửa</button></div>
           <p class="hint" id="lsEditError" role="alert"></p>
         </div>
+        <div id="lsPv" class="pvwrap"><div class="pvbox" data-sheet="ls"><img id="lsPrev" alt="Phiếu tổng hợp mẫu" title="Bấm vào dòng xe để xem chi tiết"><div class="hot" id="lsHot"></div><div class="hot" id="lsDelLayer"></div><div class="ls-grid" id="lsGrid" hidden></div></div></div>
         <div class="actions a5">
           <button type="button" class="ghost" id="lsCopy"><span class="i"><i data-ic="copy"></i></span>Sao chép ảnh</button>
           <button type="button" class="ghost" id="lsShare"><span class="i"><i data-ic="share"></i></span>Chia sẻ</button>
@@ -1312,7 +1310,7 @@ function drawSheet(mono, logo){
   });
   g.textAlign = 'left'; g.fillStyle = T('#7c9a84'); g.font = `500 12.5px ${SANS}`;
   g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
-  cv.hdr = { cols: cols.map(c => c[0]), xs: xs.slice(), top: TOP, h: H_HEAD, W: Wc, H: Hc };
+  cv.hdr = { cols: cols.map(c => c[0]), xs: xs.slice(), top: TOP, h: H_HEAD, W: Wc, H: Hc, multiDay: multiDay() };
   cv.hits = hits;   // vị trí từng dòng xe trên phiếu (bấm để xem chi tiết)
   cv.breaks = brk; cv.head = [TOP, TOP + H_HEAD]; cv.cssW = Wc; cv.cssH = Hc; cv.S = S;   // ranh giới dòng + dòng tiêu đề để chia trang A4
   return cv;
@@ -3060,6 +3058,22 @@ function parseSummaryPaste(text){
   return grid;
 }
 
+function summaryCellLayout(header, hits, original){
+  const cells = [], p0 = header.cols.findIndex(isPF), p1 = header.cols.length - 1 - [...header.cols].reverse().findIndex(isPF);
+  hits.forEach(hit => {
+    const ri = original.findIndex(r => hit.r.rid ? r.rid === hit.r.rid : r.sid === hit.r.sid); if (ri < 0) return;
+    header.cols.forEach((column, ci) => {
+      const f = column === 'date' ? 'gio' : column;
+      if (f === 'stt' || !summaryEditable(original[ri], f)) return;
+      cells.push({ ri, f, withDate: column === 'date' || column === 'gio' && header.multiDay,
+        x0: header.xs[ci], x1: header.xs[ci + 1], y0: hit.y0, y1: isPF(f) ? hit.yp : hit.y1 });
+    });
+    if (p0 >= 0 && hit.yp < hit.y1 && summaryEditable(original[ri], 'ghichu'))
+      cells.push({ ri, f: 'ghichu', x0: header.xs[p0], x1: header.xs[p1 + 1], y0: hit.yp, y1: hit.y1 });
+  });
+  return cells;
+}
+
 var APP = (() => {
   const DBK = 'tbxn_db', QK = 'tbxn_q';
   let DB = LS.get(DBK, null) || { rows: [], samples: [] };
@@ -4002,6 +4016,7 @@ var APP = (() => {
   // bấm vào dòng xe trên phiếu: xem chi tiết / phiếu thu hồi; chỗ khác: phóng to
   let lsClickT = null;
   $('#lsPrev').addEventListener('click', e => {
+    if (lsEditor) return;
     const img = e.currentTarget, y = e.offsetY / (img.clientHeight || 1) * LSX.H;
     const h = LSX.hits.find(x => y >= x.y0 && y < x.y1);
     clearTimeout(lsClickT);
@@ -4035,32 +4050,47 @@ var APP = (() => {
   function startSummaryEdit(){
     if (!isAdmin()){ toast('Cần tài khoản Toàn quyền'); return; }
     if (lsEditor || !LSX.rows.length) return;
+    if (!LSX.hdr || !LSX.hits.length){ toast('Phiếu đang được vẽ, vui lòng thử lại sau'); return; }
     clearTimeout(lsClickT); lsDelMode = false; drawDelMarks();
     const original = inSheet(LSX, () => sheetGroups().flatMap(g => g.rows).map(r => ({ ...r })));
     lsEditor = { original, drafts: original.map(r => ({ ...r })) };
-    $('#lsEditor').hidden = false; $('#lsPv').hidden = true;
+    $('#lsEditor').hidden = false; $('#lsGrid').hidden = false; $('#lsPv .pvbox').classList.add('summary-editing');
     $('#lsSheet .actions').style.display = 'none'; summaryControls().forEach(el => el.disabled = true);
     $('#lsEditError').textContent = '';
-    $('#lsGrid').innerHTML = '<table><thead><tr><th>STT</th>' + SUMMARY_COLS.map(([, label]) => `<th>${label}</th>`).join('') + '</tr></thead><tbody>' + original.map((r, ri) =>
-      `<tr><td>${ri + 1}</td>` + SUMMARY_COLS.map(([f, label]) => `<td${['khach','ghichu'].includes(f) ? ' class="wide"' : ''}><textarea data-ri="${ri}" data-f="${f}" aria-label="${label}, dòng ${ri + 1}"${summaryEditable(r, f) ? '' : ' readonly tabindex="-1"'}>${esc(r[f] ?? '')}</textarea></td>`).join('') + '</tr>').join('') + '</tbody></table>';
+    const h = LSX.hdr, pct = (v, total) => (v / total * 100).toFixed(5) + '%';
+    $('#lsGrid').innerHTML = summaryCellLayout(h, LSX.hits, original).map(cell => {
+      const { ri, f, withDate, x0, x1, y0, y1 } = cell, r = original[ri];
+      const label = SUMMARY_COLS.find(([key]) => key === f)?.[1] || f;
+      const value = withDate ? `${r.gio || ''}\n${r.date || ''}` : r[f] ?? '';
+      return `<textarea class="${isPF(f) || f === 'thuhoi' ? 'pf' : ''}" data-ri="${ri}" data-f="${f}"${withDate ? ' data-with-date="1" wrap="off"' : ''}${isPF(f) || f === 'thuhoi' ? ' placeholder="–"' : ''} aria-label="${label}, dòng ${ri + 1}" style="left:${pct(x0 + 0.8, h.W)};top:${pct(y0 + 0.8, h.H)};width:${pct(x1 - x0 - 1.6, h.W)};height:${pct(y1 - y0 - 1.6, h.H)}">${esc(value)}</textarea>`;
+    }).join('');
     $('#lsGrid').querySelectorAll('textarea').forEach(fitSummaryCell); summaryEditStatus();
     $('#lsGrid').querySelector('textarea:not([readonly])')?.focus();
   }
-  function fitSummaryCell(el){ el.style.height = 'auto'; el.style.height = Math.max(58, el.scrollHeight + 4) + 'px'; }
+  function fitSummaryCell(el){
+    const k = ($('#lsPrev').clientWidth || LSX.W) / LSX.W, f = el.dataset.f, size = (f === 'ghichu' ? 22 : 23) * k;
+    el.style.fontSize = size + 'px'; el.style.textAlign = f === 'thuc' ? 'right' : 'center';
+    el.style.fontWeight = f === 'thuhoi' ? '700' : '400';
+    el.style.paddingTop = Math.max(0, (el.clientHeight - el.value.split('\n').length * size * 1.13) / 2 - 1) + 'px';
+  }
+  if (window.ResizeObserver) new ResizeObserver(() => { if (lsEditor) $('#lsGrid').querySelectorAll('textarea').forEach(fitSummaryCell); }).observe($('#lsPrev'));
   function summaryEditStatus(){
     if (!lsEditor) return;
     const n = lsEditor.drafts.reduce((sum, r, i) => sum + SUMMARY_FIELDS.filter(f => summaryValue(r[f]) !== summaryValue(lsEditor.original[i][f])).length, 0);
     $('#lsEditStatus').textContent = `${lsEditor.drafts.length} dòng · ${n} ô thay đổi${n ? ' — chưa lưu' : ''}`;
   }
   function endSummaryEdit(){
-    lsEditor = null; $('#lsEditor').hidden = true; $('#lsPv').hidden = false;
+    lsEditor = null; $('#lsEditor').hidden = true; $('#lsGrid').hidden = true; $('#lsGrid').innerHTML = ''; $('#lsPv .pvbox').classList.remove('summary-editing');
     $('#lsSheet .actions').style.display = ''; summaryControls().forEach(el => el.disabled = false);
   }
   function updateSummaryDraft(el){
     if (!lsEditor || lsSaving || el.readOnly || !el.matches('textarea[data-ri]')) return;
     const i = +el.dataset.ri, f = el.dataset.f;
-    lsEditor.drafts[i][f] = el.value.replace(/\r\n?/g, '\n');
-    el.classList.toggle('dirty', summaryValue(el.value) !== summaryValue(lsEditor.original[i][f]));
+    const value = el.value.replace(/\r\n?/g, '\n');
+    if (el.dataset.withDate){
+      const lines = value.split('\n'); lsEditor.drafts[i].gio = lines.shift() || ''; lsEditor.drafts[i].date = lines.join('\n');
+    } else lsEditor.drafts[i][f] = value;
+    el.classList.toggle('dirty', summaryValue(lsEditor.drafts[i][f]) !== summaryValue(lsEditor.original[i][f]) || el.dataset.withDate && summaryValue(lsEditor.drafts[i].date) !== summaryValue(lsEditor.original[i].date));
     fitSummaryCell(el); summaryEditStatus(); $('#lsEditError').textContent = '';
   }
   $('#lsEdit').addEventListener('click', startSummaryEdit);
@@ -4085,10 +4115,11 @@ var APP = (() => {
     const el = e.target, text = e.clipboardData?.getData('text/plain') || '';
     if (!lsEditor || lsSaving || !el.matches('textarea') || el.readOnly || !text.includes('\t')) return;
     e.preventDefault();
-    const matrix = parseSummaryPaste(text), ri = +el.dataset.ri, ci = SUMMARY_COLS.findIndex(([f]) => f === el.dataset.f);
+    const visibleCols = LSX.hdr.cols.filter(f => f !== 'stt').map(f => f === 'date' ? 'gio' : f);
+    const matrix = parseSummaryPaste(text), ri = +el.dataset.ri, ci = visibleCols.indexOf(el.dataset.f);
     let skipped = 0;
     matrix.forEach((line, di) => line.forEach((value, dj) => {
-      const col = SUMMARY_COLS[ci + dj], target = col && $('#lsGrid').querySelector(`textarea[data-ri="${ri + di}"][data-f="${col[0]}"]`);
+      const col = visibleCols[ci + dj], target = col && $('#lsGrid').querySelector(`textarea[data-ri="${ri + di}"][data-f="${col}"]`);
       if (!target || target.readOnly){ skipped++; return; }
       target.value = value; updateSummaryDraft(target);
     }));
