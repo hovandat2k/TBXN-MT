@@ -14,8 +14,9 @@
   --brand:#80b2ff; --brand-2:#4a88e9; --accent:#80b2ff; --btn:#337cf0; --btn-ink:#fff; --field:#111e30; --soft:#1c2e47; --shadow:0 3px 16px rgba(0,0,0,.15);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+input,textarea,select{font-family:inherit}
 html,body{margin:0;background:var(--bg);min-height:100%}
-body{background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+body{background:var(--bg);color:var(--ink);font-family:"Times New Roman",Times,serif;
   font-size:16px;line-height:1.45;padding:0 16px calc(32px + env(safe-area-inset-bottom))}
 .wrap{max-width:1040px;margin:0 auto}
 header{padding:calc(18px + env(safe-area-inset-top)) 0 12px;display:flex;align-items:center;gap:12px}
@@ -194,11 +195,11 @@ button:disabled{opacity:.5;cursor:default}
 .hot .cellhl{position:absolute;background:rgba(92,191,127,.16);pointer-events:none}
 /* nút ▾ kiểu Excel ở góc dưới phải mỗi ô tiêu đề */
 .hot .dd{position:absolute;pointer-events:auto;min-height:0;padding:0;border-radius:3px;border:1px solid #a3c2ad;background:#f4f9f5;color:#33503c;
-  display:grid;place-items:center;font:700 10px/1 system-ui,sans-serif;box-shadow:0 1px 1px rgba(0,0,0,.12);cursor:pointer}
+  display:grid;place-items:center;font:700 10px/1 "Times New Roman",Times,serif;box-shadow:0 1px 1px rgba(0,0,0,.12);cursor:pointer}
 .hot .dd:hover,.hot .dd.open{background:#dcf2e3;border-color:#5cbf7f}
 .hot .dd.on{background:#2e8b53;border-color:#2e8b53;color:#fff}
 .hot .dd svg{width:62%;height:62%;display:block}
-.hot .dd .n{position:absolute;top:-7px;right:-5px;min-width:13px;height:13px;border-radius:7px;background:#e05a2a;color:#fff;font:800 9px/13px system-ui,sans-serif;padding:0 2px}
+.hot .dd .n{position:absolute;top:-7px;right:-5px;min-width:13px;height:13px;border-radius:7px;background:#e05a2a;color:#fff;font:800 9px/13px "Times New Roman",Times,serif;padding:0 2px}
 .smenu{position:absolute;z-index:5;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);
   padding:4px;line-height:1.2}
 .smenu button{display:flex;width:100%;justify-content:center;min-height:34px;padding:6px 14px;border-radius:7px;font-weight:800;font-size:15px;color:var(--brand);letter-spacing:.02em}
@@ -222,7 +223,7 @@ button:disabled{opacity:.5;cursor:default}
 #lsDel.on{background:color-mix(in srgb,var(--warn) 14%,transparent)}
 .rdelall{position:absolute;pointer-events:auto;top:8px;right:8px;min-height:0;padding:6px 12px;border-radius:999px;background:var(--warn);color:#fff;font-size:13px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.25);gap:6px}
 .rdelall .ic{width:15px;height:15px}
-.celled{position:absolute;z-index:4;box-sizing:border-box;border:2px solid var(--brand);border-radius:4px;background:#fff;color:#000;font:600 14px system-ui,sans-serif;text-align:center;padding:0 4px;outline:none;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.celled{position:absolute;z-index:4;box-sizing:border-box;border:2px solid var(--brand);border-radius:4px;background:#fff;color:#000;font:600 14px "Times New Roman",Times,serif;text-align:center;padding:0 4px;outline:none;box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .ls-editor[hidden]{display:none}
 .ls-editor .editbar{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
 .ls-editor .editbar span{flex:1;font-size:13px;color:var(--muted)}
@@ -595,7 +596,7 @@ body{padding:0 24px calc(32px + env(safe-area-inset-bottom));background:var(--bg
   padding:env(safe-area-inset-top) 24px 0;border-bottom:1px solid #283c57;
   box-shadow:0 0 0 100vmax #14263e;clip-path:inset(0 -100vmax)}
 .appbar header{padding:14px 0;gap:11px;min-width:0}
-.brand-mark{display:grid;place-items:center;width:38px;height:40px;border:1px solid #37557c;background:#1b3658;border-radius:10px;color:#83b9ff;flex:none}
+.brand-mark{display:grid;place-items:center;width:38px;height:40px;border:1px solid #37557c;background:transparent;border-radius:10px;color:#83b9ff;flex:none;object-fit:contain}
 .brand-mark .ic{width:25px;height:25px}
 .brand-title h1{font-size:17px;letter-spacing:.015em;white-space:nowrap;color:#f3f7ff}
 .brand-title h1 span{color:#7da4d3;margin:0 2px}

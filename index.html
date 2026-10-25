@@ -5,24 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14263e">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>MẪU CÀ TƯƠI NHƯ TÙNG</title>
-<meta property="og:title" content="MẪU CÀ TƯƠI NHƯ TÙNG">
+<title>Mẫu cà tươi</title>
+<meta property="og:title" content="Mẫu cà tươi">
 <meta property="og:type" content="website">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261025-navy">
+<link rel="stylesheet" href="styles.css?v=20261025-times">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="wrap">
   <div class="appbar">
   <header>
-    <span class="brand-mark" aria-hidden="true"><i data-ic="sprout"></i></span>
+    <img class="brand-mark" src="icons/icon-192.png" alt="Logo Như Tùng">
     <div class="brand-title">
-      <h1>CÀ TƯƠI <span>·</span> THU HỒI</h1>
+      <h1>MẪU CÀ TƯƠI</h1>
       <p>NHƯ TÙNG</p>
     </div>
   </header>
@@ -243,7 +241,7 @@
 <div class="login" id="login" hidden>
   <form class="lgbox" id="lgForm" autocomplete="on">
     <img src="icons/icon-192.png" alt="" class="lglogo">
-    <h2>MẪU CÀ TƯƠI NHƯ TÙNG</h2>
+    <h2>Mẫu cà tươi</h2>
     <p class="lgsub">Đăng nhập để tiếp tục</p>
     <label for="lgUser">Tên đăng nhập</label>
     <input class="fld" id="lgUser" autocomplete="username" autocapitalize="none" spellcheck="false" required>
@@ -629,7 +627,7 @@ $('#manualBtn').addEventListener('click', () => {
    ========================================================================= */
 /* Vẽ trực tiếp lên canvas: không cần thư viện, ảnh sắc nét trên mọi máy */
 const SERIF = '"Times New Roman", Times, "Liberation Serif", "Tinos", "Noto Serif", serif';
-const SANS = '"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+const SANS = '"Times New Roman", Times, serif';
 let logoImg = null;
 function getLogo(){
   if (logoImg) return logoImg;
@@ -672,7 +670,7 @@ function cellText(r, f, i){
   return v.split(/\r?\n/);
 }
 async function makeCanvas(mono = false, ctx = null){
-  try { if (document.fonts){ await Promise.race([Promise.all([document.fonts.load('800 22px "Be Vietnam Pro"'), document.fonts.load('600 15px "Be Vietnam Pro"')]), new Promise(r => setTimeout(r, 1500))]); } } catch(e){}
+  try { if (document.fonts){ await Promise.race([Promise.all([document.fonts.load('800 22px "Times New Roman"'), document.fonts.load('600 15px "Times New Roman"')]), new Promise(r => setTimeout(r, 1500))]); } } catch(e){}
   const logo = await getLogo();
   return inSheet(ctx, () => drawSheet(mono, logo));
 }
@@ -3069,7 +3067,7 @@ var APP = (() => {
     return res;
   }
   function drawChung(res, mono){
-    const S = 2, Wd = 560, P = 20, RH = 34, SANS = '"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    const S = 2, Wd = 560, P = 20, RH = 34, SANS = '"Times New Roman", Times, serif';
     const C = mono ? { h: '#000', s: '#000', ink: '#000', line: '#000', bg: '#fff', box: '#fff', fg: '#000' } : { h: '#1f6b3d', s: '#5b7d64', ink: '#24402d', line: '#8fd6a5', bg: '#eef8f1', box: '#d6f3df', fg: '#1f6b3d' };
     const n = res.sel.length, H = P + 54 + 30 + n * RH + 14 + 64 + P;
     const cv = mkCanvas(Wd * S, H * S), g = cv.getContext('2d'); g.scale(S, S); g.fillStyle = '#fff'; g.fillRect(0, 0, Wd, H); g.textBaseline = 'middle';
@@ -3219,7 +3217,7 @@ var APP = (() => {
     const { res, row, name } = t, S = 2, Wd = 560, P = 20;
     const C = mono ? { name: '#000', ink: '#000', soft: '#000', line: '#000', tagBg: '#fff', tagFg: '#000', boxBg: '#fff', boxFg: '#000', b: '#000', kl: '#fff' }
                    : { name: '#1f6b3d', ink: '#24402d', soft: '#5b7d64', line: '#8fd6a5', tagBg: '#e3f6e9', tagFg: '#1f6b3d', boxBg: '#d6f3df', boxFg: '#1f6b3d', b: '#2e8b53', kl: '#eef8f1' };
-    const SANS = '"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    const SANS = '"Times New Roman", Times, serif';
     const m = mkCanvas(10, 10).getContext('2d');
     const segs = html => html.split(/(<b>.*?<\/b>)/).filter(Boolean).map(p => ({ t: p.replace(/<\/?b>/g, ''), b: /^<b>/.test(p) }));
     const wrapRich = (html, maxW, fs) => {      // trả về các dòng, mỗi dòng là mảng {t,b}
@@ -3330,7 +3328,7 @@ var APP = (() => {
   }
   async function drawTHPreview(){
     if (!lastTH) return;
-    try { if (document.fonts) await Promise.race([document.fonts.load('800 22px "Be Vietnam Pro"'), new Promise(r => setTimeout(r, 800))]); } catch(e){}
+    try { if (document.fonts) await Promise.race([document.fonts.load('800 22px "Times New Roman"'), new Promise(r => setTimeout(r, 800))]); } catch(e){}
     const cv = drawTH(lastTH, false);
     const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
     const old = $('#thPrev').src; $('#thPrev').src = URL.createObjectURL(blob); if (old.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(old), 1000);
