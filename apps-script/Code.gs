@@ -45,10 +45,7 @@ function doPost(e) {
 
 function xuLy(p) {
   try {
-    const lock = LockService.getScriptLock();
-    lock.waitLock(25000);
-    try {
-      const b = bangTinh();
+    const b = bangTinh();
       if (p.action === 'login') return tra(dangNhap(b, p));
       const u = xacThuc(b, p.token);
       if (!u) return tra({ ok: false, auth: true, error: 'Phiên đăng nhập đã hết hạn — hãy đăng nhập lại' });
@@ -56,18 +53,26 @@ function xuLy(p) {
       switch (p.action) {
         case 'ping': return tra({ ok: true, user: u.user, name: u.name, role: role, folderUrl: role === QUYEN_TOAN ? thuMucGoc().getUrl() : '', sheetUrl: role === QUYEN_TOAN ? b.ss.getUrl() : '' });
         case 'list': return tra(danhSach(b, role));
-        case 'saveSample': if (role === QUYEN_XEM) return tra(khongDuQuyen()); return tra(luuMau(b, p, u));
-        case 'saveBatch': if (role !== QUYEN_TOAN) return tra(khongDuQuyen()); return tra(luuLo(b, p, u));
-        case 'deleteSample': if (role !== QUYEN_TOAN) return tra(khongDuQuyen()); return tra(xoaMau(b, p));
-        default: return tra({ ok: false, error: 'Thao tác không hợp lệ: ' + p.action });
+        case 'saveFile': return tra(luuPhieu(p, u));
       }
-    } finally { lock.releaseLock(); }
+    if (!['saveMany','saveBatch','saveSample','deleteSample'].includes(p.action)) return tra({ ok: false, error: 'Thao tác không hợp lệ: ' + p.action });
+    const ops = p.action === 'saveMany' ? p.ops : [p];
+    const lock = LockService.getScriptLock(); lock.waitLock(25000);
+    let result;
+    try { result = luuNhieu(b, ops, u); } finally { lock.releaseLock(); }
+    // Tương thích trang cũ: các thao tác Drive chạy sau khi nhả khoá dữ liệu.
+    if (p.action !== 'saveMany' && !p.deferFiles){
+      for (const target of result.files.filter(x => x.remove)) luuPhieu(target, u);
+      const target = result.files.find(x => !x.remove);
+      if (p.file && target) result.fileUrl = luuPhieu(Object.assign({}, target, { file: p.file }), u).fileUrl || '';
+    }
+    return tra(result);
   } catch (err) {
     return tra({ ok: false, error: String(err && err.message || err) });
   }
 }
 function khongDuQuyen() { return { ok: false, denied: true, error: 'Tài khoản không có quyền làm việc này' }; }
-function tra(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function tra(o) { o.features = { fastSync: true, deferredFiles: true, version: 2 }; return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 /* ---------------- Đăng nhập ---------------- */
 function biMat() {
@@ -107,14 +112,28 @@ function xacThuc(b, token) {
 
 /* ---------------- Thư mục, bảng tính ---------------- */
 function thuMucGoc() {
+  const pr = PropertiesService.getScriptProperties(), id = pr.getProperty('APP_FOLDER_ID');
+  if (id) { try { const folder = DriveApp.getFolderById(id); if (!folder.isTrashed()) return folder; } catch(e) {} }
   const it = DriveApp.getFoldersByName(THU_MUC);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(THU_MUC);
+  const folder = it.hasNext() ? it.next() : DriveApp.createFolder(THU_MUC);
+  pr.setProperty('APP_FOLDER_ID', folder.getId()); return folder;
 }
 function thuMucCon(cha, ten) {
   const it = cha.getFoldersByName(ten);
   return it.hasNext() ? it.next() : cha.createFolder(ten);
 }
 function bangTinh() {
+  const pr = PropertiesService.getScriptProperties(), id = pr.getProperty('APP_SHEET_ID');
+  if (id && pr.getProperty('APP_SCHEMA') === '2'){
+    try {
+      const ss = SpreadsheetApp.openById(id), tuoi = ss.getSheetByName('Cà tươi'), thuhoi = ss.getSheetByName('Thu hồi'), user = ss.getSheetByName('User');
+      if (tuoi && thuhoi && user) return { ss, tuoi, thuhoi, user };
+    } catch(e) {}
+  }
+  const lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try { return taoBangTinh(pr); } finally { lock.releaseLock(); }
+}
+function taoBangTinh(pr) {
   const goc = thuMucGoc();
   const it = goc.getFilesByName(TEN_SHEET);
   let ss;
@@ -129,6 +148,7 @@ function bangTinh() {
     try { u.getRange(2, 3, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList([QUYEN_TOAN, QUYEN_TH, QUYEN_XEM], true).build()); } catch (e) {}
   }
   ss.getSheets().forEach(sh => { const n = sh.getName(); if (n !== 'Cà tươi' && n !== 'Thu hồi' && n !== 'User' && sh.getLastRow() === 0 && ss.getSheets().length > 3) ss.deleteSheet(sh); });
+  pr.setProperties({ APP_SHEET_ID: ss.getId(), APP_SCHEMA: '2' });
   return { ss: ss, tuoi: a, thuhoi: b, user: u };
 }
 function trang(ss, ten, cot) {
@@ -168,71 +188,137 @@ function giaTri(v, k) {
   return isNaN(n) ? s : n;
 }
 
-/* ---------------- Tệp phiếu ---------------- */
-function luuTep(ngay, ten, b64s, mime) {
-  if (!b64s) return '';
-  const m = String(ngay || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/);
-  const thu = m ? m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-  const dir = thuMucCon(thuMucCon(thuMucGoc(), 'Phiếu'), thu);
-  const cu = dir.getFilesByName(ten);
-  while (cu.hasNext()) cu.next().setTrashed(true);          // lưu lại thì thay tệp cũ
-  const blob = Utilities.newBlob(Utilities.base64Decode(b64s), mime, ten);
-  return dir.createFile(blob).getUrl();
+/* Ghi từng đoạn dòng thay đổi. Không xoá/ghi lại toàn bộ sheet. */
+function ghiChenhLech(sh, cot, before, after, key){
+  const rowKey = (o, i) => String(o[key] || ('__legacy_' + i));
+  const old = new Map(before.map((o, i) => [rowKey(o, i), { row: i + 2, value: o }]));
+  const updates = [], append = [], keep = new Set();
+  const values = o => cot.map(c => giaTri(o[c[0]], c[0]));
+  after.forEach((o, i) => {
+    // Dòng cũ thiếu mã vẫn giữ đúng vị trí theo tham chiếu, không phát sinh mã giả trong dữ liệu.
+    const legacy = !o[key] ? before.indexOf(o) : -1;
+    const id = o[key] ? String(o[key]) : '__legacy_' + (legacy >= 0 ? legacy : i);
+    if (keep.has(id)) throw new Error('Trùng mã dòng: ' + id);
+    keep.add(id); const found = old.get(id), next = values(o);
+    if (!found) append.push(next);
+    else if (JSON.stringify(values(found.value)) !== JSON.stringify(next)) updates.push({ row: found.row, values: next });
+  });
+  updates.sort((a,b) => a.row - b.row);
+  for (let i = 0; i < updates.length;){
+    let end = i + 1; while (end < updates.length && updates[end].row === updates[end - 1].row + 1) end++;
+    sh.getRange(updates[i].row, 1, end - i, cot.length).setValues(updates.slice(i,end).map(x => x.values)); i = end;
+  }
+  const remove = [...old].filter(([id]) => !keep.has(id)).map(([,x]) => x.row).sort((a,b) => b-a);
+  for (let i = 0; i < remove.length;){
+    let end = i + 1; while (end < remove.length && remove[end] === remove[end - 1] - 1) end++;
+    sh.deleteRows(remove[end - 1], end - i); i = end;
+  }
+  if (append.length){
+    const start = sh.getLastRow() + 1, required = start + append.length - 1;
+    if (required > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), required - sh.getMaxRows());
+    const range = sh.getRange(start, 1, append.length, cot.length);
+    range.setNumberFormats(append.map(() => cot.map(c => CHU.includes(c[0]) ? '@' : 'General')));
+    range.setValues(append);
+  }
+  return { updated: updates.length, added: append.length, removed: remove.length };
 }
-
-/* ---------------- Thao tác ---------------- */
-// Lưu 1 lô cân: thay toàn bộ dòng cũ cùng mã lô
-function luuLo(b, p, u) {
-  const lo = p.batch || {};
-  if (!lo.id || !Array.isArray(lo.rows)) return { ok: false, error: 'Thiếu dữ liệu lô cân' };
-  const giu = docBang(b.tuoi, COT_TUOI).filter(r => String(r.batch) !== String(lo.id));
-  const moi = lo.rows.map(r => Object.assign({}, r, { batch: lo.id, savedAt: lo.savedAt || '', savedBy: u.name }));
-  ghiBang(b.tuoi, COT_TUOI, giu.concat(moi));
-  let url = '';
-  // phiếu cũ của lô (có thể nằm ở thư mục ngày khác) luôn được thay / bỏ cho khớp dữ liệu
-  if (p.file && p.file.b64 || !moi.length) xoaTepTheoMa(lo.id, 'phieu-ca-tuoi_');
-  if (p.file && p.file.b64) url = luuTep(p.file.date || (lo.rows[0] && lo.rows[0].date), p.file.name || ('phieu-ca-tuoi_' + lo.id + '.pdf'), p.file.b64, p.file.mime || 'application/pdf');
-  return { ok: true, count: moi.length, fileUrl: url };
+function tepKey(kind, id){
+  if (!['batch','sample'].includes(kind) || !/^[\w-]+$/.test(String(id || ''))) throw new Error('Mã phiếu không hợp lệ');
+  return 'FILE_' + kind + '_' + id;
 }
-// Lưu 1 mẫu thu hồi (lưu lại cùng xe thì ghi đè)
-function luuMau(b, p, u) {
-  const s = Object.assign({}, p.sample || {}, { savedBy: u.name });
-  if (!s.id) return { ok: false, error: 'Thiếu mã mẫu' };
-  const ds = docBang(b.thuhoi, COT_THUHOI);
-  if (u.role !== QUYEN_TOAN && s.rid && ds.some(r => String(r.rid) === String(s.rid) && String(r.id) !== String(s.id)))
-    return { ok: false, denied: true, error: 'Xe này đã có mẫu thu hồi — cần tài khoản Toàn quyền để làm lại' };
-  const con = ds.filter(r => String(r.id) !== String(s.id) && (!s.rid || String(r.rid) !== String(s.rid)));
-  const thay = ds.filter(r => con.indexOf(r) < 0);
-  con.push(s);
-  ghiBang(b.thuhoi, COT_THUHOI, con);
-  // ảnh phiếu của mẫu bị thay: bỏ (lưu kèm ảnh mới thì bỏ cả ảnh cũ cùng mã)
-  thay.forEach(r => { if (String(r.id) !== String(s.id) || (p.file && p.file.b64)) xoaTepTheoMa(r.id, 'thu-hoi_'); });
-  let url = '';
-  if (p.file && p.file.b64) url = luuTep(s.date, p.file.name || ('thu-hoi_' + s.id + '.png'), p.file.b64, p.file.mime || 'image/png');
-  return { ok: true, fileUrl: url };
-}
-function xoaMau(b, p) {
-  const ds = docBang(b.thuhoi, COT_THUHOI);
-  const bo = ds.filter(r => String(r.id) === String(p.id));
-  const con = ds.filter(r => String(r.id) !== String(p.id));
-  ghiBang(b.thuhoi, COT_THUHOI, con);
-  let tep = 0;
-  bo.forEach(s => { tep += xoaTepTheoMa(s.id, 'thu-hoi_'); });     // xoá luôn ảnh phiếu thu hồi trên Drive
-  return { ok: true, removed: ds.length - con.length, files: tep };
-}
-// Bỏ (chuyển vào thùng rác) các tệp phiếu "<tiền tố>…_<mã>.pdf/.png" ở mọi thư mục ngày
-function xoaTepTheoMa(ma, tienTo) {
-  ma = String(ma || '').replace(/[^\w-]/g, '');
-  if (!ma) return 0;
-  let n = 0;
-  try {
-    const it = DriveApp.searchFiles("title contains '_" + ma + ".' and trashed = false");
-    while (it.hasNext()) {
-      const f = it.next(), ten = f.getName();
-      if (ten.indexOf(tienTo) === 0 && (ten.slice(-(ma.length + 5)) === '_' + ma + '.pdf' || ten.slice(-(ma.length + 5)) === '_' + ma + '.png')) { f.setTrashed(true); n++; }
+function tepState(pr, key){ try { return JSON.parse(pr.getProperty(key) || '{}'); } catch(e){ return {}; } }
+function luuNhieu(b, input, u){
+  if (!Array.isArray(input) || !input.length || input.length > 30) throw new Error('Mỗi lượt gửi từ 1 đến 30 thao tác');
+  // Kiểm tra toàn bộ trước khi ghi; không ghi nửa bảng vì một thao tác sai quyền.
+  input.forEach(p => {
+    if (!['saveBatch','saveSample','deleteSample'].includes(p.action)) throw new Error('Thao tác lưu không hợp lệ');
+    if (u.role === QUYEN_XEM || p.action !== 'saveSample' && u.role !== QUYEN_TOAN) throw new Error('Tài khoản không có quyền làm việc này');
+    if (p.action === 'saveBatch'){
+      if (!p.batch || !p.batch.id || !Array.isArray(p.batch.rows)) throw new Error('Thiếu dữ liệu lô cân');
+      tepKey('batch',p.batch.id);
+      const ids = new Set(); p.batch.rows.forEach(r => { if (!r.rid || ids.has(String(r.rid))) throw new Error('Mã xe bị trống hoặc trùng'); ids.add(String(r.rid)); });
+    } else tepKey('sample',p.action === 'saveSample' ? p.sample && p.sample.id : p.id);
+  });
+  const pr = PropertiesService.getScriptProperties();
+  let done; try { done = JSON.parse(pr.getProperty('DONE_REQUESTS') || '[]'); } catch(e){ done = []; }
+  const beforeTuoi = input.some(p => p.action === 'saveBatch') ? docBang(b.tuoi,COT_TUOI) : null;
+  const beforeMau = input.some(p => p.action !== 'saveBatch') ? docBang(b.thuhoi,COT_THUHOI) : null;
+  let tuoi = beforeTuoi, mau = beforeMau;
+  const files = [], completed = [], properties = {};
+  const revise = (kind,id,revision,remove) => {
+    const key = tepKey(kind,id), state = properties[key] ? JSON.parse(properties[key]) : tepState(pr,key);
+    properties[key] = JSON.stringify(Object.assign({},state,{ revision, dead: !!remove }));
+    files.push({ kind,id:String(id),revision,remove:!!remove });
+  };
+  input.forEach(p => {
+    const requestId = String(p.requestId || Utilities.getUuid()), dedup = u.user + '|' + requestId;
+    completed.push(requestId);
+    if (done.includes(dedup)){
+      const kind = p.action === 'saveBatch' ? 'batch' : 'sample', id = kind === 'batch' ? p.batch.id : p.action === 'saveSample' ? p.sample.id : p.id;
+      files.push({kind,id:String(id),revision:requestId,remove:p.action === 'deleteSample' || p.action === 'saveBatch' && !p.batch.rows.length}); return;
     }
-  } catch (e) {}
-  return n;
+    if (p.action === 'saveBatch'){
+      const lo = p.batch, old = tuoi.filter(r => String(r.batch) === String(lo.id)), index = new Map(old.map(r => [String(r.rid),r]));
+      const added = lo.rows.map(row => {
+        const next = Object.assign({},row,{batch:String(lo.id)}), previous = index.get(String(row.rid));
+        const same = previous && COT_TUOI.filter(c => !['savedAt','savedBy'].includes(c[0])).every(c => giaTri(previous[c[0]],c[0]) === giaTri(next[c[0]],c[0]));
+        return same ? previous : Object.assign(next,{savedAt:lo.savedAt || '',savedBy:u.name});
+      });
+      tuoi = tuoi.filter(r => String(r.batch) !== String(lo.id)).concat(added);
+      revise('batch',lo.id,requestId,!added.length);
+    } else if (p.action === 'saveSample'){
+      const s = Object.assign({},p.sample,{savedBy:u.name});
+      if (u.role !== QUYEN_TOAN && s.rid && mau.some(r => String(r.rid) === String(s.rid) && String(r.id) !== String(s.id))) throw new Error('Xe đã có mẫu thu hồi — cần tài khoản Toàn quyền để làm lại');
+      const removed = mau.filter(r => String(r.id) === String(s.id) || s.rid && String(r.rid) === String(s.rid));
+      mau = mau.filter(r => !removed.includes(r)).concat([s]);
+      removed.filter(r => String(r.id) !== String(s.id)).forEach(r => revise('sample',r.id,requestId,true));
+      revise('sample',s.id,requestId,false);
+    } else {
+      mau = mau.filter(r => String(r.id) !== String(p.id)); revise('sample',p.id,requestId,true);
+    }
+    done.push(dedup);
+  });
+  const stats = {};
+  if (beforeTuoi) stats.tuoi = ghiChenhLech(b.tuoi,COT_TUOI,beforeTuoi,tuoi,'rid');
+  if (beforeMau) stats.samples = ghiChenhLech(b.thuhoi,COT_THUHOI,beforeMau,mau,'id');
+  done = done.slice(-120); while (JSON.stringify(done).length > 7500) done.shift();
+  properties.DONE_REQUESTS = JSON.stringify(done); pr.setProperties(properties);
+  return {ok:true,completed,files,stats};
+}
+// Tìm tệp cũ một lần khi nâng cấp; các lần sau dùng trực tiếp ID đã lưu.
+function tepCu(pr, key, kind, id){
+  const state = tepState(pr,key), ids = state.fileId ? [state.fileId] : [];
+  if (!state.migrated){
+    const prefix = kind === 'batch' ? 'phieu-ca-tuoi_' : 'thu-hoi_';
+    const it = DriveApp.searchFiles("title contains '_" + String(id) + ".' and trashed = false");
+    while (it.hasNext()) { const f = it.next(); if (f.getName().startsWith(prefix) && new RegExp('_' + id + '\\.(pdf|png)$').test(f.getName())) ids.push(f.getId()); }
+  }
+  return [...new Set(ids)];
+}
+function luuPhieu(p,u){
+  if (u.role === QUYEN_XEM || p.kind === 'batch' && u.role !== QUYEN_TOAN) return khongDuQuyen();
+  const pr = PropertiesService.getScriptProperties(), key = tepKey(p.kind,p.id), state = tepState(pr,key);
+  if (!p.revision || state.revision !== p.revision) return {ok:true,stale:true};
+  if (p.remove && !state.dead || !p.remove && state.dead) return {ok:true,stale:true};
+  if (state.fileRevision === p.revision && state.migrated) return {ok:true,fileUrl:state.fileId ? DriveApp.getFileById(state.fileId).getUrl() : ''};
+  const previous = tepCu(pr,key,p.kind,p.id); let created = null;
+  if (!p.remove){
+    const file = p.file;
+    if (!file || !file.b64) throw new Error('Thiếu tệp phiếu');
+    const m = String(file.date || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/);
+    const date = m ? m[3] + '-' + ('0'+m[2]).slice(-2) + '-' + ('0'+m[1]).slice(-2) : Utilities.formatDate(new Date(),'Asia/Ho_Chi_Minh','yyyy-MM-dd');
+    const dir = thuMucCon(thuMucCon(thuMucGoc(),'Phiếu'),date);
+    created = dir.createFile(Utilities.newBlob(Utilities.base64Decode(file.b64),file.mime || (p.kind === 'batch' ? 'application/pdf' : 'image/png'),file.name || ((p.kind === 'batch' ? 'phieu-ca-tuoi_' : 'thu-hoi_') + p.id + (p.kind === 'batch' ? '.pdf' : '.png'))));
+  }
+  const lock = LockService.getScriptLock(); lock.waitLock(25000); let stale = false;
+  try {
+    const latest = tepState(pr,key);
+    stale = latest.revision !== p.revision || !!latest.dead !== !!p.remove;
+    if (!stale) pr.setProperty(key,JSON.stringify(Object.assign({},latest,{fileId:created ? created.getId() : '',fileRevision:p.revision,migrated:true})));
+  } finally { lock.releaseLock(); }
+  if (stale){ if (created) created.setTrashed(true); return {ok:true,stale:true}; }
+  previous.forEach(id => { try { const active = tepState(pr,key); if (active.fileId !== id) DriveApp.getFileById(id).setTrashed(true); } catch(e){} });
+  return {ok:true,fileUrl:created ? created.getUrl() : ''};
 }
 function danhSach(b, role) {
   const rows = docBang(b.tuoi, COT_TUOI), samples = docBang(b.thuhoi, COT_THUHOI);
