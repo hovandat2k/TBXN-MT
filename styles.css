@@ -141,6 +141,7 @@ button:disabled{opacity:.5;cursor:default}
 .fld.pct.auto::placeholder{color:var(--brand);opacity:.85;font-style:italic;font-weight:700}
 .fld.pct.bad{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 7%,var(--field))}
 .fld.warn{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 9%,var(--field))}
+.fld.note-error{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--field));box-shadow:0 0 0 1px color-mix(in srgb,var(--warn) 15%,transparent)}
 .fld.okv{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
 .cl{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:0 0 2px 2px;display:none}
 .hw{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:13px;color:var(--muted);font-weight:600}
