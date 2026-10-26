@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261026-remember-login">
+<link rel="stylesheet" href="styles.css?v=20261026-note-errors">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -469,7 +469,7 @@ function renderTable(){
         h += `<tr data-id="${r.id}">` + COLS_EDIT.map(([f]) => {
           const cls = NUMF.has(f) ? 'num' : isPF(f) ? 'pct' : '';
           const w = { stt: 46, soxe: 110, hang: 150, khach: 170, ghichu: 170, gio: 92, xanh: 62, noi: 62, chin: 62 }[f] || 88;
-          return `<td><input class="fld ${cls} ${r.flags[f] ? 'warn' : ''}" data-f="${f}" value="${esc(r[f] ?? '')}" style="width:${w}px" ${NUMF.has(f) || isPF(f) ? 'inputmode="decimal"' : ''}></td>`;
+          return `<td><input class="fld ${cls} ${r.flags[f] ? 'warn' : ''} ${f === 'ghichu' && r.flags.ghichu ? 'note-error' : ''}" data-f="${f}" value="${esc(r[f] ?? '')}" style="width:${w}px" ${f === 'ghichu' && r.flags.ghichu ? 'aria-invalid="true" title="Ghi chú có dấu ba chấm, nội dung có thể bị cắt. Hãy kiểm tra lại."' : ''} ${NUMF.has(f) || isPF(f) ? 'inputmode="decimal"' : ''}></td>`;
         }).join('') + `<td class="c"><button class="del" data-del="${r.id}" title="Xoá dòng" style="width:30px;height:32px;min-height:0;padding:0">✕</button></td></tr>`;
       });
     });
@@ -495,7 +495,7 @@ function rowHTML(r, n){
         <input class="fld" data-f="soxe" value="${esc(r.soxe || '')}" placeholder="Biển số xe" aria-label="Biển số xe" autocomplete="off">
         <input class="fld" data-f="gio" value="${esc(r.gio || '')}" placeholder="Giờ cân" aria-label="Giờ cân" title="Giờ cân (HH:mm hoặc HH:mm:ss)" autocomplete="off">
       </div>${hw}</div>
-    <div class="cgc"><input class="fld" data-f="ghichu" value="${esc(r.ghichu ?? '')}" placeholder="Ghi chú"></div>
+    <div class="cgc"><input class="fld ${r.flags.ghichu ? 'warn note-error' : ''}" data-f="ghichu" value="${esc(r.ghichu ?? '')}" placeholder="Ghi chú" ${r.flags.ghichu ? 'aria-invalid="true" title="Ghi chú có dấu ba chấm, nội dung có thể bị cắt. Hãy kiểm tra lại."' : ''}></div>
     <div class="cbi"><span class="cl">TL Bì (kg)</span><input class="fld num ${r.flags.bi ? 'warn' : ''}" data-f="bi" value="${esc(r.bi ?? '')}" inputmode="decimal" placeholder="0"></div>
     <div class="ctl"><span class="cl">TL thực (kg)</span><input class="fld num ${r.flags.thuc ? 'warn' : r.flags.thucOk ? 'okv' : ''}" data-f="thuc" value="${esc(r.thuc)}" inputmode="decimal" placeholder="0"
       title="${r.flags.thuc ? 'Không khớp TL Hàng − TL Bì, hãy kiểm tra' : r.flags.thucOk ? 'Đã khớp TL Hàng − TL Bì' : ''}"></div>
@@ -552,6 +552,13 @@ $('#tbl').addEventListener('input', e => {
   const r = rows.find(x => x.id === +host.dataset.id); if (!r) return;
   r[inp.dataset.f] = inp.value;
   if (r.flags[inp.dataset.f]){ delete r.flags[inp.dataset.f]; inp.classList.remove('warn'); }
+  if (inp.dataset.f === 'ghichu'){
+    const bad = /\.{3,}|…/.test(inp.value);
+    if (bad) r.flags.ghichu = true;
+    inp.classList.toggle('warn',bad); inp.classList.toggle('note-error',bad);
+    inp.setAttribute('aria-invalid',String(bad));
+    inp.title = bad ? 'Ghi chú có dấu ba chấm, nội dung có thể bị cắt. Hãy kiểm tra lại.' : '';
+  }
   if (isPF(inp.dataset.f) && pcts(r).have >= 2) PF.forEach(f => {   // đủ 2/3: ô còn lại tự tính, bỏ viền vàng
     if (!String(r[f] ?? '').trim() && r.flags[f]){ delete r.flags[f]; const o = host.querySelector(`input[data-f="${f}"]`); if (o) o.classList.remove('warn'); }
   });
@@ -1266,7 +1273,15 @@ $('#drop').addEventListener('drop', e => { const f = [...e.dataTransfer.files].f
 const isPdf = f => !!f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''));
 
 // Ghép bằng danh tính xe, không theo STT (STT khác nhau giữa hai báo cáo).
+function normalizeReadNote(row){
+  row.ghichu = String(row.ghichu ?? '').replace(/[()]/g,' ').replace(/\s+/g,' ').trim();
+  row.flags ||= {};
+  if (/\.{3,}|…/.test(row.ghichu)) row.flags.ghichu = true;
+  else delete row.flags.ghichu;
+  return row;
+}
 function mergeSourceNotes(base, notes){
+  notes.forEach(normalizeReadNote);
   const plate = r => norm(r.soxe).replace(/[^a-z0-9]/g, '');
   const day = r => { const m = String(r.date || '').match(reDate); return m ? fixDate(m) : ''; };
   const time = r => { const m = String(r.gio || '').match(/(\d{1,2}):(\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; };
@@ -1292,6 +1307,7 @@ function mergeSourceNotes(base, notes){
     const signatures = new Set(all.map(s => JSON.stringify([...PF.map(f => parsePct(s[f])), String(s.ghichu || '').trim()])));
     if (all.length && signatures.size === 1){
       const s = all[0]; PF.forEach(f => { r[f] = s[f] ?? ''; }); r.ghichu = s.ghichu || '';
+      normalizeReadNote(r);
       const p = pcts(r);
       PF.forEach(f => { if (p.have >= 2 && !p.bad && !s.flags?.[f]) delete r.flags[f]; else r.flags[f] = true; });
       matched++;
@@ -1728,6 +1744,7 @@ async function readSheet(blob, options = {}){
   }
   if (!rowsOut.length && localErr) throw localErr;
   if (!options.notesOnly && blob.pdfWeights?.length) applyPdfWeights(rowsOut, blob.pdfWeights);
+  rowsOut.forEach(normalizeReadNote);
   return { rows: rowsOut, via };
 }
 async function readLocal(blob, options = {}){
@@ -1934,7 +1951,7 @@ async function parseGrid(grid, words, ctx){
     const xs1 = Math.max(...PF.filter(f => map[f] != null && colX[map[f]]).map(f => colX[map[f]].x1));
     const topY = used.size ? Math.max(...[...used].map(w => w.y1)) : b.y0;
     const note = ws.filter(w => !used.has(w) && w.cx >= xs0 && w.cx <= xs1 && w.cy > topY && !isDash(w.t));
-    if (note.length) r.ghichu = cleanText(joinWords(note)).replace(/^\s*gh?[il1]\s*ch\S*\s*:?\s*/i, '');
+    if (note.length) r.ghichu = joinWords(note).replace(/^\s*gh?[il1]\s*ch\S*\s*:?\s*/i, '');
     r._printed = true;
   }
   for (let i = hdrIdx + 1; i < bands.length; i++){
@@ -2271,9 +2288,9 @@ function softRow(txt){
     // ghi chú: 17X / 25N / 30C -> Xanh / Nổi / Chín; còn lại giữ làm ghi chú
     let note = txt('ghichu'); const got = {};
     note = note.replace(/(\d{1,3}(?:[.,]\d+)?)\s*([XNC])(?![A-Za-zÀ-ỹ])/gi, (m0, v, c) => { const f = { x: 'xanh', n: 'noi', c: 'chin' }[c.toLowerCase()]; if (got[f] == null && +v.replace(',', '.') <= 100){ got[f] = v.replace(',', '.'); return ' '; } return m0; });
-    note = note.replace(/^[\s\-–,;:.+]+|[\s\-–,;:+]+$/g, '').replace(/\s+/g, ' ').trim();
+    note = note.replace(/^[\s\-–,;:+]+|[\s\-–,;:+]+$/g, '').replace(/\s+/g, ' ').trim();
     const pm = note.match(/^\(\s*([^()]*?)\s*\)?$/); if (pm) note = pm[1];
-    r.ghichu = note;
+    r.ghichu = note; normalizeReadNote(r);
     PF.forEach(f => { r[f] = got[f] != null ? fmtPctIn(+got[f]) : ''; });
     if (PF.filter(f => r[f]).length < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });
     if (!r.khach) r.flags.khach = true;
