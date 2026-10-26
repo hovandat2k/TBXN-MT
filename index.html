@@ -2597,8 +2597,7 @@ function planSummaryEdits(drafts, originals, db, at, newId){
         value = [m[1].padStart(2, '0'), m[2], m[3]].filter(x => x !== undefined).join(':');
       } else if (f === 'thuhoi'){
         if (v === ''){
-          if (sp && /^x$/i.test(String(sp.thuhoi))) deletes.add(String(sp.id));
-          else if (sp) fail('Dùng Xoá mẫu nếu muốn bỏ kết quả thu hồi đã lưu');
+          if (sp) deletes.add(String(sp.id));
           return;
         }
         value = /^x$/i.test(v) ? 'x' : parsePct(v);
@@ -3818,6 +3817,8 @@ var APP = (() => {
       const updatedSamples = DB.samples.map(s => plan.samples.find(x => String(x.id) === String(s.id)) || s).filter(s => !plan.deletes.includes(String(s.id)));
       plan.samples.filter(s => !updatedSamples.some(x => String(x.id) === String(s.id))).forEach(s => updatedSamples.push(s));
       const sampleWrites = new Map(plan.samples.map(s => [String(s.id), s]));
+      const clearedGroups = new Set(DB.samples.filter(s => plan.deletes.includes(String(s.id)) && s.nhom).map(s => String(s.nhom)));
+      clearedGroups.forEach(group => { const leader = updatedSamples.find(s => String(s.nhom) === group); if (leader) sampleWrites.set(String(leader.id), leader); });
       plan.samples.filter(s => s.nhom).forEach(s => { const leader = updatedSamples.find(x => String(x.nhom) === String(s.nhom)); if (leader) sampleWrites.set(String(leader.id), leader); });
       for (const sp of sampleWrites.values()){
         const row = updatedRows.find(r => String(r.rid) === String(sp.rid));
