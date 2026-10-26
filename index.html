@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261025-detail-contrast">
+<link rel="stylesheet" href="styles.css?v=20261026-remember-login">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -247,6 +247,7 @@
     <input class="fld" id="lgUser" autocomplete="username" autocapitalize="none" spellcheck="false" required>
     <label for="lgPass">Mật khẩu</label>
     <input class="fld" id="lgPass" type="password" autocomplete="current-password" required>
+    <label class="remember-login" for="lgRemember"><input type="checkbox" id="lgRemember" checked> Ghi nhớ đăng nhập</label>
     <div id="lgSrv" hidden>
       <label for="lgUrl">Địa chỉ máy chủ (URL Apps Script …/exec)</label>
       <input class="fld" id="lgUrl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
@@ -2618,16 +2619,14 @@ var APP = (() => {
   // URL máy chủ Apps Script gắn sẵn: người dùng chỉ cần đăng nhập. Để trống thì màn hình đăng nhập hiện ô nhập URL.
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbyd1j55R2fAbaRSaJv6lULpmD8ZuNSCyVD6A3MtrpOyHDfTVDg08K6sQF5erWfN0po/exec';
   const gasUrl = () => GAS_URL || String(LS.get('tbxn_gas', '') || '').trim();
-  // Phiên đăng nhập { token, user, name, role }. Toàn quyền: lưu trong sessionStorage → đóng trình duyệt là tự đăng xuất;
-  // các quyền khác: localStorage (giữ đăng nhập).
+  // Chỉ lưu token phiên, không lưu mật khẩu. Người dùng chọn thời gian giữ phiên cho mọi quyền.
   const SS = { get(){ try { return JSON.parse(sessionStorage.getItem('tbxn_auth')); } catch(e){ return null; } },
                set(v){ try { v ? sessionStorage.setItem('tbxn_auth', JSON.stringify(v)) : sessionStorage.removeItem('tbxn_auth'); } catch(e){} } };
-  function saveAuth(a){
-    const admin = a && a.role === 'Toàn quyền';
-    SS.set(admin ? a : null); LS.set('tbxn_auth', a && !admin ? a : null);
+  function saveAuth(a, remember = LS.get('tbxn_remember', true)){
+    SS.set(a && !remember ? a : null);
+    LS.set('tbxn_auth', a && remember ? a : null);
   }
   let AUTH = SS.get() || LS.get('tbxn_auth', null);
-  if (AUTH && AUTH.role === 'Toàn quyền' && !SS.get()){ AUTH = null; LS.set('tbxn_auth', null); }   // phiên Toàn quyền cũ lưu lâu dài: bỏ
   const isAdmin = () => !!AUTH && AUTH.role === 'Toàn quyền';
   const isViewer = () => !!AUTH && AUTH.role === 'Chỉ xem';            // chỉ xem Tổng hợp mẫu, không lưu / sửa
   const canTH = () => isAdmin() || (!!AUTH && AUTH.role === 'Thu hồi');
@@ -3913,10 +3912,18 @@ var APP = (() => {
   /* ---------------- Tài khoản, cài đặt ---------------- */
   function showAcct(){
     if (!AUTH) return;
-    $('#acctBox').innerHTML = `<span class="acn">${IC('user')}<b>${esc(AUTH.name)}</b></span><span class="sp"></span><button type="button" class="ghost" id="logoutBtn">Đăng xuất</button>`;
+    const remembered = LS.get('tbxn_auth', null)?.token === AUTH.token;
+    $('#acctBox').innerHTML = `<span class="acn">${IC('user')}<b>${esc(AUTH.name)}</b></span><span class="sp"></span><button type="button" class="ghost" id="logoutBtn">Đăng xuất</button><label class="remember-login" for="acctRemember"><input type="checkbox" id="acctRemember"${remembered ? ' checked' : ''}> Ghi nhớ đăng nhập trên thiết bị này</label>`;
   }
   $('#setBtn').addEventListener('click', showAcct);
   $('#acctBox').addEventListener('click', e => { if (e.target.id === 'logoutBtn'){ $('#setDlg').close(); logout(false); } });
+  $('#acctBox').addEventListener('change', e => {
+    if (e.target.id !== 'acctRemember' || !AUTH) return;
+    const remember = e.target.checked;
+    LS.set('tbxn_remember', remember);
+    LS.set('tbxn_login_user', remember ? AUTH.user : '');
+    saveAuth(AUTH, remember);
+  });
   function applyRole(){
     document.body.classList.toggle('role-th', !!AUTH && !isAdmin() && !isViewer());
     document.body.classList.toggle('role-xem', isViewer());
@@ -3926,6 +3933,8 @@ var APP = (() => {
   }
   function showLogin(msg){
     applyRole();
+    $('#lgRemember').checked = LS.get('tbxn_remember', true);
+    if (!$('#lgUser').value) $('#lgUser').value = LS.get('tbxn_login_user', '') || '';
     $('#lgSrv').hidden = !!GAS_URL;
     $('#lgUrl').value = gasUrl();
     $('#lgErr').textContent = msg || '';
@@ -3953,7 +3962,10 @@ var APP = (() => {
     try {
       const j = await api('login', { user, pass }, url);
       if (!GAS_URL) LS.set('tbxn_gas', url);
-      AUTH = { token: j.token, user: j.user, name: j.name, role: j.role }; saveAuth(AUTH);
+      const remember = $('#lgRemember').checked;
+      LS.set('tbxn_remember', remember);
+      LS.set('tbxn_login_user', remember ? j.user : '');
+      AUTH = { token: j.token, user: j.user, name: j.name, role: j.role }; saveAuth(AUTH, remember);
       $('#lgPass').value = '';
       applyRole(); lastErr = '';
       showTab(LS.get('tbxn_tab', 'tuoi') || 'tuoi');
