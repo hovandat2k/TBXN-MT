@@ -2256,7 +2256,7 @@ function softRow(txt){
     const kieu = norm(txt('kieu')), hang = cleanText(txt('hang'));
     if (/xuat/.test(kieu)) return null;                               // xuất hàng: không phải cà tươi nhập
     if (/nhan/.test(norm(hang)) && !/tuoi/.test(norm(hang))) return null;  // cà nhân
-    const dm = (txt('ngayra') || txt('ngayvao')).match(reDate);
+    const dm = (txt('ngayra') || txt('ngayvao')).replace(/\s+/g, '').match(reDate);
     // phần mềm cân hiện giờ dạng "00.19:23…" = 19:23 (số trước dấu chấm không phải giờ)
     const gt = txt('giora') || txt('giovao'), m2 = gt.match(/(\d{1,2})[.,](\d{2})[:;](\d{2})/);
     const tm = m2 && +m2[2] <= 23 ? [null, m2[2], m2[3]] : gt.match(/(\d{1,2})[:.;,](\d{2})(?:[:.;,](\d{2}))?/);
@@ -2282,13 +2282,37 @@ function softRow(txt){
 }
 /* Bảng phần mềm cân KHÔNG có dòng tiêu đề: nhận cột theo nội dung từng dòng
    [STT] Số xe | Khách hàng | Hàng hóa (CÀ ARABICA…) | TL1 TL2 TL Hàng | Ngày vào Giờ vào | Ngày ra Giờ ra | [Số chứng từ] | NHẬP/XUẤT HÀNG | Ghi chú */
+function mergeSoftDateWords(words){
+  const out = [], maxGap = Math.max(8, median(words.map(w => w.h)) * 2);
+  for (let i = 0; i < words.length; i++){
+    const first = words[i]; let text = first.t.replace(/\s+/g, ''), end = i;
+    if (/^\d{1,2}[\/.-]/.test(text)){
+      for (let j = i; j < Math.min(words.length, i + 5); j++){
+        if (j > i){
+          if (words[j].x0 - words[j-1].x1 > maxGap || !/^[\d\/.-]+$/.test(words[j].t.replace(/\s+/g,''))) break;
+          text += words[j].t.replace(/\s+/g,'');
+        }
+        const date = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+        if (date && +date[1] >= 1 && +date[1] <= 31 && +date[2] >= 1 && +date[2] <= 12){ end = j; break; }
+      }
+    }
+    if (end > i){
+      const group = words.slice(i,end+1), x0 = Math.min(...group.map(w=>w.x0)), x1 = Math.max(...group.map(w=>w.x1));
+      out.push({...first,t:text,x0,x1,cx:(x0+x1)/2});i = end;
+    } else {
+      const compact = first.t.replace(/\s+/g,'');
+      out.push({...first,t:/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}$/.test(compact) ? compact : first.t});
+    }
+  }
+  return out;
+}
 function parseSoftNoHeader(words){
   const K = w => norm(w.t).replace(/[^a-z0-9]/g, '');
   const isDate = w => reDate.test(w.t), isTime = w => /^\d{1,2}[.:;,]\d{2}/.test(w.t) && /:/.test(w.t);
-  const isNum = w => /^\d{1,3}([.,]\d{3})+$|^\d{1,3}$/.test(w.t.replace(/[^\d.,]/g, '')) && /\d/.test(w.t) && !isDate(w) && !isTime(w);
+  const isNum = w => /^\d{1,3}([.,]\d{3})+$|^\d{1,3}$/.test(cleanNum(w.t)) && /\d/.test(w.t) && !isDate(w) && !isTime(w);
   const rows = []; let hits = 0;
   softLines(words.map(w => Object.assign({}, w, { t: w.t.replace(/¢/g, 'C') }))).forEach(L => {
-    const ws = L.ws, di = ws.map((w, i) => isDate(w) ? i : -1).filter(i => i >= 0);
+    const ws = mergeSoftDateWords(L.ws), di = ws.map((w, i) => isDate(w) ? i : -1).filter(i => i >= 0);
     const ki = ws.findIndex((w, i) => /^(nhap|xuat|nhp|xut)$/.test(K(w)) && ws[i + 1] && /^h.?ng$|^hang$/.test(K(ws[i + 1])));
     if (!di.length || ki < 0) return;
     hits++;
