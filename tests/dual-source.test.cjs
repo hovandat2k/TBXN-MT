@@ -21,7 +21,7 @@ vm.runInContext(`
 `, context);
 vm.runInContext(html.match(/^const reDate = .*$/m)[0], context);
 for (const fn of ['parseKg', 'parsePct', 'pcts', 'fixDate', 'mergeSourceNotes']) vm.runInContext(functionSource(fn), context);
-for (const fn of ['cleanText', 'cleanNum', 'softRow']) vm.runInContext(functionSource(fn), context);
+for (const fn of ['cleanText', 'cleanNum', 'softRow', 'median', 'softLines', 'mergeSoftDateWords', 'parseSoftNoHeader']) vm.runInContext(functionSource(fn), context);
 for (const name of ['numOf', 'fmtKg', 'fmtPctIn']) vm.runInContext(html.match(new RegExp('^const ' + name + ' = .*$', 'm'))[0], context);
 {
   const parsed = context.softRow(key => ({ stt: '21', soxe: '82C 05525', khach: 'A HINH KONTUM', hang: 'CÀ ARABICA QUẢ TƯƠI', tl1: '11,610', tl2: '4,110', tlh: '7,500', ngayra: '25/10/2026', giora: '00.09:08...', kieu: 'NHẬP HÀNG', ghichu: '46C-16N (1 BAO RỖ)' }[key] || ''));
@@ -45,6 +45,21 @@ if (process.env.DUAL_SOURCE_SAMPLE) {
 }
 const row = o => ({ soxe: '82C 05525', date: '25/10/2026', gio: '09:08:43', khach: 'A HINH KONTUM', tlh: '7,500', bi: '38', thuc: '7,462', flags: {}, ...o });
 const note = o => row({ soxe: '82C-055.25', gio: '09:08', thuc: '7,500', xanh: '', noi: '16', chin: '46', ghichu: '1 bao rỗ', ...o });
+{
+  const words = (tokens,y) => { let x=0; return tokens.map(t=>{const w={t,x0:x,x1:x+t.length*8,y0:y,y1:y+20,h:20,cy:y+10,cx:x+t.length*4};x=w.x1+5;return w;}); };
+  for(const dateTokens of [['25/','1','0/2026'],['25/1','0/2026'],['25/1 0/2026']]){
+    const first=['23','49C','26220','DEMO','CÀ','ARABICA','QUẢ','TƯƠI','4,140','2/120','2,020','25/10/2026','00.18:50',...dateTokens,'00.19:00','NHẬP','HÀNG','21N','30C'];
+    const second=['24','49C','12345','DEMO','CÀ','ARABICA','QUẢ','TƯƠI','7,460','5,480','1,980','25/10/2026','00.21:35','25/10/2026','00.21:58','NHẬP','HÀNG','20N','32C'];
+    const parsed=context.parseSoftNoHeader([...words(first,0),...words(second,35)]);
+    assert.equal(parsed.length,2);assert.equal(parsed[0].gio,'19:00');assert.equal(parsed[0].tl2,'2,120');
+    const base=[row({soxe:'49C 26220',gio:'19:00:26',tlh:'2,020',bi:'11',thuc:'2,009'})];
+    assert.equal(merge(base,parsed).matched,1);
+    assert.equal(base[0].noi,'21');assert.equal(base[0].chin,'30');assert.equal(context.pcts(base[0]).x,49);
+    assert.equal(base[0].thuc,'2,009');assert.equal(base[0].bi,'11');
+  }
+  const far=words(['25/','10/2026'],0);far[1].x0+=500;far[1].x1+=500;
+  assert.equal(context.mergeSoftDateWords(far).length,2,'do not join unrelated columns');
+}
 {
   const base = [row({})], original = { ...base[0] };
   const report = merge(base, [note({})]);
