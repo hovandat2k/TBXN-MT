@@ -3267,7 +3267,7 @@ var APP = (() => {
     const list = DB.samples.filter(sp => sNight(sp) === svNight).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))
       .filter(sp => { if (!sp.nhom) return true; if (seen.has(sp.nhom)) return false; seen.add(sp.nhom); return true; });
     box.innerHTML = `<div class="svlist">${list.map(sp => { const g = groupOf(sp), many = g.length > 1; return `<button type="button" class="svitem${isAdmin() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc((many ? groupName(g) : sp.khach) || '(không tên)')}</span><span class="v">${isNaN(+sp.thuhoi) ? 'X' : f2(+sp.thuhoi) + ' kg'}</span>${isAdmin() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
-      <span class="m">${[many ? `${g.length} xe chung mẫu` : sp.soxe, isNaN(+sp.thuhoi) ? '' : sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', 'Lưu ' + (sp.savedAt || ''), isAdmin() ? sp.savedBy : ''].filter(Boolean).map(esc).join(' · ')}</span></button>`; }).join('')}</div>`;
+      <span class="m">${[many ? `${g.length} xe chung mẫu` : sp.soxe, isNaN(+sp.thuhoi) || /^nhập tay$/i.test(String(sp.mau || '').trim()) ? '' : sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', isAdmin() ? sp.savedBy : ''].filter(Boolean).map(esc).join(' · ')}</span></button>`; }).join('')}</div>`;
   }
   $('#thSavedNight').addEventListener('change', e => { svNight = e.target.value; renderSaved(); });
   $('#thSaved').addEventListener('click', e => {
