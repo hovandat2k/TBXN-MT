@@ -21,6 +21,23 @@ const row = (id, batch = 'L1') => ({ batch, rid: id, date: '25/10/2026', gio: '1
 const sheet = r => ({ ...r, thuhoi: '', sid: '' });
 const clone = value => JSON.parse(JSON.stringify(value));
 {
+  for(const recovery of [5.2,'x']){
+    const db={rows:[row('R1'),row('R2')],samples:[{id:'M1',rid:'R1',nhom:'G1',thuhoi:recovery,kl:400,am:14},{id:'M2',rid:'R2',nhom:'G1',thuhoi:5.5}]};
+    const original=db.rows.map((r,i)=>({...sheet(r),sid:'M'+(i+1),thuhoi:String(db.samples[i].thuhoi)}));
+    const drafts=clone(original),before=JSON.stringify(db);drafts[0].thuhoi='';
+    const p=plan(drafts,original,db);
+    assert.deepEqual(Array.from(p.deletes),['M1']);assert.equal(p.samples.length,0);assert.equal(p.batches.length,0);
+    assert.equal(JSON.stringify(db),before,'planning a clear must not mutate live data');
+    drafts[0].khach='Tên đã sửa';const combined=plan(drafts,original,db);
+    assert.equal(combined.batches[0].batch.rows[0].khach,'Tên đã sửa');
+    assert.equal(combined.samples.length,0,'do not recreate a cleared sample while editing another field');
+    assert.deepEqual(Array.from(combined.deletes),['M1']);
+  }
+  const db={rows:[],samples:[{id:'F1',khach:'Free',thuhoi:5.2}]};
+  const original=[{rid:'',sid:'F1',khach:'Free',thuhoi:'5.2'}],drafts=clone(original);drafts[0].thuhoi='';
+  assert.deepEqual(Array.from(plan(drafts,original,db).deletes),['F1']);
+}
+{
   const db = { rows: [row('R1'), row('R2'), row('hidden'), row('R3', 'L2')], samples: [] };
   const original = db.rows.filter(r => r.rid !== 'hidden').map(sheet), drafts = clone(original), saved = JSON.stringify(db);
   drafts[0].khach = 'Demo\nDòng thứ hai'; drafts[0].ghichu = 'Bao rỗ\nGhi chú thêm';
