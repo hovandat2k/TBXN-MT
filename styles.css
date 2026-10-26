@@ -335,6 +335,18 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .thinfo{margin-top:8px;padding:8px 12px;border-radius:12px;background:var(--soft);font-size:15px;font-weight:600;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
 .thinfo b{color:var(--ink);font-size:16.5px}
 .thinfo[hidden]{display:none}
+.th-quality{display:flex;flex-wrap:wrap;gap:7px 16px;color:var(--muted);font-size:15px;margin-top:5px}
+.thinfo>.th-quality{width:100%;margin-top:3px}
+.th-quality>span{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap}
+.th-quality b,.thgrp .nm .th-quality b{font-size:16px;font-weight:700;color:var(--ink)}
+.th-quality.invalid b{color:var(--warn)}
+.saved-summary{display:flex;align-items:center;gap:10px;list-style:none;cursor:pointer;font-size:17px;font-weight:700;min-height:28px}
+.saved-summary::-webkit-details-marker{display:none}
+.saved-summary::after{content:'Xem phiếu ▾';margin-left:auto;color:var(--brand);font-size:14px;white-space:nowrap}
+#thSavedDetails[open]>.saved-summary::after{content:'Thu gọn ▴'}
+.saved-count{font-size:14px;font-weight:500;color:var(--muted)}
+.saved-filter{margin-top:14px}
+.saved-filter label{font-size:15px;color:var(--muted);font-weight:600}
 #thForm .row3{display:grid;grid-template-columns:1.1fr 1fr .95fr;gap:8px;margin-top:12px}
 .inp{position:relative}
 .inp .fld{padding-right:26px;font-size:16px}

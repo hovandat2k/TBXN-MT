@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261026-note-errors">
+<link rel="stylesheet" href="styles.css?v=20261026-recovery-quality">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -191,8 +191,11 @@
       </div>
     </section>
     <section class="card" id="thSavedCard">
-      <div class="tbar"><h2 style="margin:0">Phiếu đã lưu</h2><span class="sp"></span><select class="fld sel" id="thSavedNight"></select></div>
-      <div id="thSaved"></div>
+      <details id="thSavedDetails">
+        <summary class="saved-summary"><span>Phiếu đã lưu</span><span class="saved-count" id="thSavedCount"></span></summary>
+        <div class="tbar saved-filter"><label for="thSavedNight">Theo đêm</label><span class="sp"></span><select class="fld sel" id="thSavedNight"></select></div>
+        <div id="thSaved"></div>
+      </details>
     </section>
     <section class="card">
       <details id="amDet"><summary>Bảng trừ ẩm cà phê</summary><div class="amtbl"><table id="amTbl"></table></div></details>
@@ -400,6 +403,11 @@ function pcts(r){
   if (have === 2){ const i = v.findIndex(x => x == null); v[i] = Math.round((100 - v.reduce((a, b) => a + (b || 0), 0)) * 100) / 100; auto = PF[i]; }
   const bad = have >= 2 && (Math.abs(v.reduce((a, b) => a + b, 0) - 100) > 0.01 || v.some(x => x < 0));
   return { x: v[0], n: v[1], c: v[2], auto, bad, have, v: { xanh: v[0], noi: v[1], chin: v[2] } };
+}
+function recoveryQualityHTML(r){
+  const p = pcts(r || {});
+  return `<span class="th-quality${p.bad ? ' invalid' : ''}">` +
+    PF.map(f => `<span>${PF_LABEL[f]} <b>${p.v[f] == null ? '–' : fmtPct(p.v[f]) + '%'}</b></span>`).join('') + '</span>';
 }
 const COLS_FULL = [
   ['stt','STT'],['soxe','Số xe'],['hang','Hàng hóa'],['khach','Khách hàng'],['tl1','TL Lần 1'],['tl2','TL Lần 2'],
@@ -3021,7 +3029,7 @@ var APP = (() => {
     const kgs = r => numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : '–';
     const tot = [main, ...ex].reduce((a, r) => a + (numv(r.thuc) || 0), 0);
     const chips = ex.length ? `<div class="thgrp"><div class="gh">Mẫu chung ${ex.length + 1} xe</div>` +
-      [main, ...ex].map((r, i) => `<div class="gr"><span class="no">${i + 1}</span><span class="nm"><b>${esc(rowLabel(r))}</b><small>${esc([r.soxe, hm(r)].filter(Boolean).join(' · '))}</small></span><span class="kg">${kgs(r)}</span>${i ? `<button type="button" class="ghost" data-rmx="${esc(r.rid)}" title="Bỏ xe này" aria-label="Bỏ xe này">${IC('x')}</button>` : '<span></span>'}</div>`).join('') +
+      [main, ...ex].map((r, i) => `<div class="gr"><span class="no">${i + 1}</span><span class="nm"><b>${esc(rowLabel(r))}</b><small>${esc([r.soxe, hm(r)].filter(Boolean).join(' · '))}</small>${recoveryQualityHTML(r)}</span><span class="kg">${kgs(r)}</span>${i ? `<button type="button" class="ghost" data-rmx="${esc(r.rid)}" title="Bỏ xe này" aria-label="Bỏ xe này">${IC('x')}</button>` : '<span></span>'}</div>`).join('') +
       `<div class="gt"><span>Tổng KL cà tươi</span><b>${fmtKg(tot)} kg</b></div></div>` : '';
     let pick = '';
     if (pickOpen){
@@ -3089,7 +3097,7 @@ var APP = (() => {
     if (r){
       const tot = rs.reduce((a, x) => a + (numv(x.thuc) || 0), 0);
       info.hidden = rs.length > 1;                        // nhiều xe: danh sách bên dưới đã có từng xe và tổng
-      info.innerHTML = `<span>KL cà tươi <b>${tot ? fmtKg(tot) + ' kg' : '–'}</b></span>`;
+      info.innerHTML = `<span>KL cà tươi <b>${tot ? fmtKg(tot) + ' kg' : '–'}</b></span>${recoveryQualityHTML(r)}`;
     } else info.hidden = true;
     if (!pickOpen || !r) renderMulti();
     if (recalc) thCalc(false);
@@ -3129,7 +3137,7 @@ var APP = (() => {
       return `<label class="man${on ? ' on' : ''}"><input type="checkbox" data-tc="${esc(m.id)}"${on ? ' checked' : ''}><span class="k">${esc(m.khach || 'Mẫu nhập tay')}</span><span class="w">${fmtKg(+m.klTuoi)} kg</span><span class="t">${f2(+m.thuhoi)} kg <button type="button" class="ghost rm" data-rmman="${esc(m.id)}" title="Bỏ mẫu nhập tay" aria-label="Bỏ mẫu nhập tay">${IC('x')}</button></span></label>`; }).join('');
     $('#tcList').innerHTML = manH + (list.length ? list.map(sp => { const on = tcSel.has(String(sp.id)), w = numv(sp.klTuoi);
       return `<label class="${on ? 'on' : ''}"><input type="checkbox" data-tc="${esc(sp.id)}"${on ? ' checked' : ''}><span class="k">${esc(sp.khach || '(không tên)')}</span><span class="w">${w != null ? fmtKg(w) + ' kg' : '–'}</span><span class="t">${f2(+sp.thuhoi)} kg</span>
-        <span class="s">${esc([sp.soxe, sp.mau, tcNight === '*' ? nightLabel(sNight(sp)) : ''].filter(Boolean).join(' · '))}</span></label>`; }).join('')
+        <span class="s">${esc([sp.soxe, sp.mau, tcNight === '*' ? nightLabel(sNight(sp)) : ''].filter(Boolean).join(' · '))}${sp.rid ? recoveryQualityHTML(rowOf(sp.rid)) : ''}</span></label>`; }).join('')
       : (tcMan.length ? '' : '<div class="lsempty">Chưa có mẫu thu hồi nào đã làm.</div>'));
     tcCalc();
   }
@@ -3249,6 +3257,7 @@ var APP = (() => {
   let svNight = '';
   function renderSaved(){
     const box = $('#thSaved'), selN = $('#thSavedNight');
+    $('#thSavedCount').textContent = DB.samples.length ? `${DB.samples.length} mẫu` : '';
     const nights = [...new Set(DB.samples.map(sNight))].filter(Boolean).sort((a, b) => nightKey(b) - nightKey(a));
     $('#thSavedCard').hidden = !DB.samples.length;
     if (!DB.samples.length){ box.innerHTML = ''; return; }
