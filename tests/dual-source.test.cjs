@@ -20,7 +20,7 @@ vm.runInContext(`
   const PF = ['xanh','noi','chin'];
 `, context);
 vm.runInContext(html.match(/^const reDate = .*$/m)[0], context);
-for (const fn of ['parseKg', 'parsePct', 'pcts', 'fixDate', 'mergeSourceNotes']) vm.runInContext(functionSource(fn), context);
+for (const fn of ['parseKg', 'parsePct', 'pcts', 'fixDate', 'normalizeReadNote', 'mergeSourceNotes']) vm.runInContext(functionSource(fn), context);
 for (const fn of ['cleanText', 'cleanNum', 'softRow', 'median', 'softLines', 'mergeSoftDateWords', 'parseSoftNoHeader']) vm.runInContext(functionSource(fn), context);
 for (const name of ['numOf', 'fmtKg', 'fmtPctIn']) vm.runInContext(html.match(new RegExp('^const ' + name + ' = .*$', 'm'))[0], context);
 {
@@ -45,6 +45,19 @@ if (process.env.DUAL_SOURCE_SAMPLE) {
 }
 const row = o => ({ soxe: '82C 05525', date: '25/10/2026', gio: '09:08:43', khach: 'A HINH KONTUM', tlh: '7,500', bi: '38', thuc: '7,462', flags: {}, ...o });
 const note = o => row({ soxe: '82C-055.25', gio: '09:08', thuc: '7,500', xanh: '', noi: '16', chin: '46', ghichu: '1 bao rỗ', ...o });
+{
+  for(const text of ['(1 BAO RỖ)','1 (BAO) RỖ','(1 BAO RỖ']){
+    const r=context.normalizeReadNote({ghichu:text,flags:{}});
+    assert.equal(r.ghichu,'1 BAO RỖ');assert.equal(r.flags.ghichu,undefined);
+  }
+  for(const text of ['(1 BAO RỖ 2 XANH N...)','1 BAO…','...']){
+    const parsed=context.softRow(k=>({tlh:'2,020',khach:'Demo',ghichu:'21N 30C '+text}[k]||''));
+    assert.equal(parsed.flags.ghichu,true);assert(!/[()]/.test(parsed.ghichu));
+    const base=[row({})];assert.equal(merge(base,[note({ghichu:parsed.ghichu,flags:parsed.flags})]).matched,1);
+    assert.equal(base[0].flags.ghichu,true);assert.equal(base[0].thuc,'7,462');
+    base[0].ghichu='Đã sửa đầy đủ';context.normalizeReadNote(base[0]);assert.equal(base[0].flags.ghichu,undefined);
+  }
+}
 {
   const words = (tokens,y) => { let x=0; return tokens.map(t=>{const w={t,x0:x,x1:x+t.length*8,y0:y,y1:y+20,h:20,cy:y+10,cx:x+t.length*4};x=w.x1+5;return w;}); };
   for(const dateTokens of [['25/','1','0/2026'],['25/1','0/2026'],['25/1 0/2026']]){
