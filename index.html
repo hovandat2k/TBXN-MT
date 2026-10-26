@@ -684,6 +684,7 @@ async function makeCanvas(mono = false, ctx = null){
 }
 function drawSheet(mono, logo){
   const F = c => mono ? '#fff' : c, T = c => mono ? '#000' : c;   // mono: bản in trắng đen
+  const striped = isLSX();
   const isTH = f => f === 'thuhoi', hits = [];
   const cols = sheetCols(), gs = sheetGroups(), A = agg(rows);
   const FS = 23, PADX = 14, LH = 26;
@@ -758,7 +759,8 @@ function drawSheet(mono, logo){
   const txt = (t, x, yy, align = 'center', w = 400, sz = FS, color = '#000') => { g.font = `${w} ${sz}px ${SERIF}`; g.fillStyle = color; g.textAlign = align; g.fillText(t, x, yy); };
   const cellX = (k, align) => align === 'right' ? xs[k + 1] - PADX : align === 'left' ? xs[k] + PADX : (xs[k] + xs[k + 1]) / 2;
   // header
-  nxFill(y, H_HEAD, F('#dcf2e3'));
+  if (striped){ g.fillStyle = F('#dcf2e3'); g.fillRect(X0,y,XE-X0,H_HEAD); }
+  else nxFill(y, H_HEAD, F('#dcf2e3'));
   cols.forEach(([f, t], k) => txt(t, cellX(k), y + H_HEAD / 2 + 1, 'center', isNX(f) || isTH(f) ? 700 : 400, FS, T(isNX(f) || isTH(f) ? '#1f5e37' : '#000')));
   line(X0, y, XE, y); xs.forEach(x => line(x, y, x, y + H_HEAD));
   y += H_HEAD; brk.push(y);
@@ -772,8 +774,11 @@ function drawSheet(mono, logo){
     gr.rows.forEach((r, i) => {
       const note = noteOf.get(r) || [], h = rowH(r), pfH = valH(r);
       line(X0, y, XE, y);
-      nxFill(y + 0.8, pfH - 1.6, F('#eef8f1'), h - 1.6);
-      hits.push({ y0: y, y1: y + h, yp: y + pfH, r });
+      if (striped){
+        g.fillStyle = F(i % 2 === 0 ? '#edf7f0' : '#fff');
+        g.fillRect(X0,y + 0.8,XE-X0,h - 1.6);
+      } else nxFill(y + 0.8, pfH - 1.6, F('#eef8f1'), h - 1.6);
+      hits.push({ y0: y, y1: y + h, yp: y + pfH, r, bg: striped ? F(i % 2 === 0 ? '#edf7f0' : '#fff') : undefined });
       cols.forEach(([f], k) => {
         const ls = cellText(r, f, i);
         const al = f === 'thuc' ? 'right' : 'center';
@@ -793,7 +798,8 @@ function drawSheet(mono, logo){
     // tổng ngày
     const a = agg(gr.rows);
     line(X0, y, XE, y);
-    nxFill(y + 0.8, H_TOT - 1.6, F('#dcf2e3'));
+    if (striped){ g.fillStyle = F('#dcf2e3'); g.fillRect(X0,y + 0.8,XE-X0,H_TOT - 1.6); }
+    else nxFill(y + 0.8, H_TOT - 1.6, F('#dcf2e3'));
     txt('Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
     txt(fmtKg(a.tl), cellX(iThuc, 'right'), y + H_TOT / 2 + 1, 'right', 700);
     cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(a[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#1f5e37')); });
@@ -805,7 +811,7 @@ function drawSheet(mono, logo){
   if (gs.length > 1){
     line(X0, y, XE, y);
     g.fillStyle = F('#d6f3df'); g.fillRect(X0, y, XE - X0, H_GRAND);
-    nxFill(y, H_GRAND, F('#bfe6cb'));
+    if (!striped) nxFill(y, H_GRAND, F('#bfe6cb'));
     txt('TỔNG CỘNG TẤT CẢ :', xs[iThuc] - 30, y + H_GRAND / 2 + 1, 'right', 800);
     txt(fmtKg(A.tl), cellX(iThuc, 'right'), y + H_GRAND / 2 + 1, 'right', 800, FS + 1);
     cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(A[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#1f5e37')); });
@@ -3717,7 +3723,7 @@ var APP = (() => {
       const { ri, f, withDate, x0, x1, y0, y1 } = cell, r = original[ri];
       const label = SUMMARY_COLS.find(([key]) => key === f)?.[1] || f;
       const value = withDate ? `${r.gio || ''}\n${r.date || ''}` : r[f] ?? '';
-      return `<textarea class="${isPF(f) || f === 'thuhoi' ? 'pf' : ''}" data-ri="${ri}" data-f="${f}"${withDate ? ' data-with-date="1" wrap="off"' : ''}${isPF(f) || f === 'thuhoi' ? ' placeholder="–"' : ''} aria-label="${label}, dòng ${ri + 1}" style="left:${pct(x0 + 0.8, h.W)};top:${pct(y0 + 0.8, h.H)};width:${pct(x1 - x0 - 1.6, h.W)};height:${pct(y1 - y0 - 1.6, h.H)}">${esc(value)}</textarea>`;
+      return `<textarea class="${isPF(f) || f === 'thuhoi' ? 'pf' : ''}" data-ri="${ri}" data-f="${f}"${withDate ? ' data-with-date="1" wrap="off"' : ''}${isPF(f) || f === 'thuhoi' ? ' placeholder="–"' : ''} aria-label="${label}, dòng ${ri + 1}" style="background:${LSX.hits[ri]?.bg || '#fff'};left:${pct(x0 + 0.8, h.W)};top:${pct(y0 + 0.8, h.H)};width:${pct(x1 - x0 - 1.6, h.W)};height:${pct(y1 - y0 - 1.6, h.H)}">${esc(value)}</textarea>`;
     }).join('');
     $('#lsGrid').querySelectorAll('textarea').forEach(fitSummaryCell); summaryEditStatus();
     $('#lsGrid').querySelector('textarea:not([readonly])')?.focus();
