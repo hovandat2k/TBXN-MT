@@ -1382,7 +1382,7 @@ async function pdfToImages(file){
   progress(0.02, 'Đang mở tệp PDF…');
   const lib = await withTimeout(loadPdfLib(), LIM.pdf, 'Tải bộ đọc PDF quá lâu — kiểm tra mạng');
   const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-  const n = Math.min(doc.numPages, 20), out = [];
+  const n = Math.min(doc.numPages, 20), out = []; let pdfDate = '';
   if (doc.numPages > 20) toast(`PDF có ${doc.numPages} trang — chỉ đọc 20 trang đầu`, 4000);
   for (let i = 1; i <= n; i++){
     check();
@@ -1395,14 +1395,53 @@ async function pdfToImages(file){
     const blob = await new Promise(r => c.toBlob(r, 'image/png'));
     // Trang tiếp theo có thể chỉ có khoảng ngày báo cáo, không lặp “Ngày cân”.
     try {
-      const text = (await page.getTextContent()).items.map(t => t.str || '').join(' ');
+      const items = (await page.getTextContent()).items;
+      const text = items.map(t => t.str || '').join(' ');
       blob.printedDates = [...text.matchAll(/Ngày\s+cân\s*:\s*(\d{1,2})\s*[\/.-]\s*(\d{1,2})\s*[\/.-]\s*(\d{4})/gi)].map(m => fixDate(m));
+      blob.pdfWeights = parsePdfWeightRows(items, pdfDate);
+      if (blob.printedDates.length) pdfDate = blob.printedDates[blob.printedDates.length - 1];
     } catch(e) { blob.printedDates = []; }
     out.push(blob);
     page.cleanup();
   }
   doc.destroy();
   return out;
+}
+// PDF có lớp chữ: lấy đúng chuỗi số gốc, không dùng OCR để đoán lại trọng lượng.
+function parsePdfWeightRows(items, initialDate = ''){
+  if (!/tl\s*bi/.test(norm(items.map(t => t.str || '').join(' ')))) return [];
+  const lines = [];
+  for (const item of items){
+    if (!item.str || !item.transform) continue;
+    const y = item.transform[5]; let line = lines.find(l => Math.abs(l.y - y) <= 1.5);
+    if (!line){ line = { y, items: [] }; lines.push(line); }
+    line.items.push(item);
+  }
+  const out = []; let date = initialDate;
+  for (const line of lines.sort((a,b) => b.y-a.y)){
+    const text = line.items.sort((a,b) => a.transform[4]-b.transform[4]).map(t => t.str.trim()).filter(Boolean).join(' ');
+    const dm = text.match(/Ngày\s+cân\s*:\s*(\d{1,2})\s*[\/.-]\s*(\d{1,2})\s*[\/.-]\s*(\d{4})/i);
+    if (dm){ date = fixDate(dm); continue; }
+    const plate = text.match(/^\s*(\d+)\s+(\d{2}[A-Z]\s*[-.]?\s*\d{3,6})\b/i);
+    const numbers = text.match(/(?:^|\s)(\d[\d.,]*)\s+(\d[\d.,]*)\s+(\d[\d.,]*)\s+(\d[\d.,]*)\s+(\d[\d.,]*)\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*$/);
+    if (!plate || !numbers || !date) continue;
+    const weights = Object.fromEntries(['tl1','tl2','tlh','bi','thuc'].map((f,i) => [f,parseKg(numbers[i+1])]));
+    if (!reconcile(weights).ok) continue; // PDF tự mâu thuẫn: để luồng đọc thường đánh dấu kiểm tra.
+    out.push({ date, stt:plate[1], soxe:plate[2], gio:numbers[6], ...weights });
+  }
+  return out;
+}
+function applyPdfWeights(rows, printed){
+  const plate = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const time = s => String(s || '').slice(0,5);
+  for (const row of rows){
+    const hits = printed.filter(p => p.date === row.date && time(p.gio) === time(row.gio) &&
+      (plate(p.soxe) === plate(row.soxe) || String(p.stt) === String(row.stt)));
+    if (hits.length !== 1) continue;
+    row.flags ||= {};
+    for (const f of ['tl1','tl2','tlh','bi','thuc']){ row[f] = fmtKg(hits[0][f]); delete row.flags[f]; }
+    row.flags.thucOk = true;
+  }
 }
 async function handlePdf(file){
   if (busy){ toast('Đang đọc tệp trước, vui lòng chờ…'); return; }
@@ -1688,6 +1727,7 @@ async function readSheet(blob, options = {}){
     }
   }
   if (!rowsOut.length && localErr) throw localErr;
+  if (!options.notesOnly && blob.pdfWeights?.length) applyPdfWeights(rowsOut, blob.pdfWeights);
   return { rows: rowsOut, via };
 }
 async function readLocal(blob, options = {}){
@@ -1951,7 +1991,7 @@ async function parseGrid(grid, words, ctx){
     }
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => { if (rc.vals[f] != null) r[f] = fmtKg(rc.vals[f]); });
     if (rc.ok) r.flags.thucOk = true;
-    else if (!(nums.thuc != null && map.tlh == null && map.bi == null)) r.flags.thuc = true;   // phiếu không có cột để đối chiếu: không tô vàng
+    else if (!(nums.thuc != null && map.tlh == null && map.bi == null)){ r.flags.thuc = true; if (nums.bi != null) r.flags.bi = true; }   // phiếu không có cột để đối chiếu: không tô vàng
     { const a = parseKg(r.tl1), b2 = parseKg(r.tl2), h = parseKg(r.tlh);
       if (a != null && b2 != null && h != null && Math.abs(b2 - a) !== h){ r.flags.tl1 = r.flags.tl2 = true; } }
     if (!r.khach) r.flags.khach = true;
@@ -2024,22 +2064,14 @@ function median(a){ if (!a.length) return 0; const s = [...a].sort((x, y) => x -
 // Đối chiếu: TL Thực = TL Hàng − TL Bì ; TL Hàng = TL Lần 2 − TL Lần 1
 function reconcile(n){
   const v = Object.assign({}, n);
-  const cand = [];
-  if (n.thuc != null) cand.push(n.thuc);
-  if (n.tlh != null && n.bi != null) cand.push(n.tlh - n.bi);
-  if (n.tl1 != null && n.tl2 != null && n.bi != null) cand.push(Math.abs(n.tl2 - n.tl1) - n.bi);
-  const votes = {}; cand.forEach(c => votes[c] = (votes[c] || 0) + 1);
-  const best = Object.keys(votes).sort((a, b) => votes[b] - votes[a])[0];
-  if (best != null && votes[best] >= 2 && +best > 0){
-    v.thuc = +best;
-    if (n.bi != null){
-      const h = v.thuc + n.bi;
-      if (n.tlh !== h) v.tlh = h;
-    }
-    return { ok: true, vals: v };
-  }
-  if (v.thuc == null && cand.length) v.thuc = cand[0];
-  return { ok: false, vals: v };
+  const gross = n.tl1 != null && n.tl2 != null ? Math.abs(n.tl1-n.tl2) : null;
+  // Chỉ điền số thiếu; không ghi đè số đã đọc khi các ô mâu thuẫn.
+  if (v.tlh == null && gross != null) v.tlh = gross;
+  if (v.bi == null && v.tlh != null && v.thuc != null && v.tlh >= v.thuc) v.bi = v.tlh-v.thuc;
+  if (v.thuc == null && v.tlh != null && v.bi != null) v.thuc = v.tlh-v.bi;
+  const ok = v.tlh > 0 && v.bi != null && v.bi >= 0 && v.thuc > 0 &&
+    Math.abs(v.tlh-v.bi-v.thuc) < 0.01 && (gross == null || Math.abs(gross-v.tlh) < 0.01);
+  return { ok, vals: v };
 }
 
 function cropCanvas(c, x0, y0, x1, y1, up = 1){
@@ -2317,7 +2349,7 @@ async function parseLoose(words, ctx){
     const dd = dates.filter(x => x.y < t.cy).pop();
     const r = { date: dd ? dd.d : '', stt: '', soxe: '', hang: '', khach: cleanText(khach), gio: t.t.replace(/[.;]/g, ':'), flags: { khach: true } };
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = rc.vals[f] != null ? fmtKg(rc.vals[f]) : '');
-    if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
+    if (rc.ok) r.flags.thucOk = true; else { r.flags.thuc = true; if (rc.vals.bi != null) r.flags.bi = true; }
     const next = times[k + 1];
     const hw = veryLate() ? null : await readHandwriting(ctx, t.x0 - medH * 2, t.y1 + 3, t.x1 + medH * 3, next ? next.y0 - 3 : t.y1 + medH * 3, t.y0);
     applyHW(r, hw);
@@ -2368,7 +2400,7 @@ function mergeGemini(local, gem){
     const n = { tl1: g.tl1, tl2: g.tl2, tlh: g.tlh, bi: g.bi, thuc: g.thuc }, rc = reconcile(n);
     const r = { date: g.date, stt: g.stt, soxe: g.soxe, hang: g.hang, khach: g.khach, gio: g.gio, flags: {} };
     ['tl1','tl2','tlh','bi','thuc'].forEach(f => r[f] = rc.vals[f] != null ? fmtKg(rc.vals[f]) : '');
-    if (rc.ok) r.flags.thucOk = true; else r.flags.thuc = true;
+    if (rc.ok) r.flags.thucOk = true; else { r.flags.thuc = true; if (rc.vals.bi != null) r.flags.bi = true; }
     PF.forEach(f => r[f] = g[f] != null && !isNaN(g[f]) ? fmtPctIn(g[f]) : '');
     r.ghichu = g.ghichu || '';
     if (PF.filter(f => r[f]).length < 2) PF.forEach(f => { if (!r[f]) r.flags[f] = true; });
