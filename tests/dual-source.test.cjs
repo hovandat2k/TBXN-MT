@@ -46,16 +46,21 @@ if (process.env.DUAL_SOURCE_SAMPLE) {
 const row = o => ({ soxe: '82C 05525', date: '25/10/2026', gio: '09:08:43', khach: 'A HINH KONTUM', tlh: '7,500', bi: '38', thuc: '7,462', flags: {}, ...o });
 const note = o => row({ soxe: '82C-055.25', gio: '09:08', thuc: '7,500', xanh: '', noi: '16', chin: '46', ghichu: '1 bao rỗ', ...o });
 {
-  for(const text of ['(1 BAO RỖ)','1 (BAO) RỖ','(1 BAO RỖ']){
+  for(const text of ['(1 BAO RỖ)','1 (BAO) RỖ','(1 BAO RỖ','{1 BAO RỖ}','1 BAO RỖ }','{1 BAO RỖ','1 {BAO) RỖ']){
     const r=context.normalizeReadNote({ghichu:text,flags:{}});
     assert.equal(r.ghichu,'1 BAO RỖ');assert.equal(r.flags.ghichu,undefined);
   }
-  for(const text of ['(1 BAO RỖ 2 XANH N...)','1 BAO…','...']){
+  for(const text of ['(1 BAO RỖ 2 XANH N...)','1 BAO…','...','{1 BAO...}','1 BAO… }']){
     const parsed=context.softRow(k=>({tlh:'2,020',khach:'Demo',ghichu:'21N 30C '+text}[k]||''));
-    assert.equal(parsed.flags.ghichu,true);assert(!/[()]/.test(parsed.ghichu));
+    assert.equal(parsed.flags.ghichu,true);assert(!/[(){}]/.test(parsed.ghichu));
     const base=[row({})];assert.equal(merge(base,[note({ghichu:parsed.ghichu,flags:parsed.flags})]).matched,1);
     assert.equal(base[0].flags.ghichu,true);assert.equal(base[0].thuc,'7,462');
     base[0].ghichu='Đã sửa đầy đủ';context.normalizeReadNote(base[0]);assert.equal(base[0].flags.ghichu,undefined);
+  }
+  for(const [text,expected] of [['11C 16N ( 3 XANH NON }','3 XANH NON'],['25N 18C ( 1 BAO CÀ RỖ }','1 BAO CÀ RỖ']]){
+    const parsed=context.softRow(k=>({tlh:'2,020',khach:'Demo',ghichu:text}[k]||''));
+    assert.equal(parsed.ghichu,expected);assert.equal(parsed.flags.ghichu,undefined);
+    assert.equal(context.pcts(parsed).have,2);
   }
 }
 {

@@ -1274,7 +1274,8 @@ const isPdf = f => !!f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name
 
 // Ghép bằng danh tính xe, không theo STT (STT khác nhau giữa hai báo cáo).
 function normalizeReadNote(row){
-  row.ghichu = String(row.ghichu ?? '').replace(/[()]/g,' ').replace(/\s+/g,' ').trim();
+  // OCR có thể nhận nhầm ngoặc tròn thành ngoặc nhọn, nhất là ở cuối ô.
+  row.ghichu = String(row.ghichu ?? '').replace(/[(){}]/g,' ').replace(/\s+/g,' ').trim();
   row.flags ||= {};
   if (/\.{3,}|…/.test(row.ghichu)) row.flags.ghichu = true;
   else delete row.flags.ghichu;
