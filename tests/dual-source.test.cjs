@@ -116,6 +116,25 @@ const note = o => row({ soxe: '82C-055.25', gio: '09:08', thuc: '7,500', xanh: '
   assert.equal(merge(base, [note({ gio: '', tlh: '8,000' })]).matched, 1);
   assert.equal(base[1].noi, '16'); assert.equal(base[0].noi, undefined);
 }
+
+// Extra weighing columns and a named vehicle must not drop or misidentify rows.
+{
+  const words=(tokens,y)=>{let x=0;return tokens.map(t=>{const w={t,x0:x,x1:x+t.length*8,y0:y,y1:y+20,h:20,cy:y+10,cx:x+t.length*4};x=w.x1+5;return w;});};
+  const make=(plate,name,weights,extra,note,y)=>words(['21',...plate,...name,'CÀ','ARABICA','QUẢ','TƯƠI',...weights,...extra,'26/10/2026','00.21:31','26/10/2026','00.22;00','NHẬP','HÀNG',...note],y);
+  const parsed=context.parseSoftNoHeader([
+    ...make(['49H','12345'],['DEMO'],['9,120','3,020','5,200'],['115','250','29','5471'],['14C','15N'],0),
+    ...make(['MÁY','CÀY'],['DEMO','TRACTOR'],['7,290','2,190','5,100'],['113','250','28','5,072'],['19C','20N'],35),
+    ...make(['49A','54321'],['DEMO'],['9,130','3,790','5,340'],['106','250','ng','5,313'],['11N','12X'],70)
+  ]);
+  assert.equal(parsed.length,3);assert.equal(parsed[0].gio,'22:00');assert.equal(parsed[0].tlh,'5,200');assert.equal(parsed[0].flags.thuc,true);
+  assert.equal(parsed[1].soxe,'MÁY CÀY');assert.equal(parsed[1].stt,'21');assert.equal(parsed[1].khach,'DEMO TRACTOR');
+  assert.equal(parsed[2].tlh,'5,340');assert.equal(parsed[2].hang,'CÀ ARABICA QUẢ TƯƠI');
+  const base=parsed.map(r=>({...r,gio:'22:00:11',bi:'29',thuc:'5,171'}));
+  assert.equal(merge(base,parsed).matched,3);assert.equal(context.pcts(base[0]).x,71);assert.equal(context.pcts(base[1]).x,61);
+  for(const r of base){assert.equal(r.bi,'29');assert.equal(r.thuc,'5,171');}
+  const repeated=[{...base[1]},{...base[1]}];assert.equal(merge(repeated,[parsed[1]]).matched,0);
+}
+
 // Thất bại ở nguồn thứ hai không được thay bảng đang làm.
 const elements = new Map();
 const element = selector => {

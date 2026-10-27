@@ -2294,7 +2294,7 @@ function softRow(txt){
     const tm = m2 && +m2[2] <= 23 ? [null, m2[2], m2[3]] : gt.match(/(\d{1,2})[:.;,](\d{2})(?:[:.;,](\d{2}))?/);
     // STT dính vào ô số xe: tách số đầu dòng ra
     let sx = cleanText(txt('stt') + ' ' + txt('soxe')).toUpperCase(), stt = '';
-    const ms = sx.match(/^(\d{1,3}|IL|I1|1L|LL)\s+(.*\S.*)$/); if (ms && /\d/.test(ms[2])){ stt = ms[1].replace(/[IL]/g, '1'); sx = ms[2]; }
+    const ms = sx.match(/^(\d{1,3}|IL|I1|1L|LL)\s+(.*\S.*)$/); if (ms && (/\d/.test(ms[2]) || /^may cay$/i.test(norm(ms[2]).replace(/\s+/g, ' ').trim()))){ stt = ms[1].replace(/[IL]/g, '1'); sx = ms[2]; }
     sx = sx.replace(/^([0-9OSI]{2})(?=[A-Z])/, m => m.replace(/O/g, '0').replace(/S/g, '5').replace(/I/g, '1'));
     const r = { date: dm ? fixDate(dm) : '', stt, soxe: sx, hang, khach: cleanText(txt('khach')),
       tl1: n1 != null ? fmtKg(n1) : '', tl2: n2 != null ? fmtKg(n2) : '', tlh: fmtKg(nh), bi: '', thuc: fmtKg(nh),
@@ -2340,7 +2340,7 @@ function mergeSoftDateWords(words){
 }
 function parseSoftNoHeader(words){
   const K = w => norm(w.t).replace(/[^a-z0-9]/g, '');
-  const isDate = w => reDate.test(w.t), isTime = w => /^\d{1,2}[.:;,]\d{2}/.test(w.t) && /:/.test(w.t);
+  const isDate = w => reDate.test(w.t), isTime = w => /^\d{1,2}[.:;,]\d{2}/.test(w.t) && /[:;]/.test(w.t);
   const isNum = w => /^\d{1,3}([.,]\d{3})+$|^\d{1,3}$/.test(cleanNum(w.t)) && /\d/.test(w.t) && !isDate(w) && !isTime(w);
   const rows = []; let hits = 0;
   softLines(words.map(w => Object.assign({}, w, { t: w.t.replace(/¢/g, 'C') }))).forEach(L => {
@@ -2357,16 +2357,31 @@ function parseSoftNoHeader(words){
     if (nums.length === 3){ put('tl1', [nums[0]]); put('tl2', [nums[1]]); put('tlh', [nums[2]]); }
     else if (nums.length === 2){ put('tl1', [nums[0]]); put('tl2', [nums[1]]); }
     else if (nums.length === 1) put('tl1', [nums[0]]);
-    const head = pre.slice(0, j);
+    let head = pre.slice(0, j);
     // hàng hóa: từ chữ "CÀ" đứng trước ARABICA / ROBUSTA / NHÂN / QUẢ / TƯƠI (tên khách cũng có thể bắt đầu bằng "CÀ")
     let hi = -1;
     for (let i = head.length - 2; i >= 0; i--) if (/^.?ca?$/.test(K(head[i])) && K(head[i]).length <= 3 && /^(arabica|robusta|nhan|qua|tuoi|che|cherry)/.test(K(head[i + 1]))){ hi = i; break; }
+    // Một số báo cáo có thêm số bao, định mức, TL bì, TL thực trước ngày.
+    // Lấy ba cột cân đầu tiên sau hàng hóa, không lấy ba số cuối dòng.
+    if (hi < 0){
+      for (let i = pre.length - 2; i >= 0; i--) if (/^.?ca?$/.test(K(pre[i])) && K(pre[i]).length <= 3 && /^(arabica|robusta|nhan|qua|tuoi|che|cherry)/.test(K(pre[i + 1]))){ hi = i; break; }
+    }
+    if (hi >= 0){
+      const numeric = w => isNum(w) || /^\d{4,}$/.test(cleanNum(w.t));
+      const first = pre.findIndex((w,i) => i > hi && numeric(w));
+      if (first >= 0 && pre.slice(first,first+3).length === 3 && pre.slice(first,first+3).every(numeric)){
+        ['tl1','tl2','tlh'].forEach((f,i) => put(f,[pre[first+i]]));
+        head = pre.slice(0,first);
+      }
+    }
     const front = hi >= 0 ? head.slice(0, hi) : head;
     if (hi >= 0) put('hang', head.slice(hi));
     // số xe: cụm có dạng 49C 12345 / 49C-37604 / 26E00592 (có thể có STT đứng trước)
     let pi = front.findIndex(w => /^[0-9OSI]{2}[A-Z][A-Z0-9]?([-.]?\d{3,5}(\.\d{2})?)?$/i.test(w.t.replace(/[,]/g, '')));
+    if (pi < 0) pi = front.findIndex((w,i) => K(w) === 'may' && front[i+1] && K(front[i+1]) === 'cay');
     let pe = pi;
-    if (pi >= 0 && !/\d{3}/.test(front[pi].t.slice(3)) && front[pi + 1] && /^[\d.]{3,7}$/.test(front[pi + 1].t)) pe = pi + 1;
+    if (pi >= 0 && K(front[pi]) === 'may') pe = pi + 1;
+    if (pi >= 0 && pe === pi && !/\d{3}/.test(front[pi].t.slice(3)) && front[pi + 1] && /^[\d.]{3,7}$/.test(front[pi + 1].t)) pe = pi + 1;
     if (pi >= 0){ put('stt', front.slice(0, pi)); put('soxe', front.slice(pi, pe + 1)); put('khach', front.slice(pe + 1)); }
     else put('khach', front);
     // ngày / giờ vào, ngày / giờ ra
