@@ -135,6 +135,23 @@ const note = o => row({ soxe: '82C-055.25', gio: '09:08', thuc: '7,500', xanh: '
   const repeated=[{...base[1]},{...base[1]}];assert.equal(merge(repeated,[parsed[1]]).matched,0);
 }
 
+// A one-row screenshot is a valid table; numeric-only fleet IDs stay separate from names.
+{
+ const words=tokens=>{let x=0;return tokens.map(t=>{const w={t,x0:x,x1:x+t.length*8,y0:0,y1:20,h:20,cy:10,cx:x+t.length*4};x=w.x1+5;return w;});};
+ const make=(id,note,extra=[])=>words([...id,'DEMO','CÀ','ARABICA','QUẢ','TƯƠI','18,060','4,610','13,450',...extra,'29/10/2026','00.05:53','29/10/2026','00.07:19','NHẬP','HÀNG',...note]);
+ for(const id of [['5555'],['1','5555']]){
+  const parsed=context.parseSoftNoHeader(make(id,['15N','17C']));assert.equal(parsed.length,1);
+  assert.equal(parsed[0].soxe,'5555');assert.equal(parsed[0].khach,'DEMO');assert.equal(parsed[0].gio,'07:19');
+  const base=[row({soxe:'5555',date:'29/10/2026',gio:'07:19:48',tlh:'13,450',bi:'67',thuc:'13,383'}),row({soxe:'5555',date:'29/10/2026',gio:'08:19:48'})];
+  assert.equal(merge(base,parsed).matched,1);assert.equal(context.pcts(base[0]).x,68);assert.equal(base[0].noi,'15');assert.equal(base[0].chin,'17');assert.equal(base[0].thuc,'13,383');assert.equal(base[1].noi,undefined);
+ }
+ const single=context.parseSoftNoHeader(make(['5','83C','12345'],['15N','20X'],['150','250','38','13,412']));
+ assert.equal(single.length,1);assert.equal(context.pcts(single[0]).c,65);
+ assert.equal(context.parseSoftNoHeader(words(['15N','20X','29/10/2026'])),null);
+ const exported=make(['5555'],['15N','17C']).map(w=>({...w,t:w.t==='NHẬP'?'XUẤT':w.t}));
+ assert.equal(context.parseSoftNoHeader(exported).length,0,'exports remain excluded');
+}
+
 // Thất bại ở nguồn thứ hai không được thay bảng đang làm.
 const elements = new Map();
 const element = selector => {
