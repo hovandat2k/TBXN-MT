@@ -161,5 +161,21 @@ context.readSourceFiles = async (_, notesOnly) => { if (notesOnly) throw new Err
   vm.runInContext(functionSource('readSourceFiles'), context);
   const pages = await context.readSourceFiles([{ name: 'report.pdf' }], false);
   assert.equal(pages[1].date, '25/10/2026');
+  // Native summary pages bypass both local OCR and Gemini, in both import modes.
+  vm.runInContext(functionSource('readSheet'), context);
+  const readSheet=context.readSheet;
+  for(const notesOnly of [false,true]){
+    const skipped=await readSheet({pdfSummaryOnly:true},{notesOnly});
+    assert.equal(skipped.skippedSummary,true);assert.equal(skipped.rows.length,0);
+  }
+  let calls=0;
+  context.pdfToImages=async()=>[{n:1},{n:2,pdfSummaryOnly:true}];
+  context.readSheet=async(page,options)=>{calls++;return page.pdfSummaryOnly?readSheet(page,options):{rows:[row({})]};};
+  assert.equal((await context.readSourceFiles([{name:'report.pdf'}],false)).length,1);assert.equal(calls,2);
+  context.pdfToImages=async()=>[{pdfSummaryOnly:true}];
+  await assert.rejects(()=>context.readSourceFiles([{name:'summary.pdf'}],false),/Không tìm thấy dòng xe/);
+  context.pdfToImages=async()=>[{n:1},{n:2}];
+  context.readSheet=async page=>({rows:page.n===1?[row({})]:[]});
+  await assert.rejects(()=>context.readSourceFiles([{name:'unreadable.pdf'}],false),/trang 2/);
   console.log('PASS: syntax, matching, weights preserved, missing/duplicate/conflicting rows, atomic import failure.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
