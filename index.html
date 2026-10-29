@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261029-recovery-result-large">
+<link rel="stylesheet" href="styles.css?v=20261029-recovery-choice-toolbar">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -3089,12 +3089,14 @@ var APP = (() => {
     $('#thChoose').setAttribute('aria-expanded',String(pickOpen));
     const box = $('#thChoices'); box.hidden = !pickOpen;
     const options = [...sel.options].filter(o=>o.value && !o.value.startsWith('__'));
-    box.innerHTML = options.map(o=>{
+    const scrollTop = box.querySelector('.th-choice-list')?.scrollTop || 0;
+    box.innerHTML = '<div class="th-choice-tools"><button type="button" class="ghost" id="thChoiceNone"'+(chosen.length?'':' disabled')+'>Bỏ chọn tất cả</button><button type="button" class="primary th-choice-done" id="thChoiceDone">Xong</button></div><div class="th-choice-list">' + options.map(o=>{
       const r = DB.rows.find(r=>String(r.rid) === o.value);
       return '<label class="th-choice'+(on.has(o.value)?' on':'')+'"><input type="checkbox" data-th-choice="'+esc(o.value)+'"'+(on.has(o.value)?' checked':'')+'><span><b>'+esc(o.textContent)+'</b><small>'+esc(r?.date || '')+'</small></span></label>';
-    }).join('') + [...sel.options].filter(o=>o.value.startsWith('__')).map(o=>'<button type="button" class="ghost th-choice-action" data-th-mode="'+esc(o.value)+'">'+esc(o.textContent)+'</button>').join('') + '<button type="button" class="primary th-choice-done" id="thChoiceDone">Xong</button>';
+    }).join('') + [...sel.options].filter(o=>o.value.startsWith('__')).map(o=>'<button type="button" class="ghost th-choice-action" data-th-mode="'+esc(o.value)+'">'+esc(o.textContent)+'</button>').join('') + '</div>';
+    box.querySelector('.th-choice-list').scrollTop = scrollTop;
   }
-  $('#thChoose').addEventListener('click',()=>{pickOpen=!pickOpen;renderRecoveryChoices();});
+  $('#thChoose').addEventListener('click',()=>{pickOpen=!pickOpen;renderRecoveryChoices();if(pickOpen) $('#thChoices').querySelector('.th-choice-tools').scrollIntoView({block:'nearest'});});
   $('#thChoices').addEventListener('change',e=>{
     const c=e.target.closest('[data-th-choice]'); if(!c) return;
     const id=c.dataset.thChoice, ids=selRows().map(r=>String(r.rid));
@@ -3112,6 +3114,12 @@ var APP = (() => {
     [...$('#thChoices').querySelectorAll('[data-th-choice]')].find(x=>x.dataset.thChoice===id)?.focus({preventScroll:true});
   });
   $('#thChoices').addEventListener('click',e=>{
+    e.stopPropagation();
+    if(e.target.closest('#thChoiceNone')){
+      if(editSample){stopEdit();renderTH();}
+      $('#thSel').value=''; extraRids=[]; $('#thName').value=''; pickOpen=true;
+      selChanged(); $('#thChoiceDone').focus(); return;
+    }
     const mode=e.target.closest('[data-th-mode]');
     if(mode){$('#thSel').value=mode.dataset.thMode;$('#thSel').dispatchEvent(new Event('change'));}
     if(mode || e.target.closest('#thChoiceDone')){pickOpen=false;renderRecoveryChoices(); if(!mode) $('#thChoose').focus();}
