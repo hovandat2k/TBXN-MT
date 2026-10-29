@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 const ctx={};vm.createContext(ctx);
 vm.runInContext("const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[đĐ]/g,'d').toLowerCase();",ctx);
-for(const name of ['parseKg','fixDate','reconcile','parsePdfWeightRows','applyPdfWeights']){
+for(const name of ['isPdfSummaryPage','parseKg','fixDate','reconcile','parsePdfWeightRows','applyPdfWeights']){
   const start=html.indexOf('function '+name+'(');
   vm.runInContext(html.slice(start,html.indexOf('\n}',start)+2),ctx);
 }
@@ -31,6 +31,17 @@ assert.equal(row.flags.bi,undefined);assert.equal(row.ghichu,'Keep');assert.equa
 const ambiguous={...row,bi:'3'};ctx.applyPdfWeights([ambiguous],[...printed,printed[0]]);assert.equal(ambiguous.bi,'3');
 const mismatch={...row,date:'24/10/2026',bi:'3'};ctx.applyPdfWeights([mismatch],printed);assert.equal(mismatch.bi,'3');
 assert.equal(ctx.parsePdfWeightRows([item('scanned PDF',700)]).length,0);
+
+// Only a positively identified summary-only native PDF page may bypass OCR.
+{
+ const head=item('STT Số xe Hàng hóa Khách hàng TL Lần 1 TL Lần 2 TL Hàng TL Bì TL Thực Giờ cân',700);
+ const totals=[head,item('Tổng cộng : 1,000',670),item('Trọng lượng tổng cộng : 1,005 Ngày báo cáo :29/10/2026',640),item('Trọng lượng bì tổng cộng : 5 Người lập báo cáo',620),item('Trọng lượng thực tế tổng cộng : 1,000',600),item('Trang : 2/2',10)];
+ assert.equal(ctx.isPdfSummaryPage(totals),true);
+ for(const line of ['1 49C 12345 DEMO 1,100 95 1,005 5 1,000 10:00:00','2 MÁY CÀY DEMO 1,100 95 1,005 5 1,000 10:00:00','3 5555 DEMO 1,100 95 1,005 5 1,000 10:00:00','Nội dung không xác định']) assert.equal(ctx.isPdfSummaryPage([...totals,item(line,680)]),false);
+ assert.equal(ctx.isPdfSummaryPage([]),false);assert.equal(ctx.isPdfSummaryPage(totals.slice(1)),false);
+ assert.equal(ctx.isPdfSummaryPage([head]),false);
+}
+
 console.log('PASS: conflicting OCR, missing values, PDF weights, dates, exact matching, ambiguity and unrelated fields.');
 // Optional local verification against an actual PDF, using the app's PDF.js version.
 if(process.argv[2]) (async()=>{
