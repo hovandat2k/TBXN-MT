@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261029-recovery-choices">
+<link rel="stylesheet" href="styles.css?v=20261029-recovery-result-large">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -3360,7 +3360,7 @@ var APP = (() => {
 
   // Vẽ phiếu thu hồi lên canvas (xem trên trang: màu; sao chép/chia sẻ/lưu: đen trắng như bản gốc)
   function drawTH(t, mono){
-    const { res, row, name } = t, S = 2, Wd = 560, P = 20;
+    const { res, row, name } = t, S = 2, Wd = 560, P = 14;
     const C = mono ? { name: '#000', ink: '#000', soft: '#000', line: '#000', tagBg: '#fff', tagFg: '#000', boxBg: '#fff', boxFg: '#000', b: '#000', kl: '#fff' }
                    : { name: '#1f6b3d', ink: '#24402d', soft: '#5b7d64', line: '#8fd6a5', tagBg: '#e3f6e9', tagFg: '#1f6b3d', boxBg: '#d6f3df', boxFg: '#1f6b3d', b: '#2e8b53', kl: '#eef8f1' };
     const SANS = '"Times New Roman", Times, serif';
@@ -3377,38 +3377,38 @@ var APP = (() => {
       return lines;
     };
     const tag = `Ẩm ${degree(res.am)}`;
-    m.font = `700 12px ${SANS}`; const tagW = m.measureText(tag).width + 22;
+    m.font = `700 18px ${SANS}`; const tagW = m.measureText(tag).width + 22;
     const g0 = t.rows && t.rows.length > 1 ? t.rows : null;
-    let nameFs = 22, title = g0 && g0.length > 2 ? `MẪU CHUNG ${g0.length} XE` : (name || 'Mẫu cà phê');
+    let nameFs = 28, title = g0 && g0.length > 2 ? `MẪU CHUNG ${g0.length} XE` : (name || 'Mẫu cà phê');
     m.font = `800 ${nameFs}px ${SANS}`;
     while (m.measureText(title).width > Wd - P * 2 - tagW * 2 - 10 && nameFs > 14){ nameFs--; m.font = `800 ${nameFs}px ${SANS}`; }
     const grp = t.rows && t.rows.length > 1 ? t.rows : null;
     let sub = grp ? (row && row.date ? nightLabel(nightOf(row.date, row.gio)) : '') : row ? [row.soxe, row.date].filter(Boolean).join(' · ') : '';
-    m.font = `600 13px ${SANS}`; while (sub.length > 8 && m.measureText(sub).width > Wd - P * 2) sub = sub.slice(0, -2).replace(/[ ,·]+$/, '') + '…';
+    m.font = `600 16px ${SANS}`; while (sub.length > 8 && m.measureText(sub).width > Wd - P * 2) sub = sub.slice(0, -2).replace(/[ ,·]+$/, '') + '…';
     const klSum = grp ? grp.reduce((a, x) => a + (numv(x.thuc) || 0), 0) : null;
     const klT = grp ? (klSum ? fmtKg(klSum) + ' kg' : '') : row && numv(row.thuc) != null ? fmtKg(numv(row.thuc)) + ' kg' : '';
-    const leftW = 128, FS = 16, LH = 22;
+    const leftW = 136, FS = 20, LH = 28;
     const left = [['', f2(res.kl), ''], ['+', f2(res.klq / 2), 'sum'], ['', f2(res.tong), ''], ['', '', '']];
     const rich = res.lines.map(l => wrapRich(l, Wd - P * 2 - leftW - 14, FS));
-    const rowH = rich.map(ls => Math.max(46, ls.length * LH + 24));
+    const rowH = rich.map(ls => Math.max(58, ls.length * LH + 24));
     // Xanh – Nổi – Chín của xe (lấy từ phiếu cà tươi)
     const pc = grp ? (A => ({ x: A.x, n: A.n, c: A.c, have: A.x != null && A.n != null && A.c != null ? 3 : 0 }))(agg(grp.map(x => ({ thuc: String(x.thuc ?? ''), xanh: String(x.xanh ?? ''), noi: String(x.noi ?? ''), chin: String(x.chin ?? '') }))))
       : row ? pcts(row) : null, hasPc = pc && pc.have >= 2;
     const pcItems = hasPc ? [['Xanh', pc.x], ['Nổi', pc.n], ['Chín', pc.c]] : [];
-    const GL = 30, glH = grp ? grp.length * GL + 8 : 0;      // nhiều xe: mỗi xe một dòng trong khung
-    const boxH = glH + (klT ? 34 : 0) + (hasPc ? (klT ? 32 : 34) : 0);
-    const headH = 38 + (sub ? 20 : 0), klH = boxH ? boxH + 10 : 0;
-    const H = P + headH + 12 + klH + rowH.reduce((a, b) => a + b, 0) + 14 + 60 + P;
+    const GL = 40, glH = grp ? grp.length * GL + 8 : 0;      // nhiều xe: mỗi xe một dòng trong khung
+    const boxH = glH + (klT ? 42 : 0) + (hasPc ? 40 : 0);
+    const headH = 46 + (sub ? 24 : 0), klH = boxH ? boxH + 10 : 0;
+    const H = P + headH + 12 + klH + rowH.reduce((a, b) => a + b, 0) + 14 + 76 + P;
     const cv = mkCanvas(Wd * S, H * S), g = cv.getContext('2d'); g.scale(S, S);
     g.fillStyle = '#fff'; g.fillRect(0, 0, Wd, H); g.textBaseline = 'middle';
     const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
     let y = P;
     // tiêu đề: tên mẫu giữa, độ ẩm bên phải
-    g.textAlign = 'center'; g.fillStyle = C.name; g.font = `800 ${nameFs}px ${SANS}`; g.fillText(title, Wd / 2, y + 16);
-    g.font = `700 12px ${SANS}`; g.fillStyle = C.tagBg; rr(Wd - P - tagW, y + 4, tagW, 24, 12); g.fill();
+    g.textAlign = 'center'; g.fillStyle = C.name; g.font = `800 ${nameFs}px ${SANS}`; g.fillText(title, Wd / 2, y + 19);
+    g.font = `700 12px ${SANS}`; g.fillStyle = C.tagBg; rr(Wd - P - tagW, y + 4, tagW, 30, 15); g.fill();
     if (mono){ g.lineWidth = 1.5; g.strokeStyle = '#000'; g.stroke(); }
-    g.fillStyle = C.tagFg; g.fillText(tag, Wd - P - tagW / 2, y + 16.5);
-    if (sub){ g.font = `600 13px ${SANS}`; g.fillStyle = C.soft; g.fillText(sub, Wd / 2, y + 42); }
+    g.fillStyle = C.tagFg; g.fillText(tag, Wd - P - tagW / 2, y + 19.5);
+    if (sub){ g.font = `600 16px ${SANS}`; g.fillStyle = C.soft; g.fillText(sub, Wd / 2, y + 50); }
     y += headH;
     g.fillStyle = C.line; g.fillRect(P, y, Wd - P * 2, 2); y += 12;
     // khối lượng cà tươi của xe
@@ -3419,31 +3419,31 @@ var APP = (() => {
         yy += 6;
         grp.forEach((x, i) => {
           const cy = yy + GL / 2;
-          g.textAlign = 'left'; g.font = `700 13px ${SANS}`; g.fillStyle = C.soft; g.fillText(`${i + 1}.`, P + 14, cy);
-          g.font = `800 15px ${SANS}`; g.fillStyle = C.ink;
+          g.textAlign = 'left'; g.font = `700 16px ${SANS}`; g.fillStyle = C.soft; g.fillText(`${i + 1}.`, P + 14, cy);
+          g.font = `800 18px ${SANS}`; g.fillStyle = C.ink;
           let nm = x.khach || '(không tên)'; while (nm.length > 3 && g.measureText(nm).width > Wd - P * 2 - 250) nm = nm.slice(0, -2) + '…';
           g.fillText(nm, P + 36, cy); const nw = g.measureText(nm).width;
-          g.font = `600 12px ${SANS}`; g.fillStyle = C.soft; g.fillText(x.soxe || '', P + 36 + nw + 10, cy + 1);
+          g.font = `600 17px ${SANS}`; g.fillStyle = C.soft; g.fillText(x.soxe || '', P + 36 + nw + 10, cy + 1);
           g.textAlign = 'right'; g.font = `700 15px ${SANS}`; g.fillStyle = C.ink; g.fillText(numv(x.thuc) != null ? fmtKg(numv(x.thuc)) + ' kg' : '–', Wd - P - 14, cy);
           yy += GL;
         });
         yy += 2; g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + 12, yy - 1, Wd - P * 2 - 24, 1);
       }
       if (klT){
-        g.textAlign = 'left'; g.font = `600 15px ${SANS}`; g.fillStyle = C.soft; g.fillText(grp ? 'Tổng KL cà tươi' : 'KL cà tươi', P + 14, yy + 17.5);
-        g.textAlign = 'right'; g.font = `800 18px ${SANS}`; g.fillStyle = C.ink; g.fillText(klT, Wd - P - 14, yy + 17.5);
-        yy += 34;
+        g.textAlign = 'left'; g.font = `600 18px ${SANS}`; g.fillStyle = C.soft; g.fillText(grp ? 'Tổng KL cà tươi' : 'KL cà tươi', P + 14, yy + 21);
+        g.textAlign = 'right'; g.font = `800 22px ${SANS}`; g.fillStyle = C.ink; g.fillText(klT, Wd - P - 14, yy + 21);
+        yy += 42;
         if (hasPc){ g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + 12, yy - 1, Wd - P * 2 - 24, 1); }
       }
       if (hasPc){
-        const cw = (Wd - P * 2) / 3, cy = yy + (klT ? 15 : 17);
+        const cw = (Wd - P * 2) / 3, cy = yy + 20;
         pcItems.forEach(([l, v], i) => {
           const cx = P + cw * i + cw / 2, val = `${fmtPct(v)} %`;
-          g.font = `600 14px ${SANS}`; const lw = g.measureText(l + '  ').width;
-          g.font = `800 16px ${SANS}`; const vw = g.measureText(val).width, x0 = cx - (lw + vw) / 2;
-          g.textAlign = 'left'; g.font = `600 14px ${SANS}`; g.fillStyle = C.soft; g.fillText(l, x0, cy);
-          g.font = `800 16px ${SANS}`; g.fillStyle = C.ink; g.fillText(val, x0 + lw, cy);
-          if (i){ g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + cw * i, yy + 6, 1, (klT ? 32 : 34) - 12); }
+          g.font = `600 17px ${SANS}`; const lw = g.measureText(l + '  ').width;
+          g.font = `800 20px ${SANS}`; const vw = g.measureText(val).width, x0 = cx - (lw + vw) / 2;
+          g.textAlign = 'left'; g.font = `600 17px ${SANS}`; g.fillStyle = C.soft; g.fillText(l, x0, cy);
+          g.font = `800 20px ${SANS}`; g.fillStyle = C.ink; g.fillText(val, x0 + lw, cy);
+          if (i){ g.fillStyle = mono ? '#000' : C.line; g.fillRect(P + cw * i, yy + 6, 1, 40 - 12); }
         });
       }
       y += klH;
@@ -3452,7 +3452,7 @@ var APP = (() => {
     const gy0 = y;
     left.forEach((L, i) => {
       const h = rowH[i], cy = y + h / 2;
-      g.textAlign = 'left'; g.font = `800 20px ${SANS}`; g.fillStyle = C.ink; g.fillText(L[0], P + 2, cy);
+      g.textAlign = 'left'; g.font = `800 24px ${SANS}`; g.fillStyle = C.ink; g.fillText(L[0], P + 2, cy);
       g.textAlign = 'right'; g.fillText(L[1], P + leftW - 12, cy);
       if (L[2] === 'sum'){ g.fillStyle = C.ink; g.fillRect(P, y + h - 1, leftW, 2); }
       const ls = rich[i];
@@ -3466,9 +3466,9 @@ var APP = (() => {
     g.fillStyle = C.line; g.fillRect(P + leftW, gy0, 1.5, y - gy0);
     y += 14;
     // kết quả
-    g.fillStyle = C.boxBg; rr(P, y, Wd - P * 2, 60, 14); g.fill(); if (mono){ g.lineWidth = 2; g.strokeStyle = '#000'; g.stroke(); }
-    g.textAlign = 'left'; g.font = `600 15px ${SANS}`; g.fillStyle = C.boxFg; g.fillText('Thu hồi', P + 16, y + 30);
-    g.textAlign = 'right'; g.font = `800 30px ${SANS}`; g.fillText(`${f2(res.E)} Kg`, Wd - P - 16, y + 31);
+    g.fillStyle = C.boxBg; rr(P, y, Wd - P * 2, 76, 14); g.fill(); if (mono){ g.lineWidth = 2; g.strokeStyle = '#000'; g.stroke(); }
+    g.textAlign = 'left'; g.font = `600 18px ${SANS}`; g.fillStyle = C.boxFg; g.fillText('Thu hồi', P + 16, y + 38);
+    g.textAlign = 'right'; g.font = `800 36px ${SANS}`; g.fillText(`${f2(res.E)} Kg`, Wd - P - 16, y + 39);
     return cv;
   }
   async function drawTHPreview(){
