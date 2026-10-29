@@ -731,14 +731,19 @@ dialog,.lgbox{border-radius:12px}
 .th-chooser{position:relative;margin-bottom:8px}
 .th-choose{width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;white-space:normal}
 .th-choose::after{content:'▾';color:var(--muted)}
-.th-choices{margin-top:8px;border:1px solid var(--line);border-radius:14px;padding:6px;background:#fff;max-height:390px;overflow:auto;overscroll-behavior:contain;box-shadow:0 8px 24px #18345112}
+.th-choices{margin-top:8px;border:1px solid var(--line);border-radius:14px;padding:6px;background:#fff;overflow:hidden;box-shadow:0 8px 24px #18345112}
 .th-choices[hidden]{display:none}
 .th-choice{display:flex;align-items:center;gap:12px;padding:12px;border-radius:9px;cursor:pointer;border-bottom:1px solid var(--line)}
 .th-choice.on{background:var(--soft)}
 .th-choice input{width:21px;height:21px;flex:0 0 21px;accent-color:var(--brand)}
 .th-choice span{min-width:0}.th-choice b{font-size:17px;line-height:1.4}.th-choice small{display:block;color:var(--muted);font-size:14px;margin-top:2px}
-.th-choice-action{width:100%;text-align:left;margin-top:6px}.th-choice-done{width:100%;position:sticky;bottom:0;margin-top:8px}
+.th-choice-action{width:100%;text-align:left;margin-top:6px}.th-choice-done{flex:1;min-width:0}
 
 /* Larger recovery result with more space for the actual receipt on phones. */
 #thOut .thprev,#thOut .actions{max-width:760px;width:100%}
 @media(max-width:640px){#thOut{padding:10px}#thOut .thprev{border-radius:12px}}
+
+/* Keep selection actions outside the scrolling vehicle list. */
+.th-choice-tools{display:flex;gap:8px;padding:4px 4px 10px;background:#fff;border-bottom:1px solid var(--line)}
+.th-choice-tools>.ghost{flex:1;min-width:0;white-space:normal}
+.th-choice-list{max-height:390px;max-height:min(390px,45dvh);overflow-y:auto;overscroll-behavior:contain;padding-top:4px}
