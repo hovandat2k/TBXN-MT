@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261026-recovery-quality">
+<link rel="stylesheet" href="styles.css?v=20261029-recovery-choices">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -141,8 +141,12 @@
     <section class="card" id="thForm">
       <div class="seg seg2" id="mauSeg"><button type="button" data-mau="2000" class="on">Mẫu riêng</button><button type="button" data-mau="10000">Mẫu chung</button></div>
       <div id="thRieng">
-      <label class="flbl" for="thSel">Tên mẫu <span class="thleft" id="thLeft"></span></label>
-      <select class="fld sel" id="thSel"></select>
+      <label class="flbl" for="thChoose">Chọn khách hàng / xe <span class="thleft" id="thLeft"></span></label>
+      <select id="thSel" hidden aria-hidden="true" tabindex="-1"></select>
+      <div class="th-chooser" id="thChooser">
+        <button type="button" class="fld th-choose" id="thChoose" aria-expanded="false" aria-controls="thChoices">— Chọn khách hàng / xe —</button>
+        <div class="th-choices" id="thChoices" hidden></div>
+      </div>
       <div class="thedit" id="thEdit" hidden></div>
       <input class="fld" id="thName" type="text" placeholder="Nhập tên mẫu" autocomplete="off" hidden>
       <div class="thinfo" id="thInfo" hidden></div>
@@ -3065,53 +3069,66 @@ var APP = (() => {
   function renderMulti(){
     const box = $('#thMulti'), main = selRow();
     box.hidden = !main || !main.rid || !canTH();
-    if (box.hidden){ pickOpen = false; box.innerHTML = ''; return; }
+    if (box.hidden){ box.innerHTML = ''; return; }
     const ex = extraRids.map(id => DB.rows.find(r => String(r.rid) === String(id))).filter(Boolean);
-    const hm = r => String(r.gio || '').replace(/^(\d{1,2}:\d{2}).*$/, '$1');
     const kgs = r => numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : '–';
     const tot = [main, ...ex].reduce((a, r) => a + (numv(r.thuc) || 0), 0);
     const chips = ex.length ? `<div class="thgrp"><div class="gh">Mẫu chung ${ex.length + 1} xe</div>` +
-      [main, ...ex].map((r, i) => `<div class="gr"><span class="no">${i + 1}</span><span class="nm"><b>${esc(rowLabel(r))}</b><small>${esc([r.soxe, hm(r)].filter(Boolean).join(' · '))}</small>${recoveryQualityHTML(r)}</span><span class="kg">${kgs(r)}</span>${i ? `<button type="button" class="ghost" data-rmx="${esc(r.rid)}" title="Bỏ xe này" aria-label="Bỏ xe này">${IC('x')}</button>` : '<span></span>'}</div>`).join('') +
+      [main, ...ex].map((r, i) => `<div class="gr"><span class="no">${i + 1}</span><span class="nm"><b>${esc(rowLabel(r))}</b><small>${esc(r.soxe || '')}</small>${recoveryQualityHTML(r)}</span><span class="kg">${kgs(r)}</span>${i ? `<button type="button" class="ghost" data-rmx="${esc(r.rid)}" title="Bỏ xe này" aria-label="Bỏ xe này">${IC('x')}</button>` : '<span></span>'}</div>`).join('') +
       `<div class="gt"><span>Tổng KL cà tươi</span><b>${fmtKg(tot)} kg</b></div></div>` : '';
-    let pick = '';
-    if (pickOpen){
-      const on = new Set(extraRids.map(String));
-      const cand = [...extraRids.map(id => DB.rows.find(r => String(r.rid) === String(id))).filter(Boolean),
-        ...pending().filter(r => String(r.rid) !== String(main.rid) && !on.has(String(r.rid)))];
-      const n0 = nightOf(main.date, main.gio), by = {};
-      cand.forEach(r => { const k = nightOf(r.date, r.gio); (by[k] = by[k] || []).push(r); });
-      const nights = Object.keys(by).sort((a, b) => (b === n0) - (a === n0) || nightKey(b) - nightKey(a));
-      pick = `<div class="thpick">${nights.length ? nights.map(n => `<div class="pg">${esc(nightLabel(n))}</div>` + by[n].map(r => `<label><input type="checkbox" data-addx="${esc(r.rid)}"${on.has(String(r.rid)) ? ' checked' : ''}> ${esc(rowLabel(r))} <small>${esc([r.soxe, numv(r.thuc) != null ? fmtKg(numv(r.thuc)) + ' kg' : ''].filter(Boolean).join(' · '))}</small></label>`).join('')).join('') : '<div class="lsempty" style="padding:10px">Không còn xe nào chưa làm thu hồi.</div>'}</div>`;
-    }
-    box.innerHTML = chips + `<button type="button" class="ghost addx" id="thAddX">${pickOpen ? 'Xong' : '＋ Thêm xe chung mẫu'}</button>` + pick;
+    box.innerHTML = chips;
+    box.hidden = !chips;
   }
   $('#thMulti').addEventListener('click', e => {
     const rm = e.target.closest('[data-rmx]');
-    if (rm){ extraRids = extraRids.filter(x => String(x) !== rm.dataset.rmx); renderMulti(); selChanged(); return; }
-    if (e.target.closest('#thAddX')){ pickOpen = !pickOpen; renderMulti(); return; }
+    if (rm){ extraRids = extraRids.filter(x => String(x) !== rm.dataset.rmx); selChanged(); }
   });
-  $('#thMulti').addEventListener('change', e => {
-    const c = e.target.closest('[data-addx]'); if (!c) return;
-    if (c.checked && !extraRids.includes(c.dataset.addx)) extraRids.push(c.dataset.addx);
-    else if (!c.checked) extraRids = extraRids.filter(x => x !== c.dataset.addx);
+  function renderRecoveryChoices(){
+    const sel = $('#thSel'), chosen = selRows(), on = new Set(chosen.map(r=>String(r.rid)));
+    $('#thChoose').textContent = chosen.length > 1 ? chosen.length + ' xe đã chọn' : chosen.length ? [rowLabel(chosen[0]),chosen[0].soxe].filter(Boolean).join(' · ') : sel.value === '__free' ? 'Nhập tên khác…' : sel.value === '__edit' ? 'Sửa mẫu đã lưu' : sel.options[0]?.textContent || '— Chọn khách hàng / xe —';
+    $('#thChoose').setAttribute('aria-expanded',String(pickOpen));
+    const box = $('#thChoices'); box.hidden = !pickOpen;
+    const options = [...sel.options].filter(o=>o.value && !o.value.startsWith('__'));
+    box.innerHTML = options.map(o=>{
+      const r = DB.rows.find(r=>String(r.rid) === o.value);
+      return '<label class="th-choice'+(on.has(o.value)?' on':'')+'"><input type="checkbox" data-th-choice="'+esc(o.value)+'"'+(on.has(o.value)?' checked':'')+'><span><b>'+esc(o.textContent)+'</b><small>'+esc(r?.date || '')+'</small></span></label>';
+    }).join('') + [...sel.options].filter(o=>o.value.startsWith('__')).map(o=>'<button type="button" class="ghost th-choice-action" data-th-mode="'+esc(o.value)+'">'+esc(o.textContent)+'</button>').join('') + '<button type="button" class="primary th-choice-done" id="thChoiceDone">Xong</button>';
+  }
+  $('#thChoose').addEventListener('click',()=>{pickOpen=!pickOpen;renderRecoveryChoices();});
+  $('#thChoices').addEventListener('change',e=>{
+    const c=e.target.closest('[data-th-choice]'); if(!c) return;
+    const id=c.dataset.thChoice, ids=selRows().map(r=>String(r.rid));
+    const next=c.checked?[...new Set([...ids,id])]:ids.filter(x=>x!==id);
+    const available=new Set([...$('#thSel').options].map(o=>o.value));
+    const valid=next.filter(x=>available.has(x));
+    if(editSample && valid.length){
+      editSample={...editSample,rid:valid[0]}; $('#thSel').value='__edit';
+    } else {
+      if(editSample){stopEdit();renderTH();pickOpen=true;}
+      $('#thSel').value=valid[0] || '';
+    }
+    extraRids=valid.slice(1);
     selChanged();
+    [...$('#thChoices').querySelectorAll('[data-th-choice]')].find(x=>x.dataset.thChoice===id)?.focus({preventScroll:true});
+  });
+  $('#thChoices').addEventListener('click',e=>{
+    const mode=e.target.closest('[data-th-mode]');
+    if(mode){$('#thSel').value=mode.dataset.thMode;$('#thSel').dispatchEvent(new Event('change'));}
+    if(mode || e.target.closest('#thChoiceDone')){pickOpen=false;renderRecoveryChoices(); if(!mode) $('#thChoose').focus();}
+  });
+  document.addEventListener('click',e=>{if(pickOpen && !$('#thChooser').contains(e.target)){pickOpen=false;renderRecoveryChoices();}});
+  $('#thChooser').addEventListener('keydown',e=>{
+    if(e.key==='Escape'){pickOpen=false;renderRecoveryChoices();$('#thChoose').focus();}
+    if(e.key==='ArrowDown' && e.target.id==='thChoose'){e.preventDefault();pickOpen=true;renderRecoveryChoices();$('#thChoices').querySelector('input,button')?.focus();}
   });
   function renderTH(){
     renderSaved(); renderChung();
     const sel = $('#thSel'), cur = sel.value;
     const pend = pending();
-    const byDate = {};
-    pend.forEach(r => { const k = nightOf(r.date, r.gio); (byDate[k] = byDate[k] || []).push(r); });
-    const dates = Object.keys(byDate).sort((a, b) => nightKey(b) - nightKey(a));
-    const tkey = r => dateKey(r.date) * 1e6 + (+(String(r.gio || '').replace(/\D/g, '').padEnd(6, '0').slice(0, 6)) || 0);
-    let h = `<option value="">${pend.length ? '— Chọn khách hàng / xe —' : (DB.rows.length ? '✅ Đã làm thu hồi hết các xe đã lưu' : '— Chưa có phiếu cà tươi nào được lưu —')}</option>`;
-    dates.forEach(d => {
-      const list = byDate[d].sort((a, b) => tkey(a) - tkey(b)), cnt = {}, seen = {};
-      const lab = r => [rowLabel(r), r.soxe, String(r.gio || '').replace(/^(\d{1,2}:\d{2}).*$/, '$1')].filter(Boolean).join(' · ');   // tên · biển số · giờ cân
-      list.forEach(r => { const n = lab(r); cnt[n] = (cnt[n] || 0) + 1; });
-      h += `<optgroup label="${esc(d ? nightLabel(d) : 'Đêm ?')} · còn ${list.length} xe">` +
-        list.map(r => { const n = lab(r); seen[n] = (seen[n] || 0) + 1; return `<option value="${esc(r.rid)}">${esc(cnt[n] > 1 ? `${n} (${seen[n]})` : n)}</option>`; }).join('') + '</optgroup>';
-    });
+    const editable = editSample ? groupOf(editSample).map(sp=>DB.rows.find(r=>String(r.rid)===String(sp.rid))).filter(Boolean) : [];
+    const list = [...new Map([...pend,...editable].map(r=>[String(r.rid),r])).values()].sort((a,b)=>rowLabel(a).localeCompare(rowLabel(b),'vi',{sensitivity:'base'}) || String(a.soxe||'').localeCompare(String(b.soxe||''),'vi',{numeric:true}) || dateKey(a.date)-dateKey(b.date));
+    let h = '<option value="">'+(pend.length?'— Chọn khách hàng / xe —':DB.rows.length?'Đã làm thu hồi hết các xe đã lưu':'— Chưa có phiếu cà tươi nào được lưu —')+'</option>';
+    h += list.map(r=>'<option value="'+esc(r.rid)+'">'+esc([rowLabel(r),r.soxe].filter(Boolean).join(' · '))+'</option>').join('');
     h += '<option value="__free">✏️ Nhập tên khác…</option>';
     if (editSample) h = h.replace('</option>', `</option><option value="__edit">✏️ Sửa mẫu: ${esc(groupName(groupOf(editSample)) || editSample.khach || '(không tên)')}</option>`);
     sel.innerHTML = h;
@@ -3141,7 +3158,7 @@ var APP = (() => {
       info.hidden = rs.length > 1;                        // nhiều xe: danh sách bên dưới đã có từng xe và tổng
       info.innerHTML = `<span>KL cà tươi <b>${tot ? fmtKg(tot) + ' kg' : '–'}</b></span>${recoveryQualityHTML(r)}`;
     } else info.hidden = true;
-    if (!pickOpen || !r) renderMulti();
+    renderMulti(); renderRecoveryChoices();
     if (recalc) thCalc(false);
   }
   $('#thSel').addEventListener('change', () => { extraRids = []; pickOpen = false; if (editSample && $('#thSel').value !== '__edit'){ stopEdit(); renderTH(); } selChanged(); if ($('#thSel').value === '__free') $('#thName').focus(); else if ($('#thSel').value) $('#thKl').focus(); });
@@ -3338,8 +3355,8 @@ var APP = (() => {
     $('#thHint').textContent = ''; $('#thOut').hidden = true; lastTH = null; buildAmTable();
     LS.set('tbxn_thlast', null);
   }
-  $('#thClear').addEventListener('click', () => { thClear(false); $('#thSel').focus(); });
-  $('#thNew').addEventListener('click', () => { thClear(false); window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#thSel').focus(), 250); });
+  $('#thClear').addEventListener('click', () => { thClear(false); $('#thChoose').focus(); });
+  $('#thNew').addEventListener('click', () => { thClear(false); window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#thChoose').focus(), 250); });
 
   // Vẽ phiếu thu hồi lên canvas (xem trên trang: màu; sao chép/chia sẻ/lưu: đen trắng như bản gốc)
   function drawTH(t, mono){
@@ -3406,8 +3423,7 @@ var APP = (() => {
           g.font = `800 15px ${SANS}`; g.fillStyle = C.ink;
           let nm = x.khach || '(không tên)'; while (nm.length > 3 && g.measureText(nm).width > Wd - P * 2 - 250) nm = nm.slice(0, -2) + '…';
           g.fillText(nm, P + 36, cy); const nw = g.measureText(nm).width;
-          const hm = String(x.gio || '').replace(/^(\d{1,2}:\d{2}).*$/, '$1');
-          g.font = `600 12px ${SANS}`; g.fillStyle = C.soft; g.fillText([x.soxe, hm].filter(Boolean).join(' · '), P + 36 + nw + 10, cy + 1);
+          g.font = `600 12px ${SANS}`; g.fillStyle = C.soft; g.fillText(x.soxe || '', P + 36 + nw + 10, cy + 1);
           g.textAlign = 'right'; g.font = `700 15px ${SANS}`; g.fillStyle = C.ink; g.fillText(numv(x.thuc) != null ? fmtKg(numv(x.thuc)) + ' kg' : '–', Wd - P - 14, cy);
           yy += GL;
         });
@@ -3491,7 +3507,7 @@ var APP = (() => {
   $('#thSave').addEventListener('click', async () => {
     if (!thCalc(true)) return;
     const t = lastTH, r = t.row;
-    if (!r && !t.name){ toast('Chọn khách hàng hoặc nhập tên mẫu trước khi lưu'); $('#thSel').focus(); return; }
+    if (!r && !t.name){ toast('Chọn khách hàng hoặc nhập tên mẫu trước khi lưu'); $('#thChoose').focus(); return; }
     const ed = $('#thSel').value === '__edit' ? editSample : null;
     const rs = selRows();
     if (rs.length > 1 || (ed && ed.nhom)) return saveGroup(t, rs, ed);
@@ -3517,7 +3533,7 @@ var APP = (() => {
     $('#thSel').value = next ? String(next.rid) : (r ? '' : $('#thSel').value);
     selChanged(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => (next ? $('#thKl') : $('#thSel')).focus(), 300);
+    setTimeout(() => (next ? $('#thKl') : $('#thChoose')).focus(), 300);
   });
   // Một mẫu cho nhiều xe: lưu mỗi xe một dòng mẫu (cùng kết quả, cùng mã nhóm); ảnh phiếu lưu một lần
   async function saveGroup(t, rs, ed){
