@@ -1341,12 +1341,14 @@ async function readSourceFiles(files, notesOnly){
     if (!isPdf(file) && !file.type.startsWith('image/')) throw new Error('Chỉ nhận ảnh hoặc PDF');
     check();
     const pages = isPdf(file) ? await pdfToImages(file) : [file];
+    const before = out.length;
     // Ngày cân ở đầu nhóm có thể chỉ xuất hiện trên trang trước trong cùng PDF.
     lastDate = ''; lastPrintedDate = '';
     for (let i = 0; i < pages.length; i++){
       check(); job.t0 = Date.now(); job.extra = 0;
       progPrefix = `${notesOnly ? 'Dạng 2' : 'Dạng 1'} · ${file.name} · trang ${i + 1}/${pages.length}: `;
       const result = await readSheet(pages[i], { notesOnly });
+      if (result.skippedSummary) continue;
       if (!result.rows.length) throw new Error(`Không đọc được dòng xe trong ${file.name}, trang ${i + 1}`);
       if (!notesOnly && isPdf(file)){
         const dates = pages[i].printedDates || [];
@@ -1356,6 +1358,7 @@ async function readSourceFiles(files, notesOnly){
       result.rows.forEach(r => { if (r.date) lastDate = r.date; else if (lastDate) r.date = lastDate; });
       out.push(...result.rows);
     }
+    if (out.length === before) throw new Error(`Không tìm thấy dòng xe trong ${file.name}`);
   }
   return out;
 }
@@ -1429,6 +1432,7 @@ async function pdfToImages(file){
       const items = (await page.getTextContent()).items;
       const text = items.map(t => t.str || '').join(' ');
       blob.printedDates = [...text.matchAll(/Ngày\s+cân\s*:\s*(\d{1,2})\s*[\/.-]\s*(\d{1,2})\s*[\/.-]\s*(\d{4})/gi)].map(m => fixDate(m));
+      blob.pdfSummaryOnly = isPdfSummaryPage(items);
       blob.pdfWeights = parsePdfWeightRows(items, pdfDate);
       if (blob.printedDates.length) pdfDate = blob.printedDates[blob.printedDates.length - 1];
     } catch(e) { blob.printedDates = []; }
@@ -1437,6 +1441,22 @@ async function pdfToImages(file){
   }
   doc.destroy();
   return out;
+}
+// Chỉ bỏ qua trang được lớp chữ PDF xác nhận là phần tổng kết.
+// Trang quét, trang không rõ cấu trúc hoặc có bất kỳ dòng xe nào vẫn phải đọc.
+function isPdfSummaryPage(items){
+  const lines = [];
+  for (const item of items){
+    if (!item.str?.trim() || !item.transform) continue;
+    const y = item.transform[5]; let line = lines.find(l => Math.abs(l.y-y) <= 1.5);
+    if (!line){ line = {y,items:[]}; lines.push(line); }
+    line.items.push(item);
+  }
+  const text = lines.sort((a,b)=>b.y-a.y).map(l=>norm(l.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(t=>t.str.trim()).join(' ')).replace(/\s+/g,' ').trim());
+  const header = text.findIndex(t=>/\bstt\b/.test(t) && /so xe/.test(t) && /tl\s*bi/.test(t) && /gio can/.test(t));
+  if (header < 0) return false;
+  const body = text.slice(header+1).filter(Boolean);
+  return body.some(t=>/^(?:tong cong|trong luong.*tong cong)\s*:/.test(t)) && body.every(t=>/^(?:tong cong|trong luong.*tong cong|ngay bao cao|nguoi lap bao cao|trang)\b/.test(t));
 }
 // PDF có lớp chữ: lấy đúng chuỗi số gốc, không dùng OCR để đoán lại trọng lượng.
 function parsePdfWeightRows(items, initialDate = ''){
@@ -1737,6 +1757,11 @@ function analyzeGrid(gray, ink, W, H){
 }
 
 async function readSheet(blob, options = {}){
+  if (blob.pdfSummaryOnly === true){
+    check();
+    progress(1, 'Bỏ qua trang tổng kết không có dòng xe');
+    return { rows: [], via: 'PDF', skippedSummary: true };
+  }
   // Gemini (nếu có key) chạy song song với đọc trên máy để tiết kiệm thời gian
   const key = LS.get('tbxn_gkey', '');
   const gemP = key ? geminiRead(blob, key, LS.get('tbxn_gmodel', '') || 'gemini-3.8-flash', options).then(v => ({ v }), e => ({ e })) : null;
