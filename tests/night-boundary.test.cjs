@@ -38,3 +38,13 @@ const nights=context.nightAverages([row({date:'29/10/2026',gio:'16:59'}),row({da
 assert.equal(nights.length,2);assert.equal(nights[0].night,'29/10/2026');assert.equal(nights[0].count,2);assert.equal(nights[1].count,1);
 assert.equal(context.nightAverages([]).length,0);
 console.log('PASS: weighted nightly averages, separate coverage, inferred percentages, missing/invalid values, X markers, zero recovery and night boundaries.');
+
+// The overview reads every night from the database, independently of the detail filters.
+const els=new Map();context.$=id=>{if(!els.has(id))els.set(id,{hidden:false,innerHTML:'',style:{}});return els.get(id);};
+Object.assign(context,{DB:{rows:[row({date:'29/10/2026',gio:'20:00'}),row({date:'28/10/2026',gio:'20:00',thuhoi:'7'})],samples:[]},LSX:{rows:[row({date:'29/10/2026'})]},lsMode:'avg',lsEditor:false,lsTok:0,document:{querySelectorAll:()=>[]},freeSamples:()=>[],sheetRowsOf:(rows,free)=>[...rows,...free],esc:String,fmtPct:String,f2:n=>n.toFixed(2)});
+for(const name of ['renderNightAverages','renderLS']){const start=source.indexOf('function '+name+'(');vm.runInContext(source.slice(start,source.indexOf('\n  }',start)+4),context);}
+context.renderLS();const table=els.get('#lsNightAverages').innerHTML;
+assert(table.includes('Đêm 29/10/2026'));assert(table.includes('Đêm 28/10/2026'));assert(table.includes('5.00 kg'));assert(table.includes('7.00 kg'));
+assert.equal((table.match(/<tr>/g)||[]).length,3);assert.equal(els.get('#lsSheet').hidden,true);assert.equal(els.get('#lsCtl').innerHTML,'');
+context.DB.rows=[];context.renderLS();assert(els.get('#lsNightAverages').innerHTML.includes('Chưa có dữ liệu'));assert(!els.get('#lsNightAverages').innerHTML.includes('<table'));
+console.log('PASS: all-night overview ignores selected detail rows, hides detail sheet and clears empty data.');

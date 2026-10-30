@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261030-night-averages">
+<link rel="stylesheet" href="styles.css?v=20261030-night-average-tab">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -213,7 +213,7 @@
       <div class="tbar">
         <h2 style="margin:0">Tổng hợp mẫu</h2>
         <span class="sp"></span>
-        <div class="seg" id="lsSeg"><button type="button" data-m="day" class="on">Theo đêm</button><button type="button" data-m="cus">Theo khách hàng</button><button type="button" data-m="opt">Tùy chọn</button></div>
+        <div class="seg" id="lsSeg"><button type="button" data-m="day" class="on">Theo đêm</button><button type="button" data-m="cus">Theo khách hàng</button><button type="button" data-m="opt">Tùy chọn</button><button type="button" data-m="avg">Trung bình theo đêm</button></div>
         <button type="button" class="ghost small" id="lsRefresh" title="Tải lại từ Google Drive"><i data-ic="refresh"></i></button>
       </div>
       <div class="lsctl" id="lsCtl"></div>
@@ -3593,7 +3593,7 @@ var APP = (() => {
   /* ---------------- Lịch sử: theo ngày / theo khách hàng / theo mẫu + xem chi tiết ---------------- */
   let lsMode = LS.get('tbxn_lsmode', 'day'), lsDate = '', lsCus = '', lsFrom = null, lsTo = '';
   const lsSelCus = new Set(), lsSelXe = new Set();
-  if (lsMode !== 'day' && lsMode !== 'cus') lsMode = 'opt';
+  if (!['day','cus','opt','avg'].includes(lsMode)) lsMode = 'day';
   const sampleOf = rid => DB.samples.find(s => rid && String(s.rid) === String(rid));
   // “Đêm D” = 17h ngày D → 17h ngày D+1
   const rNight = r => nightOf(r.date, r.gio);
@@ -3646,14 +3646,13 @@ var APP = (() => {
   };
   let lsTok = 0;
   function renderNightAverages(){
-    const box=$('#lsNightAverages'), nights=nightAverages(LSX.rows);
-    box.hidden=!nights.length;
-    box.innerHTML=nights.map(a=>'<section class="night-average"><div class="night-average-heading"><b>'+esc(a.night?nightLabel(a.night):'Đêm chưa xác định')+'</b><span>'+a.count+' xe</span></div><div class="night-average-grid">'+
-      [['Xanh',a.x,'%'],['Nổi',a.n,'%'],['Chín',a.c,'%'],['TB thu hồi',a.th,'kg']].map(([label,value,unit])=>'<div><span>'+label+'</span><strong>'+(value==null?'—':(unit==='%'?fmtPct(value):f2(value))+' <small>'+unit+'</small>')+'</strong></div>').join('')+
-      '</div><p>TB theo khối lượng cà tươi · '+a.qualityCount+'/'+a.count+' xe có tỷ lệ · '+a.recoveryCount+'/'+a.count+' xe có thu hồi</p></section>').join('');
+    const box=$('#lsNightAverages'), nights=nightAverages(sheetRowsOf(DB.rows,freeSamples()));
+    box.hidden=false;
+    if(!nights.length){box.innerHTML='<div class="lsempty">Chưa có dữ liệu để tính trung bình theo đêm.</div>';return;}
+    const pct=(v,count)=>v==null?'—':fmtPct(v)+' %<small>'+count+' xe có tỷ lệ</small>';
+    box.innerHTML='<div class="night-average-intro"><b>'+nights.length+' đêm</b><span>Trung bình theo khối lượng cà tươi · Chỉ tính xe có dữ liệu hợp lệ · Đêm từ 17:00 đến 17:00 hôm sau</span></div><div class="night-average-scroll"><table class="night-average-table"><thead><tr><th>Đêm</th><th>Số xe</th><th>TB Xanh</th><th>TB Nổi</th><th>TB Chín</th><th>TB thu hồi</th></tr></thead><tbody>'+nights.map(a=>'<tr><th scope="row">'+esc(a.night?nightLabel(a.night):'Đêm chưa xác định')+'</th><td>'+a.count+'</td><td>'+pct(a.x,a.qualityCount)+'</td><td>'+pct(a.n,a.qualityCount)+'</td><td>'+pct(a.c,a.qualityCount)+'</td><td>'+(a.th==null?'—':f2(a.th)+' kg<small>'+a.recoveryCount+' xe có thu hồi</small>')+'</td></tr>').join('')+'</tbody></table></div>';
   }
   async function renderLSSheet(){
-    renderNightAverages();
     const tok = ++lsTok, n = LSX.rows.length;
     $('#lsSheet').hidden = !n;
     if (!n) return;
@@ -3718,6 +3717,11 @@ var APP = (() => {
     $('#lsGrpSeg').style.display = lsMode === 'day' ? 'none' : '';
     document.querySelectorAll('#lsSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === lsMode));
     const ctl = $('#lsCtl');
+    if(lsMode === 'avg'){
+      ++lsTok; ctl.innerHTML=''; LSX.rows=[];
+      $('#lsSheet').hidden=true; $('#lsBody').innerHTML=''; renderNightAverages(); return;
+    }
+    $('#lsNightAverages').hidden=true;
     if (!DB.rows.length && !DB.samples.length){
       ctl.innerHTML = ''; LSX.rows = []; renderLSSheet();
       $('#lsBody').innerHTML = `<div class="lsempty">Chưa có dữ liệu nào được lưu.<br>Bấm <b>💾 Lưu</b> ở Phiếu kết quả (tab Cà tươi) để bắt đầu.</div>`; return;
