@@ -756,7 +756,7 @@ dialog,.lgbox{border-radius:12px}
 .night-average-scroll{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:70vh}
 .night-average-table{border-collapse:separate;border-spacing:0;width:100%;min-width:760px;font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
 .night-average-table th,.night-average-table td{padding:15px 16px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;background:var(--surface)}
-.night-average-table thead th{position:sticky;top:0;background:var(--soft);z-index:2;font-size:17px}
+.night-average-table thead th{position:sticky;top:0;background:var(--soft);z-index:2;font-size:17px;font-weight:800;text-transform:uppercase;color:#1765d1}
 .night-average-table tbody tr:nth-child(even)>*{background:var(--soft)}
 .night-average-table tbody th{text-align:left;white-space:normal;min-width:240px;font-size:17px}
 .night-average-table td{font-weight:700}.night-average-table small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:5px}
