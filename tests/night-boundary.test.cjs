@@ -54,5 +54,5 @@ context.DB.rows=[];context.renderLS();assert(els.get('#lsNightAverages').innerHT
 console.log('PASS: all-night overview ignores selected detail rows, hides detail sheet and clears empty data.');
 
 const combined=context.combineNightAverages(context.nightAverages([row({thuc:'1,000',thuhoi:'5'}),row({date:'29/10/2026',gio:'01:00',thuc:'3,000',xanh:'60',noi:'20',chin:'20',thuhoi:'7'}),row({xanh:'',noi:'',chin:'',thuhoi:'x'})]));
-assert.equal(combined.totalWeight,5000);assert.equal(combined.count,3);assert.equal(combined.x,50);assert.equal(combined.n,17.5);assert.equal(combined.c,32.5);assert.equal(combined.th,6.5);assert.equal(combined.qualityCount,2);assert.equal(combined.recoveryCount,2);assert(table.includes('<tfoot>'));assert(table.includes('TRUNG BÌNH TẤT CẢ CÁC ĐÊM'));
+assert.equal(combined.totalWeight,5000);assert.equal(combined.count,3);assert.equal(combined.x,50);assert.equal(combined.n,17.5);assert.equal(combined.c,32.5);assert.equal(combined.th,6.5);assert.equal(combined.qualityCount,2);assert.equal(combined.recoveryCount,2);assert(table.includes('<tfoot>'));assert(table.includes('TỔNG/TRUNG BÌNH CÁC ĐÊM'));
 console.log('PASS: all-night footer uses original eligible weights, total mass and coverage.');
