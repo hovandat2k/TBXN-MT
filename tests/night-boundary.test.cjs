@@ -24,3 +24,17 @@ vm.runInContext(source.match(/const nightStart = n => [^\r\n]+/)[0], context);
 assert.equal(vm.runInContext("new Date(nightStart('25/10/2026')).getHours()", context), 17);
 assert.equal(vm.runInContext("new Date(nightStart('25/10/2026')).getMinutes()", context), 0);
 console.log('PASS: 17:00 boundary, overnight grouping, month/year/leap rollover and default range start.');
+
+vm.runInContext("const PF=['xanh','noi','chin'];",context);
+for(const name of ['parseKg','parsePct','pcts','nightAverages']){const start=source.indexOf('function '+name+'(');vm.runInContext(source.slice(start,source.indexOf('\n}',start)+2),context);}
+const row=o=>({date:'30/10/2026',gio:'01:00',thuc:'1,000',xanh:'20',noi:'10',chin:'70',thuhoi:'5',...o});
+const [avg]=context.nightAverages([row({}),row({thuc:'3,000',xanh:'60',noi:'20',chin:'20',thuhoi:'7'}),row({xanh:'',noi:'',chin:'',thuhoi:'x'})]);
+assert.equal(avg.night,'29/10/2026');assert.equal(avg.count,3);assert.equal(avg.qualityCount,2);assert.equal(avg.recoveryCount,2);
+assert.equal(avg.x,50);assert.equal(avg.n,17.5);assert.equal(avg.c,32.5);assert.equal(avg.th,6.5);
+const [inferred]=context.nightAverages([row({chin:'',thuhoi:'0'})]);assert.equal(inferred.c,70);assert.equal(inferred.th,0);
+const [missing]=context.nightAverages([row({xanh:'70',noi:'70',chin:'10',thuhoi:''}),row({thuc:'',thuhoi:'8'})]);
+assert.equal(missing.x,null);assert.equal(missing.th,null);assert.equal(missing.qualityCount,0);assert.equal(missing.recoveryCount,0);
+const nights=context.nightAverages([row({date:'29/10/2026',gio:'16:59'}),row({date:'29/10/2026',gio:'17:00'}),row({date:'30/10/2026',gio:'00:00'})]);
+assert.equal(nights.length,2);assert.equal(nights[0].night,'29/10/2026');assert.equal(nights[0].count,2);assert.equal(nights[1].count,1);
+assert.equal(context.nightAverages([]).length,0);
+console.log('PASS: weighted nightly averages, separate coverage, inferred percentages, missing/invalid values, X markers, zero recovery and night boundaries.');
