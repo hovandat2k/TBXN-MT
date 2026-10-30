@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261029-recovery-choice-toolbar">
+<link rel="stylesheet" href="styles.css?v=20261030-night-averages">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -217,6 +217,7 @@
         <button type="button" class="ghost small" id="lsRefresh" title="Tải lại từ Google Drive"><i data-ic="refresh"></i></button>
       </div>
       <div class="lsctl" id="lsCtl"></div>
+      <div id="lsNightAverages" class="night-averages" hidden></div>
       <div id="lsSheet" hidden>
         <div class="tbar lsbar">
           <span class="lsnote" id="lsCount"></span>
@@ -445,6 +446,27 @@ function groups(){
   });
   return g;
 }
+// Trung bình từng đêm theo KL cà tươi; từng chỉ số có tập xe đủ dữ liệu riêng.
+function nightAverages(list){
+  const by = new Map();
+  list.forEach(r=>{
+    const night = nightOf(r.date,r.gio);
+    if(!by.has(night)) by.set(night,{night,count:0,qualityCount:0,recoveryCount:0,qualityWeight:0,recoveryWeight:0,x:0,n:0,c:0,th:0});
+    const a=by.get(night);a.count++;
+    const weight=parseKg(r.thuc);if(!(weight>0)) return;
+    const p=pcts(r);
+    if(p.have>=2 && !p.bad && [p.x,p.n,p.c].every(v=>v!=null && Number.isFinite(v))){
+      a.qualityCount++;a.qualityWeight+=weight;
+      ['x','n','c'].forEach(k=>a[k]+=weight*p[k]);
+    }
+    const th=parseKg(r.thuhoi);
+    if(th!=null && Number.isFinite(th) && th>=0){a.recoveryCount++;a.recoveryWeight+=weight;a.th+=weight*th;}
+  });
+  return [...by.values()].sort((a,b)=>nightKey(b.night)-nightKey(a.night)).map(a=>({...a,
+    x:a.qualityWeight?a.x/a.qualityWeight:null,n:a.qualityWeight?a.n/a.qualityWeight:null,c:a.qualityWeight?a.c/a.qualityWeight:null,
+    th:a.recoveryWeight?a.th/a.recoveryWeight:null}));
+}
+
 function agg(list){
   let tl = 0, miss = 0, bad = 0, thw = 0, ths = 0;
   const w = { x: 0, n: 0, c: 0 }, sw = { x: 0, n: 0, c: 0 };
@@ -3623,7 +3645,15 @@ var APP = (() => {
     render: () => renderLSSheet()
   };
   let lsTok = 0;
+  function renderNightAverages(){
+    const box=$('#lsNightAverages'), nights=nightAverages(LSX.rows);
+    box.hidden=!nights.length;
+    box.innerHTML=nights.map(a=>'<section class="night-average"><div class="night-average-heading"><b>'+esc(a.night?nightLabel(a.night):'Đêm chưa xác định')+'</b><span>'+a.count+' xe</span></div><div class="night-average-grid">'+
+      [['Xanh',a.x,'%'],['Nổi',a.n,'%'],['Chín',a.c,'%'],['TB thu hồi',a.th,'kg']].map(([label,value,unit])=>'<div><span>'+label+'</span><strong>'+(value==null?'—':(unit==='%'?fmtPct(value):f2(value))+' <small>'+unit+'</small>')+'</strong></div>').join('')+
+      '</div><p>TB theo khối lượng cà tươi · '+a.qualityCount+'/'+a.count+' xe có tỷ lệ · '+a.recoveryCount+'/'+a.count+' xe có thu hồi</p></section>').join('');
+  }
   async function renderLSSheet(){
+    renderNightAverages();
     const tok = ++lsTok, n = LSX.rows.length;
     $('#lsSheet').hidden = !n;
     if (!n) return;
