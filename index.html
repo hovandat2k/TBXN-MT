@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261030-night-average-headings">
+<link rel="stylesheet" href="styles.css?v=20261030-night-total-weight">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -451,9 +451,10 @@ function nightAverages(list){
   const by = new Map();
   list.forEach(r=>{
     const night = nightOf(r.date,r.gio);
-    if(!by.has(night)) by.set(night,{night,count:0,qualityCount:0,recoveryCount:0,qualityWeight:0,recoveryWeight:0,x:0,n:0,c:0,th:0});
+    if(!by.has(night)) by.set(night,{night,count:0,qualityCount:0,recoveryCount:0,totalWeight:0,qualityWeight:0,recoveryWeight:0,x:0,n:0,c:0,th:0});
     const a=by.get(night);a.count++;
     const weight=parseKg(r.thuc);if(!(weight>0)) return;
+    a.totalWeight+=weight;
     const p=pcts(r);
     if(p.have>=2 && !p.bad && [p.x,p.n,p.c].every(v=>v!=null && Number.isFinite(v))){
       a.qualityCount++;a.qualityWeight+=weight;
@@ -3651,7 +3652,7 @@ var APP = (() => {
     if(!nights.length){box.innerHTML='<div class="lsempty">Chưa có dữ liệu để tính trung bình theo đêm.</div>';return;}
     const coverage=(count,total)=>count<total?'<small>'+count+'/'+total+'</small>':'';
     const pct=(v,count,total)=>(v==null?'—':fmtPct(v)+' %')+coverage(count,total);
-    box.innerHTML='<div class="night-average-intro"><b>'+nights.length+' đêm</b><span>Trung bình theo khối lượng cà tươi · Chỉ tính xe có dữ liệu hợp lệ · Đêm từ 17:00 đến 17:00 hôm sau</span></div><div class="night-average-scroll"><table class="night-average-table"><thead><tr><th>Đêm</th><th>Số xe</th><th>TB Xanh</th><th>TB Nổi</th><th>TB Chín</th><th>TB thu hồi</th></tr></thead><tbody>'+nights.map(a=>'<tr><th scope="row">'+esc(a.night?nightLabel(a.night):'Đêm chưa xác định')+'</th><td>'+a.count+'</td><td>'+pct(a.x,a.qualityCount,a.count)+'</td><td>'+pct(a.n,a.qualityCount,a.count)+'</td><td>'+pct(a.c,a.qualityCount,a.count)+'</td><td>'+((a.th==null?'—':f2(a.th)+' kg')+coverage(a.recoveryCount,a.count))+'</td></tr>').join('')+'</tbody></table></div>';
+    box.innerHTML='<div class="night-average-intro"><b>'+nights.length+' đêm</b><span>Trung bình theo khối lượng cà tươi · Chỉ tính xe có dữ liệu hợp lệ · Đêm từ 17:00 đến 17:00 hôm sau</span></div><div class="night-average-scroll"><table class="night-average-table"><thead><tr><th>Đêm</th><th>Số xe</th><th>Tổng khối lượng (kg)</th><th>TB Xanh</th><th>TB Nổi</th><th>TB Chín</th><th>TB thu hồi</th></tr></thead><tbody>'+nights.map(a=>'<tr><th scope="row">'+esc(a.night?nightLabel(a.night):'Đêm chưa xác định')+'</th><td>'+a.count+'</td><td>'+fmtKg(a.totalWeight)+'</td><td>'+pct(a.x,a.qualityCount,a.count)+'</td><td>'+pct(a.n,a.qualityCount,a.count)+'</td><td>'+pct(a.c,a.qualityCount,a.count)+'</td><td>'+((a.th==null?'—':f2(a.th)+' kg')+coverage(a.recoveryCount,a.count))+'</td></tr>').join('')+'</tbody></table></div>';
   }
   async function renderLSSheet(){
     const tok = ++lsTok, n = LSX.rows.length;
