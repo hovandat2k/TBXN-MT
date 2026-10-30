@@ -748,12 +748,17 @@ dialog,.lgbox{border-radius:12px}
 .th-choice-tools>.ghost{flex:1;min-width:0;white-space:normal}
 .th-choice-list{max-height:390px;max-height:min(390px,45dvh);overflow-y:auto;overscroll-behavior:contain;padding-top:4px}
 
-/* Per-night weighted quality and recovery averages. */
-.night-averages{display:grid;gap:12px;margin:14px 0 18px}.night-averages[hidden]{display:none}
-.night-average{border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:16px}
-.night-average-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--ink);font-size:17px}.night-average-heading>span{color:var(--muted)}
-.night-average-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
-.night-average-grid>div{padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:9px}
-.night-average-grid span{display:block;color:var(--muted);font-size:16px}.night-average-grid strong{display:block;color:var(--ink);font-size:26px;margin-top:5px}.night-average-grid small{font-size:17px}
-.night-average p{margin:12px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
-@media(max-width:640px){.night-average{padding:12px}.night-average-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.night-average-grid strong{font-size:24px}}
+/* All-night averages tab. */
+#lsSeg{flex-wrap:wrap;max-width:100%}
+.night-averages{margin:14px 0}.night-averages[hidden]{display:none}
+.night-average-intro{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:12px;color:var(--ink)}
+.night-average-intro span{color:var(--muted);font-size:14px;line-height:1.5}
+.night-average-scroll{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:70vh}
+.night-average-table{border-collapse:separate;border-spacing:0;width:100%;min-width:760px;font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
+.night-average-table th,.night-average-table td{padding:15px 16px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;background:var(--surface)}
+.night-average-table thead th{position:sticky;top:0;background:var(--soft);z-index:2;font-size:17px}
+.night-average-table tbody tr:nth-child(even)>*{background:var(--soft)}
+.night-average-table tbody th{text-align:left;white-space:normal;min-width:240px;font-size:17px}
+.night-average-table td{font-weight:700}.night-average-table small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:5px}
+.night-average-table tbody tr:last-child>*{border-bottom:0}
+@media(max-width:640px){.night-average-table th,.night-average-table td{padding:12px}.night-average-table tbody th{min-width:210px}#lsSeg{width:100%}#lsSeg button{flex:1 1 42%}}
