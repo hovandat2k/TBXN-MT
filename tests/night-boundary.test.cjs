@@ -46,5 +46,9 @@ for(const name of ['renderNightAverages','renderLS']){const start=source.indexOf
 context.renderLS();const table=els.get('#lsNightAverages').innerHTML;
 assert(table.includes('Đêm 29/10/2026'));assert(table.includes('Đêm 28/10/2026'));assert(table.includes('5.00 kg'));assert(table.includes('7.00 kg'));
 assert.equal((table.match(/<tr>/g)||[]).length,3);assert.equal(els.get('#lsSheet').hidden,true);assert.equal(els.get('#lsCtl').innerHTML,'');
+assert(!table.includes('<small>'),'hide coverage when every vehicle has data');
+context.DB.rows.push(row({date:'29/10/2026',gio:'21:00',xanh:'',noi:'',chin:'',thuhoi:'x'}));context.renderLS();
+let partial=els.get('#lsNightAverages').innerHTML;assert.equal((partial.match(/<small>1\/2<\/small>/g)||[]).length,4);
+context.DB.rows=[row({xanh:'',noi:'',chin:'',thuhoi:''})];context.renderLS();partial=els.get('#lsNightAverages').innerHTML;assert.equal((partial.match(/<small>0\/1<\/small>/g)||[]).length,4);
 context.DB.rows=[];context.renderLS();assert(els.get('#lsNightAverages').innerHTML.includes('Chưa có dữ liệu'));assert(!els.get('#lsNightAverages').innerHTML.includes('<table'));
 console.log('PASS: all-night overview ignores selected detail rows, hides detail sheet and clears empty data.');
