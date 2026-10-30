@@ -762,3 +762,6 @@ dialog,.lgbox{border-radius:12px}
 .night-average-table td{font-weight:700}.night-average-table small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:5px}
 .night-average-table tbody tr:last-child>*{border-bottom:0}
 @media(max-width:640px){.night-average-table th,.night-average-table td{padding:12px}.night-average-table tbody th{min-width:210px}#lsSeg{width:100%}#lsSeg button{flex:1 1 42%}}
+
+.night-average-table tfoot th,.night-average-table tfoot td{background:var(--soft);color:#1765d1;font-weight:800;border-top:2px solid var(--line);border-bottom:0}
+.night-average-table tfoot th{white-space:normal;text-align:left}
