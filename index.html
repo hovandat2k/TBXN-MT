@@ -34,7 +34,7 @@
     <button class="hbtn" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối"><i data-ic="theme"></i></button>
   </div>
   </div>
-  <div class="area-bar" id="areaBar" hidden><b id="areaName"></b><select class="fld sel" id="areaSelect" aria-label="Khu vực" hidden><option value="">Tất cả khu vực</option><option>Lào</option><option>Lâm Đồng</option><option>Sơn La</option></select></div>
+  <div class="area-bar" id="areaBar" hidden><select class="fld sel" id="areaSelect" aria-label="Khu vực" hidden><option value="">Tất cả khu vực</option><option>Lào</option><option>Lâm Đồng</option><option>Sơn La</option></select></div>
   <button type="button" class="sync" id="syncSt" hidden></button>
 
   <div class="tab" id="tab-tuoi">
@@ -4205,7 +4205,7 @@ var APP = (() => {
   function applyRole(){
     document.body.classList.toggle('role-th', AUTH?.role==='Thu hồi');
     document.body.classList.toggle('role-ics-th',isRecoveryICS());
-    $('#areaBar').hidden=!AUTH;$('#areaName').textContent=AUTH?AUTH.role+' · '+(isRoot()?'Khu vực':AUTH.khuvuc):'';
+    $('#areaBar').hidden=!isRoot();
     $('#areaSelect').hidden=!isRoot();$('#areaSelect').value=activeArea;
     LSX.compact=isRecoveryICS();
     $('#lsEdit').hidden=!canSummary();
