@@ -3693,10 +3693,12 @@ var APP = (() => {
   const keyOf = v => norm(String(v || '').trim());
   const freeSamples = () => DB.samples.filter(sp => !sp.rid || !rowOf(sp.rid));   // mẫu không gắn với xe đã lưu
   function sheetRowsOf(list, free){
+    // Cột mới của phiếu thu hồi cũ là chuỗi rỗng trong Sheets; dùng tỷ lệ gốc của xe.
+    const quality = (sp, r, field) => sp?.[field] !== '' && sp?.[field] != null ? sp[field] : r[field];
     const out = list.map(r => {
       const sp = sampleOf(r.rid);
       return { date: str(r.date), gio: str(r.gio), stt: str(r.stt), soxe: str(sp?.soxe ?? r.soxe), hang: str(r.hang), khach: str(sp?.khach || r.khach), ghichu: str(r.ghichu),
-        tl1: kgs(r.tl1), tl2: kgs(r.tl2), tlh: kgs(r.tlh), bi: kgs(r.bi), thuc: kgs(sp?.klTuoi ?? r.thuc), xanh: str(sp?.xanh ?? r.xanh), noi: str(sp?.noi ?? r.noi), chin: str(sp?.chin ?? r.chin),
+        tl1: kgs(r.tl1), tl2: kgs(r.tl2), tlh: kgs(r.tlh), bi: kgs(r.bi), thuc: kgs(sp?.klTuoi ?? r.thuc), xanh: str(quality(sp,r,'xanh')), noi: str(quality(sp,r,'noi')), chin: str(quality(sp,r,'chin')),
         thuhoi: sp && sp.thuhoi !== '' && sp.thuhoi != null ? String(sp.thuhoi) : '', rid: String(r.rid), sid: sp ? String(sp.id) : '', flags: {} };
     });
     free.forEach(sp => {
