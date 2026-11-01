@@ -77,3 +77,14 @@ for(const am of [14,15]){
 }
 assert.equal(math.savedSampleMass({cachtinh:'Khối lượng mẫu: 2500 g | phép tính'}),2500);assert.equal(math.savedSampleMass({mau:'Mẫu riêng'}),2000);assert.equal(math.savedSampleMass({mau:'Mẫu chung'}),10000);
 console.log('PASS: anonymous calculation metadata, required save name, custom final numerator in both moisture branches and legacy mass fallback.');
+vm.runInContext("let recoveryAutoPct='';",f);
+const pctStart=html.indexOf('  function updateRecoveryPercent(');vm.runInContext(html.slice(pctStart,html.indexOf('\n  }',pctStart)+4),f);
+const pctFields=['tmXanh','tmNoi','tmChin'];
+for(const missing of pctFields){
+ pctFields.forEach(id=>f.$('#'+id).value='');vm.runInContext("recoveryAutoPct='';",f);
+ const input=pctFields.filter(id=>id!==missing);f.$('#'+input[0]).value='20';f.$('#'+input[1]).value='15';f.updateRecoveryPercent(input[1]);assert.equal(f.$('#'+missing).value,'65');
+ f.$('#'+input[0]).value='30';f.updateRecoveryPercent(input[0]);assert.equal(f.$('#'+missing).value,'55');
+ f.$('#'+input[1]).value='';f.updateRecoveryPercent(input[1]);assert.equal(f.$('#'+missing).value,'');
+}
+f.$('#tmXanh').value='80';f.$('#tmNoi').value='30';f.$('#tmChin').value='';f.updateRecoveryPercent('tmNoi');assert.equal(f.$('#tmChin').value,'');
+console.log('PASS: live inference for each quality field, source edits/deletion, and invalid total above 100.');
