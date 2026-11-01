@@ -12,14 +12,14 @@ class Sheet{
     setValues:values=>{this.writes.push({row,n:values.length});values.forEach((a,i)=>{this.data[row+i-1]??=[];a.forEach((v,j)=>this.data[row+i-1][col+j-1]=v);});},setNumberFormats:()=>{this.formats++;}};}
 }
 const T=cols('COT_TUOI'),S=cols('COT_THUHOI');
-const row=(id,batch='L1')=>({rid:id,batch,khach:'Demo '+id,thuc:1000,tlh:1010,bi:10,date:'25/10/2026',savedAt:'old',savedBy:'Demo'});
-const user={user:'admin',name:'Admin',role:'Toàn quyền'};
-const db=(rows,samples=[])=>({tuoi:new Sheet(T,rows),thuhoi:new Sheet(S,samples)});
+const row=(id,batch='L1')=>({rid:id,batch,khach:'Demo '+id,thuc:1000,tlh:1010,bi:10,date:'25/10/2026',savedAt:'old',savedBy:'Demo',khuvuc:'Lâm Đồng'});
+const user={user:'admin',name:'Admin',role:'admin',khuvuc:'Lâm Đồng'};
+const db=(rows,samples=[])=>({tuoi:new Sheet(T,[...rows,...samples.filter(s=>s.rid&&!rows.some(r=>r.rid===s.rid)).map(s=>row(s.rid))]),thuhoi:new Sheet(S,samples.map(s=>({khach:'Demo',...s,khuvuc:s.khuvuc||'Lâm Đồng'})))});
 const decoded=(sheet,columns)=>sheet.data.slice(1).map(a=>Object.fromEntries(columns.map((c,i)=>[c[0],a[i]])));
 {
   const initial=Array.from({length:1000},(_,i)=>row('R'+i,i<27?'L1':'other'));
   const b=db(initial),batch=initial.slice(0,27).map(r=>({...r}));batch[8].khach='Edited';
-  const op={action:'saveBatch',requestId:'req-change-one',batch:{id:'L1',savedAt:'now',rows:batch}};
+  const op={action:'saveBatch',requestId:'req-change-one',batch:{id:'L1',khuvuc:'Lâm Đồng',savedAt:'now',rows:batch}};
   const result=ctx.luuNhieu(b,[op],user);
   assert.equal(result.stats.tuoi.updated,1);assert.equal(b.tuoi.writes.length,1);assert.equal(b.tuoi.writes[0].n,1);
   assert.equal(b.tuoi.formats,0,'do not format existing columns on every save');
@@ -36,7 +36,7 @@ const decoded=(sheet,columns)=>sheet.data.slice(1).map(a=>Object.fromEntries(col
 }
 {
   const b=db([],[{id:'M1',rid:'R1',thuhoi:5},{id:'M2',rid:'R2',thuhoi:6}]);
-  const result=ctx.luuNhieu(b,[{action:'saveSample',requestId:'req-s1',sample:{id:'M1',rid:'R1',thuhoi:5.5}},{action:'saveSample',requestId:'req-s2',sample:{id:'M2',rid:'R2',thuhoi:6.5}}],user);
+  const result=ctx.luuNhieu(b,[{action:'saveSample',requestId:'req-s1',sample:{khuvuc:'Lâm Đồng',id:'M1',rid:'R1',thuhoi:5.5}},{action:'saveSample',requestId:'req-s2',sample:{khuvuc:'Lâm Đồng',id:'M2',rid:'R2',thuhoi:6.5}}],user);
   assert.equal(b.thuhoi.reads,1,'read once for several samples');assert.equal(b.thuhoi.writes.length,1,'write one contiguous block');assert.equal(result.completed.length,2);
   assert.equal(decoded(b.thuhoi,S)[1].thuhoi,6.5);
   ctx.luuNhieu(b,[{action:'deleteSample',requestId:'req-del',id:'M1'}],user);assert.equal(decoded(b.thuhoi,S)[0].id,'M2');
@@ -45,7 +45,7 @@ const decoded=(sheet,columns)=>sheet.data.slice(1).map(a=>Object.fromEntries(col
 }
 {
   const b=db([row('R1')]);
-  assert.throws(()=>ctx.luuNhieu(b,[{action:'saveSample',sample:{id:'M-new'}},{action:'saveBatch',batch:{id:'L1',rows:[]}}],{...user,role:'Thu hồi'}));
+  assert.throws(()=>ctx.luuNhieu(b,[{action:'saveSample',sample:{khuvuc:'Lâm Đồng',id:'M-new'}},{action:'saveBatch',batch:{id:'L1',rows:[]}}],{...user,role:'Thu hồi'}));
   assert.equal(b.tuoi.writes.length,0);assert.equal(b.thuhoi.writes.length,0,'validate whole request before writing');
   assert.throws(()=>ctx.luuNhieu(b,[{action:'saveBatch',batch:{id:'L1',rows:[row('R1'),row('R1')]}}],user));
   assert.equal(b.tuoi.data.length,2);

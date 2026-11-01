@@ -765,3 +765,8 @@ dialog,.lgbox{border-radius:12px}
 
 .night-average-table tfoot th,.night-average-table tfoot td{background:var(--soft);color:#1765d1;font-weight:800;border-top:2px solid var(--line);border-bottom:0}
 .night-average-table tfoot th{white-space:normal;text-align:left}
+
+.area-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}.area-bar[hidden]{display:none}.area-bar select{max-width:240px}
+body.role-ics-th [data-tab=tuoi],body.role-ics-th #aiSec{display:none!important}body.role-ics-th .tabs{grid-template-columns:1fr 1fr}
+body.role-ics-th #thName,body.role-ics-th #mauSeg,body.role-ics-th #lsExpSeg,body.role-ics-th #lsDel,body.role-ics-th #thChooser,body.role-ics-th label[for=thChoose],body.role-ics-th #thMulti{display:none!important}
+.th-manual{padding:12px;margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}.th-manual[hidden]{display:none}.th-manual label{display:block;font-weight:700;margin-bottom:8px}.th-manual input{width:100%;margin-top:5px}
