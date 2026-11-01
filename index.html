@@ -3364,7 +3364,23 @@ var APP = (() => {
     const p=pcts(meta);if(p.bad) throw new Error('Xanh/Nổi/Chín không hợp lệ');
     PF.forEach((f,i)=>meta[f]=[p.x,p.n,p.c][i] ?? '');return meta;
   }
+  let recoveryAutoPct = '';
+  function updateRecoveryPercent(edited){
+    const ids=['tmXanh','tmNoi','tmChin'];
+    if(edited===recoveryAutoPct) recoveryAutoPct='';
+    if(recoveryAutoPct) $('#'+recoveryAutoPct).value='';
+    const missing=ids.filter(id=>$('#'+id).value.trim()==='');
+    recoveryAutoPct='';
+    if(missing.length!==1) return;
+    const values=ids.filter(id=>id!==missing[0]).map(id=>parsePct($('#'+id).value));
+    if(values.some(v=>!Number.isFinite(v) || v<0 || v>100)) return;
+    const remaining=Math.round((100-values[0]-values[1])*100)/100;
+    if(remaining<0 || remaining>100) return;
+    recoveryAutoPct=missing[0];$('#'+recoveryAutoPct).value=String(remaining);
+  }
+  ['tmXanh','tmNoi','tmChin'].forEach(id=>$('#'+id).addEventListener('input',()=>{updateRecoveryPercent(id);thCalc(false);}));
   function fillManualRecovery(r){
+    recoveryAutoPct='';
     const meta=r || {}, d=String(meta.date||today()).split('/').reverse().join('-');
     $('#tmName').value=meta.khach||'';$('#tmPlate').value=meta.soxe||'';$('#tmDate').value=d;
     $('#tmWeight').value=meta.thuc ?? meta.klTuoi ?? '';$('#tmXanh').value=meta.xanh ?? '';$('#tmNoi').value=meta.noi ?? '';$('#tmChin').value=meta.chin ?? '';
