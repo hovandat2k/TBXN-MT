@@ -60,3 +60,11 @@ upgrade.SpreadsheetApp={open:()=>ss,newDataValidation:()=>({requireValueInList()
 upgrade.taoBangTinh(pr);
 assert.deepEqual(sheets.get('Cà tươi').regions,['Lâm Đồng','Lào']);assert.deepEqual(sheets.get('Thu hồi').regions,['Lâm Đồng','Sơn La']);assert.deepEqual(sheets.get('User').regions,['']);assert.equal(props.get('APP_SCHEMA'),'3');
 console.log('PASS: legacy blank regions migrate to Lâm Đồng and existing regions/accounts are preserved.');
+// Sheets returns empty strings for newly added columns on legacy samples.
+let legacySample={id:'old',rid:'old-row',klTuoi:1000,xanh:'',noi:'',chin:'',thuhoi:5.6};
+const summary={sampleOf:()=>legacySample,str:v=>v==null?'':String(v),kgs:v=>v==null?'':String(v),tOf:()=>0};vm.createContext(summary);
+const summaryStart=html.indexOf('  function sheetRowsOf(');vm.runInContext(html.slice(summaryStart,html.indexOf('\n  const LSX',summaryStart)),summary);
+const originalRow={rid:'old-row',thuc:1000,xanh:49,noi:15,chin:36};
+let restored=summary.sheetRowsOf([originalRow],[])[0];assert.equal(restored.xanh,'49');assert.equal(restored.noi,'15');assert.equal(restored.chin,'36');assert.equal(restored.thuhoi,'5.6');
+legacySample={...legacySample,xanh:0,noi:20,chin:80};restored=summary.sheetRowsOf([originalRow],[])[0];assert.equal(restored.xanh,'0');assert.equal(restored.noi,'20');assert.equal(restored.chin,'80');
+console.log('PASS: legacy empty sample quality falls back to weighing data, retaining explicit zero/new sample values.');
