@@ -3725,7 +3725,7 @@ var APP = (() => {
     });
     free.forEach(sp => {
       const [d, t] = sp.date?[sp.date,sp.gio||'']:savedParts(sp);
-      out.push({ date: d, gio: t ? t + ':00' : '', stt: '', soxe: str(sp.soxe), hang: '', khach: str(sp.khach), ghichu: isRecoveryICS() ? '' : 'Mẫu ngoài danh sách',
+      out.push({ date: d, gio: t ? t + ':00' : '', stt: '', soxe: str(sp.soxe), hang: '', khach: str(sp.khach), ghichu: '',
         tl1: '', tl2: '', tlh: '', bi: '', thuc: kgs(sp.klTuoi), xanh: str(sp.xanh), noi: str(sp.noi), chin: str(sp.chin), thuhoi: str(sp.thuhoi), rid: '', sid: String(sp.id), flags: {} });
     });
     return out.sort((a, b) => (tOf(a.date, a.gio) || 0) - (tOf(b.date, b.gio) || 0));
