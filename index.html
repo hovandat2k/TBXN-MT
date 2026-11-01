@@ -3806,7 +3806,7 @@ var APP = (() => {
     $('#lsNightAverages').hidden=true;
     if (!DB.rows.length && !DB.samples.length){
       ctl.innerHTML = ''; LSX.rows = []; renderLSSheet();
-      $('#lsBody').innerHTML = `<div class="lsempty">Chưa có dữ liệu nào được lưu.<br>Bấm <b>💾 Lưu</b> ở Phiếu kết quả (tab Cà tươi) để bắt đầu.</div>`; return;
+      $('#lsBody').innerHTML = isRecoveryICS() ? '' : `<div class="lsempty">Chưa có dữ liệu nào được lưu.<br>Bấm <b>💾 Lưu</b> ở Phiếu kết quả (tab Cà tươi) để bắt đầu.</div>`; return;
     }
     const free = freeSamples();
     const allDates = [...new Set([...DB.rows.map(rNight), ...free.map(sNight)])].filter(Boolean).sort((a, b) => nightKey(b) - nightKey(a));
