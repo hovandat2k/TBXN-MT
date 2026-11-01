@@ -3425,7 +3425,7 @@ var APP = (() => {
     const seen = new Set();
     const list = DB.samples.filter(sp => sNight(sp) === svNight).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))
       .filter(sp => { if (!sp.nhom) return true; if (seen.has(sp.nhom)) return false; seen.add(sp.nhom); return true; });
-    box.innerHTML = `<div class="svlist">${list.map(sp => { const g = groupOf(sp), many = g.length > 1; return `<button type="button" class="svitem${isAdmin() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc((many ? groupName(g) : sp.khach) || '(không tên)')}</span><span class="v">${isNaN(+sp.thuhoi) ? 'X' : f2(+sp.thuhoi) + ' kg'}</span>${isAdmin() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
+    box.innerHTML = `<div class="svlist">${list.map(sp => { const g = groupOf(sp), many = g.length > 1; return `<button type="button" class="svitem${canSummary() ? ' adm' : ''}" data-sid="${esc(sp.id)}"><span class="n">${esc((many ? groupName(g) : sp.khach) || '(không tên)')}</span><span class="v">${isNaN(+sp.thuhoi) ? 'X' : f2(+sp.thuhoi) + ' kg'}</span>${canSummary() ? `<span class="svdel" data-svdel="${esc(sp.id)}" role="button" title="Xoá mẫu" aria-label="Xoá mẫu">${IC('trash')}</span>` : ''}
       <span class="m">${[many ? `${g.length} xe chung mẫu` : sp.soxe, isNaN(+sp.thuhoi) || /^nhập tay$/i.test(String(sp.mau || '').trim()) ? '' : sp.mau, sp.am !== '' && sp.am != null ? 'Ẩm ' + degree(+sp.am) : '', isAdmin() ? sp.savedBy : ''].filter(Boolean).map(esc).join(' · ')}</span></button>`; }).join('')}</div>`;
   }
   $('#thSavedNight').addEventListener('change', e => { svNight = e.target.value; renderSaved(); });
@@ -3433,7 +3433,7 @@ var APP = (() => {
     const d = e.target.closest('[data-svdel]');
     if (d){
       e.stopPropagation();
-      const sp = DB.samples.find(x => String(x.id) === d.dataset.svdel); if (!sp || !isAdmin()) return;
+      const sp = DB.samples.find(x => String(x.id) === d.dataset.svdel); if (!sp || !canSummary()) return;
       delSampleGroup(sp);
       return;
     }
@@ -3441,6 +3441,7 @@ var APP = (() => {
   });
   // xoá mẫu (mẫu chung: xoá cho tất cả các xe trong nhóm)
   function delSampleGroup(sp){
+    if (!canSummary()) return false;
     const grp = groupOf(sp), many = grp.length > 1;
     if (!confirm(`Xoá mẫu thu hồi “${many ? groupName(grp) : sp.khach}” (${isNaN(+sp.thuhoi) ? 'không làm mẫu' : f2(+sp.thuhoi) + ' kg'})${many ? ` của ${grp.length} xe` : ''} và ảnh phiếu thu hồi?${grp.some(x => x.rid) ? `\n${many ? 'Các xe' : 'Xe'} sẽ quay lại danh sách chưa làm thu hồi.` : ''}`)) return false;
     if (editSample && grp.some(x => String(x.id) === String(editSample.id))) thClear(false);
@@ -4135,7 +4136,7 @@ var APP = (() => {
     $('#detBtns').innerHTML = sp
       ? `<button type="button" class="ghost" data-d="copy">${IC('copy')}Sao chép phiếu</button><button type="button" class="ghost" data-d="share">${IC('share')}Chia sẻ</button>` +
         (canTH() ? `<button type="button" class="primary" data-d="edit">${IC('pencil')}Sửa mẫu</button>` : '') +
-        (isAdmin() ? `<button type="button" class="ghost danger" data-d="del">${IC('trash')}Xoá mẫu</button>` : '')
+        (canSummary() ? `<button type="button" class="ghost danger" data-d="del">${IC('trash')}Xoá mẫu</button>` : '')
       : (r && canTH() ? `<button type="button" class="primary" data-d="do">${IC('scale')}Làm thu hồi xe này</button>` : '');
     $('#detDlg').showModal();
     if (sp){
@@ -4159,7 +4160,7 @@ var APP = (() => {
     }
     if (b.dataset.d === 'edit'){ $('#detDlg').close(); if (sp) startEdit(sp); return; }
     if (b.dataset.d === 'del'){
-      if (!isAdmin()){ toast('Cần tài khoản Toàn quyền'); return; }
+      if (!canSummary()){ toast('Tài khoản không có quyền xóa mẫu'); return; }
       if (sp && delSampleGroup(sp)) $('#detDlg').close();
       return;
     }
