@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261101-regions">
+<link rel="stylesheet" href="styles.css?v=20261101-night-mobile">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -161,7 +161,7 @@
         <div><label class="flbl" for="thKl">KL <span class="req">*</span></label><div class="inp"><input class="fld num" id="thKl" inputmode="decimal" enterkeyhint="next"><span class="unit">g</span></div></div>
         <div><label class="flbl" for="thKlq">KL quả</label><div class="inp"><input class="fld num" id="thKlq" inputmode="decimal" enterkeyhint="next"><span class="unit">g</span></div></div>
         <div><label class="flbl" for="thAm">Độ ẩm <span class="req">*</span></label><div class="inp"><input class="fld num" id="thAm" inputmode="decimal" enterkeyhint="done"><span class="unit">°</span></div></div>
-        <div><label class="flbl" for="thMass">Khối lượng mẫu</label><div class="inp"><input class="fld num" id="thMass" inputmode="decimal" value="2000" enterkeyhint="done"><span class="unit">g</span></div></div>
+        <div><label class="flbl" for="thMass">KL mẫu</label><div class="inp"><input class="fld num" id="thMass" inputmode="decimal" value="2000" enterkeyhint="done"><span class="unit">g</span></div></div>
       </div>
       <div class="hint" id="thHint"></div>
       <div class="thbtns">
@@ -3746,7 +3746,7 @@ var APP = (() => {
     if(!nights.length){box.innerHTML='<div class="lsempty">Chưa có dữ liệu để tính trung bình theo đêm.</div>';return;}
     const coverage=(count,total)=>count<total?'<small>'+count+'/'+total+'</small>':'';
     const pct=(v,count,total)=>(v==null?'—':fmtPct(v)+' %')+coverage(count,total);
-    const rowHTML=(a,label)=>'<tr><th scope="row">'+esc(label)+'</th><td>'+a.count+'</td><td>'+fmtKg(a.totalWeight)+'</td><td>'+pct(a.x,a.qualityCount,a.count)+'</td><td>'+pct(a.n,a.qualityCount,a.count)+'</td><td>'+pct(a.c,a.qualityCount,a.count)+'</td><td>'+((a.th==null?'—':f2(a.th)+' kg')+coverage(a.recoveryCount,a.count))+'</td></tr>';
+    const rowHTML=(a,label)=>'<tr><th scope="row">'+esc(label)+'</th><td data-label="Số xe">'+a.count+'</td><td data-label="Tổng KL (kg)">'+fmtKg(a.totalWeight)+'</td><td data-label="TB Xanh">'+pct(a.x,a.qualityCount,a.count)+'</td><td data-label="TB Nổi">'+pct(a.n,a.qualityCount,a.count)+'</td><td data-label="TB Chín">'+pct(a.c,a.qualityCount,a.count)+'</td><td data-label="TB thu hồi">'+((a.th==null?'—':f2(a.th)+' kg')+coverage(a.recoveryCount,a.count))+'</td></tr>';
     box.innerHTML='<div class="night-average-intro"><b>'+nights.length+' đêm</b><span>Trung bình theo khối lượng cà tươi · Chỉ tính xe có dữ liệu hợp lệ · Đêm từ 17:00 đến 17:00 hôm sau</span></div><div class="night-average-scroll"><table class="night-average-table"><thead><tr><th>Đêm</th><th>Số xe</th><th>Tổng khối lượng (kg)</th><th>TB Xanh</th><th>TB Nổi</th><th>TB Chín</th><th>TB thu hồi</th></tr></thead><tbody>'+nights.map(a=>rowHTML(a,a.night?nightLabel(a.night):'Đêm chưa xác định')).join('')+'</tbody><tfoot>'+rowHTML(combineNightAverages(nights),'TỔNG/TRUNG BÌNH CÁC ĐÊM')+'</tfoot></table></div>';
   }
   async function renderLSSheet(){
