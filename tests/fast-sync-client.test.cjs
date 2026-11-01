@@ -1,18 +1,19 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
-const start=html.indexOf("  const DBK = 'tbxn_db'"),end=html.indexOf('  /* Sửa dữ liệu đã đọc',start);
+const start=html.indexOf("  let DBK = 'tbxn_unauthed_db'"),end=html.indexOf('  /* Sửa dữ liệu đã đọc',start);
 assert(start>0&&end>start);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function runtime(initial,respond){
   const local=new Map(Object.entries(initial)),calls=[];
-  const sessionStorage={getItem:()=>JSON.stringify({token:'demo',user:'admin',name:'Demo',role:'Toàn quyền'}),setItem(){},removeItem(){}};
+  const sessionStorage={getItem:()=>JSON.stringify({token:'demo',user:'admin',name:'Demo',role:'admin',khuvuc:'Lâm Đồng'}),setItem(){},removeItem(){}};
   const context={console,AbortController,setTimeout,clearTimeout,sessionStorage,localStorage:{setItem:(k,v)=>local.set(k,JSON.parse(v)),removeItem:k=>local.delete(k)},
     LS:{get:(k,d)=>local.has(k)?local.get(k):d,set:(k,v)=>local.set(k,v)},
-    syncUI(){},changed(){},logout(){},
+    syncUI(){},changed(){},logout(){},renderTable(){},rows:[],draftKey:"draft",editSample:null,extraRids:[],pickOpen:false,lastTH:null,tcMan:[],tcSel:new Set(),
     lotPdfFile:async id=>({name:id+'.pdf',b64:'pdf-bytes'}),sampleImgFile:async()=>({name:'sample.png',b64:'png-bytes'}),
     fetch:async(url,options)=>{const p=JSON.parse(options.body);calls.push(p);return respond(p,calls);}};
   vm.createContext(context);vm.runInContext(html.slice(start,end),context);
-  const api=vm.runInContext('({enqueue,flush,flushFiles,q:()=>Q,fq:()=>FQ,fileError:()=>fileErr})',context);
+  vm.runInContext("DBK='tbxn_db';QK='tbxn_q';FQK='tbxn_file_q';activeArea='Lâm Đồng';DB=LS.get(DBK,{rows:[],samples:[]});Q=LS.get(QK,[]);FQ=LS.get(FQK,[]);",context);
+  const api=vm.runInContext('({activateScope,saveDB,enqueue,flush,flushFiles,q:()=>Q,fq:()=>FQ,fileError:()=>fileErr})',context);
   return {api,calls,local,context};
 }
 const result=data=>({json:async()=>data});
@@ -60,6 +61,14 @@ const ack=p=>result({ok:true,features,completed:p.ops.map(x=>x.requestId),files:
     await r.api.flush();for(let i=0;i<5;i++)await tick();
     assert.equal(r.api.q().length,0);assert.equal(r.api.fq().length,1);assert(r.api.fileError());
     assert.equal(r.local.get('tbxn_file_q').length,1,'persist deferred file retry');
+  }
+  {
+    const r=runtime({},async()=>result({ok:true}));
+    vm.runInContext("AUTH={user:'same',role:'ICS',khuvuc:'Lào',token:'a'};activeArea='Lào';activateScope();DB.rows=[{rid:'lao',khuvuc:'Lào'}];saveDB();",r.context);
+    vm.runInContext("AUTH={user:'same',role:'ICS',khuvuc:'Sơn La',token:'b'};activeArea='Sơn La';activateScope();",r.context);
+    assert.equal(vm.runInContext('DB.rows.length',r.context),0);assert.equal(r.api.q().length,0);
+    vm.runInContext("AUTH={user:'same',role:'ICS',khuvuc:'Lào',token:'c'};activeArea='Lào';activateScope();",r.context);
+    assert.equal(vm.runInContext('DB.rows[0].rid',r.context),'lao');
   }
   console.log('PASS: batched metadata without base64, data does not wait for PDF, parallel file/data lanes, stable retry IDs, legacy fallback and durable file errors.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
