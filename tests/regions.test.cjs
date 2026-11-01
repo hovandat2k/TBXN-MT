@@ -68,3 +68,12 @@ const originalRow={rid:'old-row',thuc:1000,xanh:49,noi:15,chin:36};
 let restored=summary.sheetRowsOf([originalRow],[])[0];assert.equal(restored.xanh,'49');assert.equal(restored.noi,'15');assert.equal(restored.chin,'36');assert.equal(restored.thuhoi,'5.6');
 legacySample={...legacySample,xanh:0,noi:20,chin:80};restored=summary.sheetRowsOf([originalRow],[])[0];assert.equal(restored.xanh,'0');assert.equal(restored.noi,'20');assert.equal(restored.chin,'80');
 console.log('PASS: legacy empty sample quality falls back to weighing data, retaining explicit zero/new sample values.');
+assert.equal(f.manualRecovery(false).khach,'');assert.throws(()=>f.manualRecovery());
+const math={r2:v=>Math.round(v*100)/100,f2:v=>v.toFixed(2),ff:String,degree:String,MOC:12.5,CONG:0.5,TABLE:{15:[0]}};vm.createContext(math);vm.runInContext('let MAU=2000;',math);
+for(const name of ['compute','computeWith','savedSampleMass']){const start=html.indexOf('  function '+name+'(');vm.runInContext(html.slice(start,html.indexOf('\n  }',start)+4),math);}
+for(const am of [14,15]){
+ const normal=math.computeWith(2000,350,25,am),custom=math.computeWith(2500,350,25,am);
+ assert(Math.abs(custom.E/normal.E-1.25)<1e-12);assert(custom.lines.at(-1).startsWith('2500 /'));assert.equal(vm.runInContext('MAU',math),2000);
+}
+assert.equal(math.savedSampleMass({cachtinh:'Khối lượng mẫu: 2500 g | phép tính'}),2500);assert.equal(math.savedSampleMass({mau:'Mẫu riêng'}),2000);assert.equal(math.savedSampleMass({mau:'Mẫu chung'}),10000);
+console.log('PASS: anonymous calculation metadata, required save name, custom final numerator in both moisture branches and legacy mass fallback.');

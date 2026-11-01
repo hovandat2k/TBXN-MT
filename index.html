@@ -157,10 +157,11 @@
       </div>
       <div class="thinfo" id="thInfo" hidden></div>
       <div class="thmulti" id="thMulti" hidden></div>
-      <div class="row3">
+      <div class="row3" style="grid-template-columns:repeat(4,minmax(0,1fr))">
         <div><label class="flbl" for="thKl">KL <span class="req">*</span></label><div class="inp"><input class="fld num" id="thKl" inputmode="decimal" enterkeyhint="next"><span class="unit">g</span></div></div>
         <div><label class="flbl" for="thKlq">KL quả</label><div class="inp"><input class="fld num" id="thKlq" inputmode="decimal" enterkeyhint="next"><span class="unit">g</span></div></div>
         <div><label class="flbl" for="thAm">Độ ẩm <span class="req">*</span></label><div class="inp"><input class="fld num" id="thAm" inputmode="decimal" enterkeyhint="done"><span class="unit">°</span></div></div>
+        <div><label class="flbl" for="thMass">Khối lượng mẫu</label><div class="inp"><input class="fld num" id="thMass" inputmode="decimal" value="2000" enterkeyhint="done"><span class="unit">g</span></div></div>
       </div>
       <div class="hint" id="thHint"></div>
       <div class="thbtns">
@@ -3353,10 +3354,10 @@ var APP = (() => {
     } catch(e){ if (e.name !== 'AbortError') toast('Không chia sẻ được: ' + e.message); }
   });
   $('#tcPrev').addEventListener('click', () => { $('#zoomImg').src = $('#tcPrev').src; $('#zoomDlg').showModal(); });
-  function manualRecovery(){
+  function manualRecovery(requireName = true){
     const value=id=>$('#'+id).value.trim(), name=value('tmName'), weight=value('tmWeight'), date=value('tmDate');
     const meta={khach:name,soxe:value('tmPlate'),date:date?date.split('-').reverse().join('/'):'',gio:'',thuc:weight,xanh:value('tmXanh'),noi:value('tmNoi'),chin:value('tmChin')};
-    if(!name) throw new Error('Nhập tên khách hàng');
+    if(requireName && !name) throw new Error('Nhập tên khách hàng');
     if(!date) throw new Error('Chọn ngày cân');
     if(weight!=='' && (parseKg(weight)==null || !(parseKg(weight)>=0))) throw new Error('Khối lượng cà tươi không hợp lệ');
     for(const f of PF) if(meta[f]!=='' && (parsePct(meta[f])==null || parsePct(meta[f])<0 || parsePct(meta[f])>100)) throw new Error('Tỷ lệ phải từ 0 đến 100');
@@ -3371,25 +3372,27 @@ var APP = (() => {
   let lastTH = null;
   function thCalc(showErr = true){
     const v = $('#thSel').value;let manual=null;
-    if(isRecoveryICS()){try{manual=manualRecovery();}catch(e){if(showErr) toast(e.message);return false;}}
+    if(isRecoveryICS()){try{manual=manualRecovery(false);}catch(e){if(showErr) toast(e.message);return false;}}
     const selected=selRow(), r=manual?{...selected,...manual}:selected, rs=manual?[r]:selRows(), name = r ? (rs.length > 1 ? groupName(rs) : (r.khach || '')) : (v === '__free' || v === '__edit') ? $('#thName').value.trim() : '';
     const kl = parseNum($('#thKl').value), klq0 = parseNum($('#thKlq').value), am = parseNum($('#thAm').value), klq = klq0 === null ? 0 : klq0;
-    ['#thKl','#thKlq','#thAm'].forEach(s => $(s).classList.remove('bad'));
+    const mass = parseNum($('#thMass').value);
+    ['#thKl','#thKlq','#thAm','#thMass'].forEach(s => $(s).classList.remove('bad'));
     let err = '';
     if (kl === null || isNaN(kl) || kl <= 0){ err = 'Vui lòng nhập KL hợp lệ.'; if (showErr) $('#thKl').classList.add('bad'); }
     else if (isNaN(klq) || klq < 0){ err = 'KL quả không hợp lệ.'; if (showErr) $('#thKlq').classList.add('bad'); }
     else if (am === null || isNaN(am) || am <= 0){ err = 'Vui lòng nhập độ ẩm.'; if (showErr) $('#thAm').classList.add('bad'); }
+    if (!Number.isFinite(mass) || mass <= 0){ err = 'Nhập khối lượng mẫu lớn hơn 0.'; if(showErr) $('#thMass').classList.add('bad'); }
     if (err){ $('#thHint').textContent = showErr ? err : ''; if (showErr) $('#thOut').hidden = true; lastTH = null; return false; }
-    const res = compute(name, kl, klq, am);
+    const res = computeWith(mass, kl, klq, am); res.name=name;
     if (res.error){ $('#thHint').textContent = res.error; $('#thAm').classList.add('bad'); return false; }
     $('#thHint').textContent = '';
-    lastTH = { res, row: r, rows: rs, name, mau: MAU };
+    lastTH = { res, row: r, rows: rs, name, mau: MAU, mass };
     drawTHPreview();
     buildAmTable(res.hit);
-    LS.set(scopeKey('thlast'), { sel: $('#thSel').value, name: $('#thName').value, kl: $('#thKl').value, klq: $('#thKlq').value, am: $('#thAm').value });
+    LS.set(scopeKey('thlast'), { sel: $('#thSel').value, name: $('#thName').value, kl: $('#thKl').value, klq: $('#thKlq').value, am: $('#thAm').value, mass: $('#thMass').value });
     return true;
   }
-  ['#thKl','#thKlq','#thAm'].forEach((id, i, arr) => {
+  ['#thKl','#thKlq','#thAm','#thMass'].forEach((id, i, arr) => {
     $(id).addEventListener('input', () => thCalc(false));
     $(id).addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); if (i < arr.length - 1) $(arr[i + 1]).focus(); else $('#thCalc').click(); } });
   });
@@ -3404,6 +3407,7 @@ var APP = (() => {
     setMau(sp.mau === 'Mẫu chung' ? 10000 : 2000);
     $('#thName').value = sp.khach || '';
     $('#thKl').value = sp.kl ?? ''; $('#thKlq').value = +sp.klq ? sp.klq : ''; $('#thAm').value = sp.am ?? '';
+    $('#thMass').value = savedSampleMass(sp);
     selChanged(false);
     if(isRecoveryICS()) fillManualRecovery({...rowOf(sp.rid),...sp,thuc:sp.klTuoi});
     const e = $('#thEdit'); e.hidden = false;
@@ -3453,6 +3457,7 @@ var APP = (() => {
     if(isRecoveryICS()) fillManualRecovery(null);
     if (!keepSel) stopEdit(); else { extraRids = []; pickOpen = false; }
     ['#thKl','#thKlq','#thAm'].forEach(s => { $(s).value = ''; $(s).classList.remove('bad'); });
+    $('#thMass').value='2000';$('#thMass').classList.remove('bad');
     if (!keepSel){ $('#thSel').value = ''; $('#thName').value = ''; selChanged(false); }
     $('#thHint').textContent = ''; $('#thOut').hidden = true; lastTH = null; buildAmTable();
     LS.set(scopeKey('thlast'), null);
@@ -3609,7 +3614,7 @@ var APP = (() => {
   $('#thSave').addEventListener('click', async () => {
     if (!thCalc(true)) return;
     const t = lastTH, r = t.row;
-    if (!r && !t.name){ toast('Chọn khách hàng hoặc nhập tên mẫu trước khi lưu'); $('#thChoose').focus(); return; }
+    if (!t.name.trim()){ toast('Nhập tên khách hàng trước khi lưu'); $(isRecoveryICS()?'#tmName':'#thChoose').focus(); return; }
     const ed = $('#thSel').value === '__edit' ? editSample : null;
     const rs = selRows();
     if (!isRecoveryICS() && (rs.length > 1 || (ed && ed.nhom))) return saveGroup(t, rs, ed);
@@ -3617,7 +3622,7 @@ var APP = (() => {
       id: ed ? String(ed.id) : 'M' + uid(), rid: r?.rid ? String(r.rid) : '', date: isRecoveryICS()?r.date:ed ? (ed.date || '') : r ? (r.date || '') : today(), khach: t.name, soxe: r ? (r.soxe || '') : '',
       klTuoi: r && numv(r.thuc) != null ? numv(r.thuc) : '', mau: t.mau === 10000 ? 'Mẫu chung' : 'Mẫu riêng',
       kl: t.res.kl, klq: t.res.klq, am: t.res.am, thuhoi: r2(t.res.E),
-      cachtinh: [`${f2(t.res.kl)} + ${f2(t.res.klq / 2)} = ${f2(t.res.tong)}`, ...t.res.lines.map(l => l.replace(/<[^>]+>/g, ''))].join(' | '),
+      cachtinh: [`Khối lượng mẫu: ${t.mass ?? t.mau} g`, `${f2(t.res.kl)} + ${f2(t.res.klq / 2)} = ${f2(t.res.tong)}`, ...t.res.lines.map(l => l.replace(/<[^>]+>/g, ''))].join(' | '),
       ...(isRecoveryICS()?{gio:r.gio||'',xanh:r.xanh,noi:r.noi,chin:r.chin}:{}), savedAt: nowStr()
     };
     enqueue({ action: 'saveSample', sample, fileJob:{kind:'sample',id:String(sample.id)} });
@@ -3642,7 +3647,7 @@ var APP = (() => {
     const old = ed ? groupOf(ed) : [];
     const nhom = (ed && ed.nhom) || ('N' + uid()), at = nowStr();
     const base = { mau: t.mau === 10000 ? 'Mẫu chung' : 'Mẫu riêng', kl: t.res.kl, klq: t.res.klq, am: t.res.am, thuhoi: r2(t.res.E),
-      cachtinh: [`${f2(t.res.kl)} + ${f2(t.res.klq / 2)} = ${f2(t.res.tong)}`, ...t.res.lines.map(l => l.replace(/<[^>]+>/g, ''))].join(' | '), savedAt: at, nhom: rs.length > 1 ? nhom : '' };
+      cachtinh: [`Khối lượng mẫu: ${t.mass ?? t.mau} g`, `${f2(t.res.kl)} + ${f2(t.res.klq / 2)} = ${f2(t.res.tong)}`, ...t.res.lines.map(l => l.replace(/<[^>]+>/g, ''))].join(' | '), savedAt: at, nhom: rs.length > 1 ? nhom : '' };
     const samples = rs.map((r, i) => {
       const prev = old.find(x => String(x.rid) === String(r.rid));
       return Object.assign({}, base, { id: prev ? String(prev.id) : 'M' + uid() + (i ? '_' + i : ''), rid: String(r.rid), date: r.date || '', khach: r.khach || '', soxe: r.soxe || '',
@@ -4104,9 +4109,13 @@ var APP = (() => {
   let detSample = null, detTH = null;
   const kv = items => `<div class="kv">${items.filter(x => x[1] !== '' && x[1] != null).map(([k, v, b]) => `<div class="k">${k}</div><div class="v${b ? ' b' : ''}">${v}</div>`).join('')}</div>`;
   function computeWith(mau, kl, klq, am){ const old = MAU; MAU = mau; try { return compute('', kl, klq, am); } finally { MAU = old; } }
+  function savedSampleMass(sp){
+    const match=String(sp.cachtinh||'').match(/Khối lượng mẫu: ([\d.]+) g/), mass=match?+match[1]:0;
+    return Number.isFinite(mass) && mass>0 ? mass : sp.mau==='Mẫu chung'?10000:2000;
+  }
   function savedRecoveryResult(sp){
     if (!(+sp.kl > 0 && +sp.am > 0) || !thNum(sp)) return null;
-    const res = computeWith(sp.mau === 'Mẫu chung' ? 10000 : 2000, +sp.kl, +sp.klq || 0, +sp.am);
+    const res = computeWith(savedSampleMass(sp), +sp.kl, +sp.klq || 0, +sp.am);
     if (!res.error && r2(res.E) !== +sp.thuhoi){ res.E = +sp.thuhoi; res.lines[3] = `Thu hồi đã chỉnh: <b>${f2(+sp.thuhoi)} Kg</b>`; }
     return res;
   }
@@ -4270,7 +4279,7 @@ var APP = (() => {
     buildAmTable();
     const s = LS.get(scopeKey('thlast'), null);
     renderTH();
-    if (s){ $('#thSel').value = [...$('#thSel').options].some(o => o.value === s.sel) ? s.sel : ''; $('#thName').value = s.name || ''; $('#thKl').value = s.kl || ''; $('#thKlq').value = s.klq || ''; $('#thAm').value = s.am || ''; selChanged(false); thCalc(false); }
+    if (s){ $('#thSel').value = [...$('#thSel').options].some(o => o.value === s.sel) ? s.sel : ''; $('#thName').value = s.name || ''; $('#thKl').value = s.kl || ''; $('#thKlq').value = s.klq || ''; $('#thAm').value = s.am || ''; $('#thMass').value = s.mass || '2000'; selChanged(false); thCalc(false); }
     if (!AUTH){ showLogin(); return; }
     try{const p=await api('ping');if(!p.features?.regions) throw new Error('Máy chủ cần cập nhật phân vùng khu vực');AUTH={...AUTH,role:p.role,khuvuc:p.khuvuc,name:p.name};saveAuth(AUTH);activeArea=isRoot()?LS.get('tbxn_area_'+AUTH.user,'Lâm Đồng'):AUTH.khuvuc;activateScope();}
     catch(e){logout(true);return;}
