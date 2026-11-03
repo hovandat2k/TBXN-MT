@@ -24,6 +24,19 @@ vm.runInContext(source.match(/const nightStart = n => [^\r\n]+/)[0], context);
 assert.equal(vm.runInContext("new Date(nightStart('25/10/2026')).getHours()", context), 17);
 assert.equal(vm.runInContext("new Date(nightStart('25/10/2026')).getMinutes()", context), 0);
 console.log('PASS: 17:00 boundary, overnight grouping, month/year/leap rollover and default range start.');
+// A manually entered recovery sample belongs to weighing date, even if saved days later.
+context.DB={rows:[{rid:'linked',date:'28/10/2026',gio:'18:00'}]};
+vm.runInContext(source.slice(source.indexOf('  const rNight ='),source.indexOf('  const rowOf =')),context);
+vm.runInContext(source.slice(source.indexOf('  const tOf ='),source.indexOf('  const dtVal =')),context);
+const getNight=sp=>vm.runInContext('sNight('+JSON.stringify(sp)+')',context);
+const parts=sp=>Array.from(vm.runInContext('savedParts('+JSON.stringify(sp)+')',context));
+assert.equal(getNight({date:'28/10/2026',gio:'',savedAt:'01/11/2026 10:00'}),'28/10/2026');
+assert.equal(getNight({date:'29/10/2026',gio:'16:59',savedAt:'01/11/2026 10:00'}),'28/10/2026');
+assert.equal(getNight({date:'29/10/2026',gio:'17:00',savedAt:'01/11/2026 10:00'}),'29/10/2026');
+assert.equal(getNight({rid:'linked',date:'30/10/2026',savedAt:'01/11/2026 10:00'}),'28/10/2026');
+assert.deepEqual(parts({date:'29/10/2026',gio:'18:00',savedAt:'01/11/2026 10:00'}),['29/10/2026','18:00']);
+assert.equal(getNight({savedAt:'01/11/2026 10:00'}),'31/10/2026');
+console.log('PASS: manual sample night/range use weighing date/time; saved time is legacy fallback only.');
 
 vm.runInContext("const PF=['xanh','noi','chin'];",context);
 for(const name of ['parseKg','parsePct','pcts','nightAverages','combineNightAverages']){const start=source.indexOf('function '+name+'(');vm.runInContext(source.slice(start,source.indexOf('\n}',start)+2),context);}
