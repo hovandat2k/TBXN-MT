@@ -3693,6 +3693,7 @@ var APP = (() => {
   const sNight = sp => {
     const r = sp.rid ? DB.rows.find(x => String(x.rid) === String(sp.rid)) : null;
     if (r) return rNight(r);
+    if (sp.date) return nightOf(sp.date, sp.gio || '');
     const m = String(sp.savedAt || '').match(/(\d{1,2}\/\d{1,2}\/\d{4})\D+(\d{1,2}:\d{2})/);
     return m ? nightOf(m[1], m[2]) : nightOf(sp.date, '');
   };
@@ -3705,7 +3706,7 @@ var APP = (() => {
     const t = String(gio || '').match(/(\d{1,2}):(\d{2})/);
     return new Date(+m[3], +m[2] - 1, +m[1], t ? +t[1] : 0, t ? +t[2] : 0).getTime();
   };
-  const savedParts = sp => { const m = String(sp.savedAt || '').match(/(\d{1,2}\/\d{1,2}\/\d{4})\D+(\d{1,2}:\d{2})/); return m ? [m[1], m[2]] : [sp.date || '', '']; };
+  const savedParts = sp => { if (sp.date) return [sp.date, sp.gio || '']; const m = String(sp.savedAt || '').match(/(\d{1,2}\/\d{1,2}\/\d{4})\D+(\d{1,2}:\d{2})/); return m ? [m[1], m[2]] : ['', '']; };
   const rTime = r => tOf(r.date, r.gio), sTime = sp => tOf(...savedParts(sp));
   const dtVal = t => { const d = new Date(t); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
   const dtParse = v => { if (!v) return null; const t = new Date(v).getTime(); return isNaN(t) ? null : t; };
