@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261101-night-mobile">
+<link rel="stylesheet" href="styles.css?v=20261104-lao-form">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -151,9 +151,14 @@
       <div class="thedit" id="thEdit" hidden></div>
       <input class="fld" id="thName" type="text" placeholder="Nhập tên mẫu" autocomplete="off" hidden>
       <div id="thManual" class="th-manual" hidden>
-        <label><span id="tmNameLabel">Tên khách hàng</span> <span class="req">*</span><input class="fld" id="tmName" autocomplete="off"></label>
-        <datalist id="tmLaoNames"><option value="Mẫu chung 1"></option><option value="Mẫu chung 2"></option></datalist>
-        <div class="row3"><label>Số xe<input class="fld" id="tmPlate"></label><label>Ngày cân<input class="fld" id="tmDate" type="date"></label><label>Khối lượng cà tươi (kg)<input class="fld num" id="tmWeight" inputmode="decimal"></label></div>
+        <div id="tmNameGroup">
+          <label><span id="tmNameLabel">Tên khách hàng</span> <span class="req">*</span><input class="fld" id="tmName" autocomplete="off"></label>
+          <div id="tmLaoNames" class="sample-name-options" role="group" aria-label="Tên mẫu gợi ý" hidden>
+            <button type="button" class="ghost" aria-pressed="false">Mẫu chung 1</button>
+            <button type="button" class="ghost" aria-pressed="false">Mẫu chung 2</button>
+          </div>
+        </div>
+        <div class="row3" id="tmWeighing"><label id="tmPlateLabel">Số xe<input class="fld" id="tmPlate"></label><label id="tmDateLabel">Ngày cân<input class="fld" id="tmDate" type="date"></label><label id="tmWeightLabel">Khối lượng cà tươi (kg)<input class="fld num" id="tmWeight" inputmode="decimal"></label></div>
         <div class="row3"><label>Xanh (%)<input class="fld num" id="tmXanh" inputmode="decimal"></label><label>Nổi (%)<input class="fld num" id="tmNoi" inputmode="decimal"></label><label>Chín (%)<input class="fld num" id="tmChin" inputmode="decimal"></label></div>
       </div>
       <div class="thinfo" id="thInfo" hidden></div>
@@ -3391,10 +3396,23 @@ var APP = (() => {
     recoveryAutoPct=missing[0];$('#'+recoveryAutoPct).value=String(remaining);
   }
   ['tmXanh','tmNoi','tmChin'].forEach(id=>$('#'+id).addEventListener('input',()=>{updateRecoveryPercent(id);thCalc(false);}));
+  const sampleNameButtons = [...$('#tmLaoNames').querySelectorAll('button')];
+  function updateSampleNameButtons(){
+    const name = $('#tmName').value.trim();
+    sampleNameButtons.forEach(button => button.setAttribute('aria-pressed', String(button.textContent === name)));
+  }
+  $('#tmName').addEventListener('input', updateSampleNameButtons);
+  sampleNameButtons.forEach(button => button.addEventListener('click', () => {
+    if (!isLaoRecovery()) return;
+    $('#tmName').value = button.textContent;
+    updateSampleNameButtons();
+    thCalc(false);
+  }));
   function fillManualRecovery(r){
     recoveryAutoPct='';
     const meta=r || {}, d=String(meta.date||today()).split('/').reverse().join('-');
     $('#tmName').value=meta.khach||'';$('#tmPlate').value=meta.soxe||'';$('#tmDate').value=d;
+    updateSampleNameButtons();
     $('#tmWeight').value=meta.thuc ?? meta.klTuoi ?? '';$('#tmXanh').value=meta.xanh ?? '';$('#tmNoi').value=meta.noi ?? '';$('#tmChin').value=meta.chin ?? '';
   }
   let lastTH = null;
@@ -4251,8 +4269,19 @@ var APP = (() => {
     LSX.compact=isRecoveryICS();
     LSX.arithmeticRecovery=isLaoRecovery();
     $('#tmNameLabel').textContent=LSX.arithmeticRecovery ? 'Tên mẫu' : 'Tên khách hàng';
-    if(LSX.arithmeticRecovery) $('#tmName').setAttribute('list','tmLaoNames');
-    else $('#tmName').removeAttribute('list');
+    const lao = LSX.arithmeticRecovery;
+    const form = $('#thManual'), nameGroup = $('#tmNameGroup'), weighing = $('#tmWeighing');
+    $('#tmLaoNames').hidden = !lao;
+    form.classList.toggle('lao-manual', lao);
+    if (lao){
+      weighing.prepend($('#tmWeightLabel'));
+      form.append(nameGroup, $('#tmPlateLabel'));
+    } else {
+      weighing.prepend($('#tmPlateLabel'));
+      weighing.append($('#tmWeightLabel'));
+      form.prepend(nameGroup);
+    }
+    updateSampleNameButtons();
     $('#lsEdit').hidden=!canSummary();
     document.body.classList.toggle('role-xem', isViewer());
     document.body.classList.toggle('role-admin', isAdmin());
