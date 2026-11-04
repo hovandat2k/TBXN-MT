@@ -770,6 +770,13 @@ dialog,.lgbox{border-radius:12px}
 body.role-ics-th [data-tab=tuoi],body.role-ics-th #aiSec{display:none!important}body.role-ics-th .tabs{grid-template-columns:1fr 1fr}
 body.role-ics-th #thName,body.role-ics-th #mauSeg,body.role-ics-th #lsExpSeg,body.role-ics-th #lsDel,body.role-ics-th #thChooser,body.role-ics-th label[for=thChoose],body.role-ics-th #thMulti{display:none!important}
 .th-manual{padding:12px;margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}.th-manual[hidden]{display:none}.th-manual label{display:block;font-weight:700;margin-bottom:8px}.th-manual input{width:100%;margin-top:5px}
+#thForm .lao-manual #tmWeighing{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}
+.lao-manual #tmNameGroup{margin-top:12px}
+.lao-manual #tmPlateLabel{margin-top:14px}
+.sample-name-options{display:flex;flex-wrap:wrap;gap:8px}
+.sample-name-options[hidden]{display:none}
+.sample-name-options button{min-height:44px;border-radius:999px;padding:8px 16px}
+.sample-name-options button[aria-pressed=true]{background:#1765d1;color:white;border-color:#1765d1}
 @media(max-width:640px){
   .night-average-scroll{overflow:visible;max-height:none;border:0;border-radius:0}
   .night-average-table{display:block;min-width:0;width:100%;font-size:20px}
