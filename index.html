@@ -746,7 +746,7 @@ function cellText(r, f, i){
   else if (f === 'stt' && (isLSX() || isMerged() || multiDay() || !String(v).trim())) v = String(i + 1);   // gộp ngày: đánh số liên tục
   v = String(v).trim();
   if (f === 'gio' && multiDay() && r.date) return v ? [v, r.date] : [r.date];
-  if (f === 'date'){ const t = String(r.gio ?? '').trim(); return t && v ? [t, v] : [t || v]; }   // phiếu rút gọn: giờ cân trên, ngày cân dưới
+  if (f === 'date'){ const t = String(r.gio ?? '').trim(); return isLaoSheet() ? [v] : t && v ? [t, v] : [t || v]; }
   if (f === 'hang'){ const w = v.split(/\s+/); if (w.length > 2) return [w.slice(0, 2).join(' '), w.slice(2).join(' ')]; if (w.length === 2 && v.length > 10) return w; }
   return v.split(/\r?\n/);
 }
@@ -805,7 +805,7 @@ function drawSheet(mono, logo){
   if (leftW < labW){ const add = Math.ceil((labW - leftW) / Math.max(1, iThuc)); for (let k = 0; k < iThuc; k++) widths[k] += add; leftW = widths.slice(0, iThuc).reduce((a, b) => a + b, 0); }
   const tableW = widths.reduce((a, b) => a + b, 0);
   const M = 24, TOP = 92;
-  const hDate = isMerged() ? 0 : H_DATE;
+  const hDate = isMerged() || arithmeticRecovery ? 0 : H_DATE;
   let tableH = H_HEAD + gs.reduce((a, g) => a + hDate + g.rows.reduce((s2, r) => s2 + rowH(r), 0) + H_TOT, 0) + (gs.length > 1 ? H_GRAND : 0);
   const SUMH = 96;
   const Wc = Math.max(tableW + M * 2, 640), Hc = TOP + tableH + SUMH + 34;
@@ -840,12 +840,14 @@ function drawSheet(mono, logo){
   line(X0, y, XE, y); xs.forEach(x => line(x, y, x, y + H_HEAD));
   y += H_HEAD; brk.push(y);
   gs.forEach(gr => {
-    if (!isMerged()){
+    if (hDate){
       line(X0, y, XE, y);
       line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
       txt(arithmeticRecovery ? `Ngày cân ${gr.date || 'chưa xác định'}` : gr.date ? nightLabel(gr.date) : 'Đêm …', X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
       y += H_DATE; brk.push(y);
     }
+    const groupTop = y;
+    const mergeDailyCells = arithmeticRecovery && gr.date && gr.rows.length > 1;
     gr.rows.forEach((r, i) => {
       const note = noteOf.get(r) || [], h = rowH(r), pfH = valH(r);
       line(X0, y, XE, y);
@@ -855,6 +857,7 @@ function drawSheet(mono, logo){
       } else nxFill(y + 0.8, pfH - 1.6, F('#eef8f1'), h - 1.6);
       hits.push({ y0: y, y1: y + h, yp: y + pfH, r, bg: striped ? F(i % 2 === 0 ? '#edf7f0' : '#fff') : undefined });
       cols.forEach(([f], k) => {
+        if (mergeDailyCells && (f === 'date' || f === 'thuc')) return;
         const ls = cellText(r, f, i);
         const al = f === 'thuc' ? 'right' : 'center';
         const cy = y + (isNX(f) ? pfH : h) / 2 + 1;
@@ -868,10 +871,24 @@ function drawSheet(mono, logo){
         const cx = (xs[iP0] + xs[iP1 + 1]) / 2, ny = y + pfH + (h - pfH) / 2 + 1;
         note.forEach((l, j) => { g.font = `400 ${NOTE_FS}px ${SERIF}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.fillText(l, cx, ny + (j - (note.length - 1) / 2) * NOTE_LH); });
       }
-      y += h; brk.push(y);
+      y += h;
+      if (!mergeDailyCells) brk.push(y);
     });
     // tổng ngày
     const a = agg(gr.rows, arithmeticRecovery);
+    if (mergeDailyCells){
+      cols.forEach(([field], k) => {
+        if (field !== 'date' && field !== 'thuc') return;
+        g.fillStyle = F('#edf7f0');
+        g.fillRect(xs[k], groupTop, widths[k], y - groupTop);
+        line(xs[k], groupTop, xs[k], y);
+        line(xs[k + 1], groupTop, xs[k + 1], y);
+        line(xs[k], groupTop, xs[k + 1], groupTop);
+        const value = field === 'date' ? gr.date || '–' : fmtKg(a.tl);
+        txt(value, cellX(k), (groupTop + y) / 2 + 1, 'center', 700);
+      });
+      brk.push(y);
+    }
     line(X0, y, XE, y);
     if (striped){ g.fillStyle = F('#dcf2e3'); g.fillRect(X0,y + 0.8,XE-X0,H_TOT - 1.6); }
     else nxFill(y + 0.8, H_TOT - 1.6, F('#dcf2e3'));
