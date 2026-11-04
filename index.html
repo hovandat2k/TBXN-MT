@@ -726,9 +726,11 @@ function inSheet(ctx, fn){
   try { return fn(); } finally { ctx.sort = sortLv; [rows, expMode, grpMode, sortLv, SHEET] = sv; }
 }
 let grpMode = LS.get('tbxn_grp', 'all');   // 'all' = gộp chung các ngày (mặc định), 'day' = tách theo ngày
-const isMerged = () => grpMode === 'all';
+const isLaoSheet = () => isLSX() && SHEET.arithmeticRecovery;
+const isMerged = () => !isLaoSheet() && grpMode === 'all';
 const multiDay = () => new Set(rows.map(r => r.date || '')).size > 1;
 function sheetCols(){
+  if(isLSX() && SHEET.arithmeticRecovery) return [['date','Ngày cân'],['khach','Tên mẫu'],['thuc','Khối lượng cà tươi (kg)'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)'],['thuhoi','Thu hồi (kg)']];
   if(isLSX() && SHEET.compact) return [['khach','Khách hàng'],['soxe','Số xe'],['thuc','Khối lượng (kg)'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)'],['thuhoi','Thu hồi (kg)']];
   let c = expMode === 'full' ? COLS_FULL : [['stt','STT'],['khach','Khách hàng'],['thuc','TL Thực'],['xanh','Xanh (%)'],['noi','Nổi (%)'],['chin','Chín (%)']];
   if (isLSX()) c = [...c.filter(x => x[0] !== 'hang'), ['thuhoi','Thu hồi (kg)']];   // Tổng hợp mẫu: bỏ Hàng hóa, thêm Thu hồi ở cuối
@@ -817,11 +819,12 @@ function drawSheet(mono, logo){
   g.font = `800 28px ${SANS}`; const titleW = g.measureText(TITLE).width;
   const gx = Math.round(Wc / 2 - (54 + 16 + titleW) / 2), tx = gx + 70;
   if (logo){ g.save(); roundRect(g, gx, 20, 54, 54, 13); g.clip(); if (mono) g.filter = 'grayscale(1)'; g.drawImage(logo, gx, 20, 54, 54); g.restore(); }
-  const range = nightRange();
+  const dates = arithmeticRecovery ? groups().map(group => group.date).filter(Boolean) : [];
+  const range = arithmeticRecovery ? (dates.length ? `Ngày cân ${dates[0]}${dates.length > 1 ? ' – ' + dates.at(-1) : ''}` : '') : nightRange();
   g.fillStyle = T('#1f6b3d'); g.font = `800 26px ${SANS}`; g.textAlign = 'left';
   g.fillText(TITLE, tx, 37);
   g.fillStyle = T('#5b7d64'); g.font = `600 15.5px ${SANS}`;
-  g.textAlign = 'center'; g.fillText([isLSX() && SHEET.sub, range, `${rows.length} xe`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
+  g.textAlign = 'center'; g.fillText([isLSX() && SHEET.sub, range, `${rows.length} ${arithmeticRecovery ? 'mẫu' : 'xe'}`].filter(Boolean).join('  ·  '), tx + titleW / 2, 63);
   // bảng
   const X0 = M + Math.max(0, (Wc - M * 2 - tableW) / 2), xs = [X0]; widths.forEach(w => xs.push(xs[xs.length - 1] + w));
   const XE = xs[xs.length - 1];
@@ -840,7 +843,7 @@ function drawSheet(mono, logo){
     if (!isMerged()){
       line(X0, y, XE, y);
       line(X0, y, X0, y + H_DATE); line(XE, y, XE, y + H_DATE);
-      txt(gr.date ? nightLabel(gr.date) : 'Đêm …', X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
+      txt(arithmeticRecovery ? `Ngày cân ${gr.date || 'chưa xác định'}` : gr.date ? nightLabel(gr.date) : 'Đêm …', X0 + Math.min(76, widths[0] + 30), y + H_DATE / 2 + 1, 'left', 700);
       y += H_DATE; brk.push(y);
     }
     gr.rows.forEach((r, i) => {
@@ -872,7 +875,7 @@ function drawSheet(mono, logo){
     line(X0, y, XE, y);
     if (striped){ g.fillStyle = F('#dcf2e3'); g.fillRect(X0,y + 0.8,XE-X0,H_TOT - 1.6); }
     else nxFill(y + 0.8, H_TOT - 1.6, F('#dcf2e3'));
-    txt('Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
+    txt(arithmeticRecovery ? 'Tổng ngày' : 'Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
     txt(fmtKg(a.tl), cellX(iThuc, 'right'), y + H_TOT / 2 + 1, 'right', 700);
     cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(a[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#1f5e37')); });
     cols.forEach(([f], k) => { if (isTH(f)) txt(fx2(a.th), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#1f5e37')); });
@@ -905,7 +908,7 @@ function drawSheet(mono, logo){
     g.fillStyle = T(fg); g.font = `800 ${bw < 170 ? 20 : bw < 220 ? 23 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
   });
   g.textAlign = 'left'; g.fillStyle = T('#7c9a84'); g.font = `500 12.5px ${SANS}`;
-  g.fillText('TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
+  g.fillText(arithmeticRecovery ? 'TB Thu hồi = tổng kết quả ÷ số mẫu hợp lệ. Xanh/Nổi/Chín tính theo khối lượng.' : 'TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
   cv.hdr = { cols: cols.map(c => c[0]), xs: xs.slice(), top: TOP, h: H_HEAD, W: Wc, H: Hc, multiDay: multiDay() };
   cv.hits = hits;   // vị trí từng dòng xe trên phiếu (bấm để xem chi tiết)
   cv.breaks = brk; cv.head = [TOP, TOP + H_HEAD]; cv.cssW = Wc; cv.cssH = Hc; cv.S = S;   // ranh giới dòng + dòng tiêu đề để chia trang A4
@@ -985,7 +988,7 @@ function nightLabel(d){
 }
 const nightRange = () => { const n = nightGroups().map(x => x.date).filter(Boolean); return n.length ? (n.length > 1 ? `Đêm ${n[0]} – ${n[n.length - 1]}` : nightLabel(n[0])) : ''; };
 function sheetGroups(){
-  const gs = isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : nightGroups();
+  const gs = isLaoSheet() ? groups() : isMerged() ? [{ date: '', rows: groups().flatMap(g => g.rows) }] : nightGroups();
   if (!sortLv.length) return gs;
   return gs.map(g => ({ date: g.date, rows: [...g.rows].sort(cmpRows) }));
 }
@@ -3788,7 +3791,7 @@ var APP = (() => {
     document.querySelectorAll('#lsExpSeg button').forEach(b => b.classList.toggle('on', b.dataset.e === LSX.exp));
     fillSortOpts(LSX);
     const nx = LSX.rows.filter(r => /^x$/i.test(String(r.thuhoi).trim())).length;
-    $('#lsCount').textContent = `${n} xe · ${LSX.rows.filter(r => r.thuhoi !== '' && !isNaN(+r.thuhoi)).length} đã làm thu hồi${nx ? ` · ${nx} không làm mẫu` : ''}`;
+    $('#lsCount').textContent = `${n} ${LSX.arithmeticRecovery ? 'mẫu' : 'xe'} · ${LSX.rows.filter(r => r.thuhoi !== '' && !isNaN(+r.thuhoi)).length} đã làm thu hồi${nx ? ` · ${nx} không làm mẫu` : ''}`;
     try {
       const c = await makeCanvas(false, LSX); if (tok !== lsTok) return;
       LSX.hits = c.hits; LSX.W = c.cssW; LSX.H = c.cssH;
@@ -3958,7 +3961,7 @@ var APP = (() => {
     const h = LSX.hdr, pct = (v, total) => (v / total * 100).toFixed(5) + '%';
     $('#lsGrid').innerHTML = summaryCellLayout(h, LSX.hits, original).map(cell => {
       const { ri, f, withDate, x0, x1, y0, y1 } = cell, r = original[ri];
-      const label = SUMMARY_COLS.find(([key]) => key === f)?.[1] || f;
+      const label = LSX.arithmeticRecovery && f === 'khach' ? 'Tên mẫu' : SUMMARY_COLS.find(([key]) => key === f)?.[1] || f;
       const value = withDate ? `${r.gio || ''}\n${r.date || ''}` : r[f] ?? '';
       return `<textarea class="${isPF(f) || f === 'thuhoi' ? 'pf' : ''}" data-ri="${ri}" data-f="${f}"${withDate ? ' data-with-date="1" wrap="off"' : ''}${isPF(f) || f === 'thuhoi' ? ' placeholder="–"' : ''} aria-label="${label}, dòng ${ri + 1}" style="background:${LSX.hits[ri]?.bg || '#fff'};left:${pct(x0 + 0.8, h.W)};top:${pct(y0 + 0.8, h.H)};width:${pct(x1 - x0 - 1.6, h.W)};height:${pct(y1 - y0 - 1.6, h.H)}">${esc(value)}</textarea>`;
     }).join('');
