@@ -151,7 +151,8 @@
       <div class="thedit" id="thEdit" hidden></div>
       <input class="fld" id="thName" type="text" placeholder="Nhập tên mẫu" autocomplete="off" hidden>
       <div id="thManual" class="th-manual" hidden>
-        <label>Tên khách hàng <span class="req">*</span><input class="fld" id="tmName" autocomplete="off"></label>
+        <label><span id="tmNameLabel">Tên khách hàng</span> <span class="req">*</span><input class="fld" id="tmName" autocomplete="off"></label>
+        <datalist id="tmLaoNames"><option value="Mẫu chung 1"></option><option value="Mẫu chung 2"></option></datalist>
         <div class="row3"><label>Số xe<input class="fld" id="tmPlate"></label><label>Ngày cân<input class="fld" id="tmDate" type="date"></label><label>Khối lượng cà tươi (kg)<input class="fld num" id="tmWeight" inputmode="decimal"></label></div>
         <div class="row3"><label>Xanh (%)<input class="fld num" id="tmXanh" inputmode="decimal"></label><label>Nổi (%)<input class="fld num" id="tmNoi" inputmode="decimal"></label><label>Chín (%)<input class="fld num" id="tmChin" inputmode="decimal"></label></div>
       </div>
@@ -455,21 +456,25 @@ function groups(){
   return g;
 }
 // Trung bình từng đêm theo KL cà tươi; từng chỉ số có tập xe đủ dữ liệu riêng.
-function nightAverages(list){
+function nightAverages(list, arithmeticRecovery = false){
   const by = new Map();
   list.forEach(r=>{
     const night = nightOf(r.date,r.gio);
     if(!by.has(night)) by.set(night,{night,count:0,qualityCount:0,recoveryCount:0,totalWeight:0,qualityWeight:0,recoveryWeight:0,x:0,n:0,c:0,th:0});
     const a=by.get(night);a.count++;
-    const weight=parseKg(r.thuc);if(!(weight>0)) return;
+    const weight=parseKg(r.thuc);
+    const th=parseKg(r.thuhoi);
+    if(th!=null && Number.isFinite(th) && th>=0 && (arithmeticRecovery || weight>0)){
+      const recoveryWeight = arithmeticRecovery ? 1 : weight;
+      a.recoveryCount++; a.recoveryWeight+=recoveryWeight; a.th+=recoveryWeight*th;
+    }
+    if(!(weight>0)) return;
     a.totalWeight+=weight;
     const p=pcts(r);
     if(p.have>=2 && !p.bad && [p.x,p.n,p.c].every(v=>v!=null && Number.isFinite(v))){
       a.qualityCount++;a.qualityWeight+=weight;
       ['x','n','c'].forEach(k=>a[k]+=weight*p[k]);
     }
-    const th=parseKg(r.thuhoi);
-    if(th!=null && Number.isFinite(th) && th>=0){a.recoveryCount++;a.recoveryWeight+=weight;a.th+=weight*th;}
   });
   return [...by.values()].sort((a,b)=>nightKey(b.night)-nightKey(a.night)).map(a=>({...a,
     x:a.qualityWeight?a.x/a.qualityWeight:null,n:a.qualityWeight?a.n/a.qualityWeight:null,c:a.qualityWeight?a.c/a.qualityWeight:null,
@@ -488,13 +493,18 @@ function combineNightAverages(nights){
   return total;
 }
 
-function agg(list){
+function agg(list, arithmeticRecovery = false){
   let tl = 0, miss = 0, bad = 0, thw = 0, ths = 0;
   const w = { x: 0, n: 0, c: 0 }, sw = { x: 0, n: 0, c: 0 };
   list.forEach(r => {
-    const t = parseKg(r.thuc); if (t == null) return;
+    const t = parseKg(r.thuc);
+    if (r.thuhoi !== '' && r.thuhoi != null && Number.isFinite(+r.thuhoi) && (arithmeticRecovery || t != null)){
+      const weight = arithmeticRecovery ? 1 : t;
+      thw += weight * +r.thuhoi;
+      ths += weight;
+    }
+    if (t == null) return;
     tl += t;
-    if (r.thuhoi !== '' && r.thuhoi != null && !isNaN(+r.thuhoi)){ thw += t * +r.thuhoi; ths += t; }
     const p = pcts(r);
     ['x','n','c'].forEach(k => { if (p[k] != null){ w[k] += t * p[k]; sw[k] += t; } });
     if (p.have < 2) miss++;
@@ -742,7 +752,8 @@ function drawSheet(mono, logo){
   const F = c => mono ? '#fff' : c, T = c => mono ? '#000' : c;   // mono: bản in trắng đen
   const striped = isLSX();
   const isTH = f => f === 'thuhoi', hits = [];
-  const cols = sheetCols(), gs = sheetGroups(), A = agg(rows);
+  const arithmeticRecovery = striped && SHEET.arithmeticRecovery;
+  const cols = sheetCols(), gs = sheetGroups(), A = agg(rows, arithmeticRecovery);
   const FS = 23, PADX = 14, LH = 26;
   const S = 2;                                   // độ phân giải x2
   const m = mkCanvas(10, 10).getContext('2d');
@@ -852,7 +863,7 @@ function drawSheet(mono, logo){
       y += h; brk.push(y);
     });
     // tổng ngày
-    const a = agg(gr.rows);
+    const a = agg(gr.rows, arithmeticRecovery);
     line(X0, y, XE, y);
     if (striped){ g.fillStyle = F('#dcf2e3'); g.fillRect(X0,y + 0.8,XE-X0,H_TOT - 1.6); }
     else nxFill(y + 0.8, H_TOT - 1.6, F('#dcf2e3'));
@@ -2808,6 +2819,7 @@ var APP = (() => {
   const isRoot = () => AUTH?.role === 'admin';
   const isAdmin = () => !!AUTH && ['admin','ICS'].includes(AUTH.role);
   const isRecoveryICS = () => AUTH?.role === 'ICS-thuhoi';
+  const isLaoRecovery = () => isRecoveryICS() && AUTH.khuvuc === 'Lào';
   const canSummary = () => isAdmin() || isRecoveryICS();
   const AREAS = ['Lào','Lâm Đồng','Sơn La'];
   const scopeKey = key => DBK+'_'+key;
@@ -3630,7 +3642,7 @@ var APP = (() => {
   $('#thSave').addEventListener('click', async () => {
     if (!thCalc(true)) return;
     const t = lastTH, r = t.row;
-    if (!t.name.trim()){ toast('Nhập tên khách hàng trước khi lưu'); $(isRecoveryICS()?'#tmName':'#thChoose').focus(); return; }
+    if (!t.name.trim()){ toast(isLaoRecovery() ? 'Nhập tên mẫu trước khi lưu' : 'Nhập tên khách hàng trước khi lưu'); $(isRecoveryICS()?'#tmName':'#thChoose').focus(); return; }
     const ed = $('#thSel').value === '__edit' ? editSample : null;
     const rs = selRows();
     if (!isRecoveryICS() && (rs.length > 1 || (ed && ed.nhom))) return saveGroup(t, rs, ed);
@@ -3742,13 +3754,13 @@ var APP = (() => {
   };
   let lsTok = 0;
   function renderNightAverages(){
-    const box=$('#lsNightAverages'), nights=nightAverages(sheetRowsOf(DB.rows,freeSamples()));
+    const box=$('#lsNightAverages'), nights=nightAverages(sheetRowsOf(DB.rows,freeSamples()), LSX.arithmeticRecovery);
     box.hidden=false;
     if(!nights.length){box.innerHTML='<div class="lsempty">Chưa có dữ liệu để tính trung bình theo đêm.</div>';return;}
     const coverage=(count,total)=>count<total?'<small>'+count+'/'+total+'</small>':'';
     const pct=(v,count,total)=>(v==null?'—':fmtPct(v)+' %')+coverage(count,total);
     const rowHTML=(a,label)=>'<tr><th scope="row">'+esc(label)+'</th><td data-label="Số xe">'+a.count+'</td><td data-label="Tổng KL (kg)">'+fmtKg(a.totalWeight)+'</td><td data-label="TB Xanh">'+pct(a.x,a.qualityCount,a.count)+'</td><td data-label="TB Nổi">'+pct(a.n,a.qualityCount,a.count)+'</td><td data-label="TB Chín">'+pct(a.c,a.qualityCount,a.count)+'</td><td data-label="TB thu hồi">'+((a.th==null?'—':f2(a.th)+' kg')+coverage(a.recoveryCount,a.count))+'</td></tr>';
-    box.innerHTML='<div class="night-average-intro"><b>'+nights.length+' đêm</b><span>Trung bình theo khối lượng cà tươi · Chỉ tính xe có dữ liệu hợp lệ · Đêm từ 17:00 đến 17:00 hôm sau</span></div><div class="night-average-scroll"><table class="night-average-table"><thead><tr><th>Đêm</th><th>Số xe</th><th>Tổng khối lượng (kg)</th><th>TB Xanh</th><th>TB Nổi</th><th>TB Chín</th><th>TB thu hồi</th></tr></thead><tbody>'+nights.map(a=>rowHTML(a,a.night?nightLabel(a.night):'Đêm chưa xác định')).join('')+'</tbody><tfoot>'+rowHTML(combineNightAverages(nights),'TỔNG/TRUNG BÌNH CÁC ĐÊM')+'</tfoot></table></div>';
+    box.innerHTML='<div class="night-average-intro"><b>'+nights.length+' đêm</b><span>'+(LSX.arithmeticRecovery?'Thu hồi tính trung bình cộng · Xanh/Nổi/Chín tính theo khối lượng':'Trung bình theo khối lượng cà tươi')+' · Chỉ tính dữ liệu hợp lệ · Đêm từ 17:00 đến 17:00 hôm sau</span></div><div class="night-average-scroll"><table class="night-average-table"><thead><tr><th>Đêm</th><th>Số xe</th><th>Tổng khối lượng (kg)</th><th>TB Xanh</th><th>TB Nổi</th><th>TB Chín</th><th>TB thu hồi</th></tr></thead><tbody>'+nights.map(a=>rowHTML(a,a.night?nightLabel(a.night):'Đêm chưa xác định')).join('')+'</tbody><tfoot>'+rowHTML(combineNightAverages(nights),'TỔNG/TRUNG BÌNH CÁC ĐÊM')+'</tfoot></table></div>';
   }
   async function renderLSSheet(){
     const tok = ++lsTok, n = LSX.rows.length;
@@ -4237,6 +4249,10 @@ var APP = (() => {
     $('#areaBar').hidden=!isRoot();
     $('#areaSelect').hidden=!isRoot();$('#areaSelect').value=activeArea;
     LSX.compact=isRecoveryICS();
+    LSX.arithmeticRecovery=isLaoRecovery();
+    $('#tmNameLabel').textContent=LSX.arithmeticRecovery ? 'Tên mẫu' : 'Tên khách hàng';
+    if(LSX.arithmeticRecovery) $('#tmName').setAttribute('list','tmLaoNames');
+    else $('#tmName').removeAttribute('list');
     $('#lsEdit').hidden=!canSummary();
     document.body.classList.toggle('role-xem', isViewer());
     document.body.classList.toggle('role-admin', isAdmin());

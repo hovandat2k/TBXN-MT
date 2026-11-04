@@ -41,6 +41,18 @@ console.log('PASS: manual sample night/range use weighing date/time; saved time 
 vm.runInContext("const PF=['xanh','noi','chin'];",context);
 for(const name of ['parseKg','parsePct','pcts','nightAverages','combineNightAverages']){const start=source.indexOf('function '+name+'(');vm.runInContext(source.slice(start,source.indexOf('\n}',start)+2),context);}
 const row=o=>({date:'30/10/2026',gio:'01:00',thuc:'1,000',xanh:'20',noi:'10',chin:'70',thuhoi:'5',...o});
+{
+  const samples=[row({}),row({thuc:'3,000',thuhoi:'7'}),row({thuc:'',thuhoi:'6'}),row({thuc:'500',thuhoi:'x'})];
+  const [lao]=context.nightAverages(samples,true);
+  assert.equal(lao.totalWeight,4500);
+  assert.equal(lao.th,6);
+  assert.equal(lao.recoveryCount,3);
+  assert.equal(context.nightAverages(samples)[0].th,6.5);
+  const start=source.indexOf('function agg(');
+  vm.runInContext(source.slice(start,source.indexOf('\n}',start)+2),context);
+  assert.equal(context.agg(samples,true).th,6);
+  assert.equal(context.agg(samples,true).tl,4500);
+}
 const [avg]=context.nightAverages([row({}),row({thuc:'3,000',xanh:'60',noi:'20',chin:'20',thuhoi:'7'}),row({xanh:'',noi:'',chin:'',thuhoi:'x'})]);
 assert.equal(avg.night,'29/10/2026');assert.equal(avg.count,3);assert.equal(avg.qualityCount,2);assert.equal(avg.recoveryCount,2);
 assert.equal(avg.totalWeight,5000);assert.equal(avg.x,50);assert.equal(avg.n,17.5);assert.equal(avg.c,32.5);assert.equal(avg.th,6.5);
