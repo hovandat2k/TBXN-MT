@@ -772,7 +772,7 @@ body.role-ics-th #thName,body.role-ics-th #mauSeg,body.role-ics-th #lsExpSeg,bod
 .th-manual{padding:12px;margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}.th-manual[hidden]{display:none}.th-manual label{display:block;font-weight:700;margin-bottom:8px}.th-manual input{width:100%;margin-top:5px}
 #thForm .lao-manual #tmWeighing{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}
 .lao-manual #tmNameGroup{margin-top:12px}
-.lao-manual #tmPlateLabel{margin-top:14px}
+.th-manual #tmPlateLabel[hidden]{display:none}
 .sample-name-options{display:flex;flex-wrap:wrap;gap:8px}
 .sample-name-options[hidden]{display:none}
 .sample-name-options button{min-height:44px;border-radius:999px;padding:8px 16px}
