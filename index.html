@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261104-lao-form">
+<link rel="stylesheet" href="styles.css?v=20261104-lao-form-2">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -4275,10 +4275,11 @@ var APP = (() => {
     const lao = LSX.arithmeticRecovery;
     const form = $('#thManual'), nameGroup = $('#tmNameGroup'), weighing = $('#tmWeighing');
     $('#tmLaoNames').hidden = !lao;
+    $('#tmPlateLabel').hidden = lao;
     form.classList.toggle('lao-manual', lao);
     if (lao){
       weighing.prepend($('#tmWeightLabel'));
-      form.append(nameGroup, $('#tmPlateLabel'));
+      form.append(nameGroup);
     } else {
       weighing.prepend($('#tmPlateLabel'));
       weighing.append($('#tmWeightLabel'));
