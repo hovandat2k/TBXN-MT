@@ -806,7 +806,9 @@ function drawSheet(mono, logo){
   const tableW = widths.reduce((a, b) => a + b, 0);
   const M = 24, TOP = 92;
   const hDate = isMerged() || arithmeticRecovery ? 0 : H_DATE;
-  let tableH = H_HEAD + gs.reduce((a, g) => a + hDate + g.rows.reduce((s2, r) => s2 + rowH(r), 0) + H_TOT, 0) + (gs.length > 1 ? H_GRAND : 0);
+  const showDailyTotal = !arithmeticRecovery || grpMode !== 'all';
+  const weightAlign = arithmeticRecovery ? 'center' : 'right';
+  let tableH = H_HEAD + gs.reduce((a, g) => a + hDate + g.rows.reduce((s2, r) => s2 + rowH(r), 0) + (showDailyTotal ? H_TOT : 0), 0) + (gs.length > 1 ? H_GRAND : 0);
   const SUMH = 96;
   const Wc = Math.max(tableW + M * 2, 640), Hc = TOP + tableH + SUMH + 34;
   const cv = mkCanvas(Wc * S, Hc * S), g = cv.getContext('2d');
@@ -859,7 +861,7 @@ function drawSheet(mono, logo){
       cols.forEach(([f], k) => {
         if (mergeDailyCells && (f === 'date' || f === 'thuc')) return;
         const ls = cellText(r, f, i);
-        const al = f === 'thuc' ? 'right' : 'center';
+        const al = f === 'thuc' ? weightAlign : 'center';
         const cy = y + (isNX(f) ? pfH : h) / 2 + 1;
         if ((isNX(f) || isTH(f)) && !ls[0]){ txt('–', cellX(k), cy, 'center', 400, FS, T('#9b9')); return; }
         if (isTH(f)){ txt(ls[0], cellX(k), cy, 'center', 700, FS, T('#1f5e37')); return; }
@@ -889,11 +891,12 @@ function drawSheet(mono, logo){
       });
       brk.push(y);
     }
+    if (!showDailyTotal) return;
     line(X0, y, XE, y);
     if (striped){ g.fillStyle = F('#dcf2e3'); g.fillRect(X0,y + 0.8,XE-X0,H_TOT - 1.6); }
     else nxFill(y + 0.8, H_TOT - 1.6, F('#dcf2e3'));
     txt(arithmeticRecovery ? 'Tổng ngày' : 'Tổng cộng :', xs[iThuc] - 30, y + H_TOT / 2 + 1, 'right', 700);
-    txt(fmtKg(a.tl), cellX(iThuc, 'right'), y + H_TOT / 2 + 1, 'right', 700);
+    txt(fmtKg(a.tl), cellX(iThuc, weightAlign), y + H_TOT / 2 + 1, weightAlign, 700);
     cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(a[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#1f5e37')); });
     cols.forEach(([f], k) => { if (isTH(f)) txt(fx2(a.th), cellX(k), y + H_TOT / 2 + 1, 'center', 700, FS, T('#1f5e37')); });
     line(X0, y, X0, y + H_TOT); line(XE, y, XE, y + H_TOT);
@@ -905,7 +908,7 @@ function drawSheet(mono, logo){
     g.fillStyle = F('#d6f3df'); g.fillRect(X0, y, XE - X0, H_GRAND);
     if (!striped) nxFill(y, H_GRAND, F('#bfe6cb'));
     txt('TỔNG CỘNG TẤT CẢ :', xs[iThuc] - 30, y + H_GRAND / 2 + 1, 'right', 800);
-    txt(fmtKg(A.tl), cellX(iThuc, 'right'), y + H_GRAND / 2 + 1, 'right', 800, FS + 1);
+    txt(fmtKg(A.tl), cellX(iThuc, weightAlign), y + H_GRAND / 2 + 1, weightAlign, 800, FS + 1);
     cols.forEach(([f], k) => { if (isPF(f)) txt(fmtPct(A[{ xanh: 'x', noi: 'n', chin: 'c' }[f]]), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#1f5e37')); });
     cols.forEach(([f], k) => { if (isTH(f)) txt(fx2(A.th), cellX(k), y + H_GRAND / 2 + 1, 'center', 800, FS + 1, T('#1f5e37')); });
     line(X0, y, X0, y + H_GRAND); line(XE, y, XE, y + H_GRAND);
@@ -921,8 +924,10 @@ function drawSheet(mono, logo){
   boxes.forEach(([l, v, bg, fg], k) => {
     const bx = X0 + k * (bw + gap);
     g.fillStyle = F(bg); roundRect(g, bx, y, bw, 70, 14); g.fill(); if (mono){ g.lineWidth = 1.4; g.strokeStyle = '#000'; g.stroke(); }
-    g.textAlign = 'left'; g.fillStyle = T('#4f7a5c'); g.font = `700 14.5px ${SANS}`; g.fillText(l, bx + 16, y + 22);
-    g.fillStyle = T(fg); g.font = `800 ${bw < 170 ? 20 : bw < 220 ? 23 : 27}px ${SANS}`; g.fillText(v, bx + 16, y + 49);
+    const centerWeight = arithmeticRecovery && k === 0;
+    const textX = bx + (centerWeight ? bw / 2 : 16);
+    g.textAlign = centerWeight ? 'center' : 'left'; g.fillStyle = T('#4f7a5c'); g.font = `700 14.5px ${SANS}`; g.fillText(l, textX, y + 22);
+    g.fillStyle = T(fg); g.font = `800 ${bw < 170 ? 20 : bw < 220 ? 23 : 27}px ${SANS}`; g.fillText(v, textX, y + 49);
   });
   g.textAlign = 'left'; g.fillStyle = T('#7c9a84'); g.font = `500 12.5px ${SANS}`;
   g.fillText(arithmeticRecovery ? 'TB Thu hồi = tổng kết quả ÷ số mẫu hợp lệ. Xanh/Nổi/Chín tính theo khối lượng.' : 'TB có trọng số theo TL thực = Σ(TL thực × %) ÷ Σ TL thực', X0, y + 70 + 20);
