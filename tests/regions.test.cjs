@@ -22,6 +22,18 @@ denied({action:'deleteSample',id:'Mlao'});
 denied({action:'saveBatch',batch:{id:'new',rows:[]}},user('ICS-thuhoi'));
 denied({action:'saveSample',sample:{id:'new',khach:'Demo'}},user('Chỉ xem'));
 denied({action:'deleteSample',id:'Mld'},user('Thu hồi'));
+{
+ const data=db();
+ data.tuoi.data[0].vungMau='Đà Lạt';
+ data.tuoi.data.push({...row('ld-new','Lâm Đồng'),vungMau:'Đà Lạt'});
+ const apply=rid=>({action:'saveSample',onlyPending:true,vungMau:'Đà Lạt',sample:{id:'new-'+rid,rid,khach:'Demo',thuhoi:6.25}});
+ c.luuNhieu(data,[apply('ld'),apply('ld-new')],user('Thu hồi'));
+ assert.equal(data.thuhoi.data.find(s=>s.rid==='ld').thuhoi,5);
+ assert.equal(data.thuhoi.data.find(s=>s.rid==='ld-new').thuhoi,6.25);
+ data.tuoi.data.push({...row('ld-moved','Lâm Đồng'),vungMau:'Dak Lak'});
+ c.luuNhieu(data,[apply('ld-moved')],user('Thu hồi'));
+ assert.equal(data.thuhoi.data.some(s=>s.rid==='ld-moved'),false);
+}
 props.set('FILE_sample_deleted-other',JSON.stringify({khuvuc:'Lào',dead:true,revision:'r'}));denied({action:'deleteSample',id:'deleted-other'});
 c.bangTinh=db;
 assert.equal(c.luuPhieu({kind:'sample',id:'Mlao',revision:'old'},user()).denied,true);
@@ -58,7 +70,7 @@ const ss={getSheets:()=>[...sheets.values()],getId:()=>'test-sheet'};
 upgrade.thuMucGoc=()=>({getFilesByName:()=>({hasNext:()=>true,next:()=>({})})});upgrade.trang=(s,name)=>sheets.get(name);
 upgrade.SpreadsheetApp={open:()=>ss,newDataValidation:()=>({requireValueInList(){return this;},build:()=>({})})};
 upgrade.taoBangTinh(pr);
-assert.deepEqual(sheets.get('Cà tươi').regions,['Lâm Đồng','Lào']);assert.deepEqual(sheets.get('Thu hồi').regions,['Lâm Đồng','Sơn La']);assert.deepEqual(sheets.get('User').regions,['']);assert.equal(props.get('APP_SCHEMA'),'3');
+assert.deepEqual(sheets.get('Cà tươi').regions,['Lâm Đồng','Lào']);assert.deepEqual(sheets.get('Thu hồi').regions,['Lâm Đồng','Sơn La']);assert.deepEqual(sheets.get('User').regions,['']);assert.equal(props.get('APP_SCHEMA'),'4');
 console.log('PASS: legacy blank regions migrate to Lâm Đồng and existing regions/accounts are preserved.');
 // Sheets returns empty strings for newly added columns on legacy samples.
 let legacySample={id:'old',rid:'old-row',klTuoi:1000,xanh:'',noi:'',chin:'',thuhoi:5.6};

@@ -176,6 +176,12 @@
       </div>
       </div>
       <div id="thChung" hidden>
+        <section id="tcAreas" hidden>
+          <label class="flbl" for="tcAreaNight">Đêm cân để chia khu vực</label>
+          <select id="tcAreaNight" class="fld sel"></select>
+          <div id="tcAreaVehicles"></div>
+          <div id="tcAreaGroups"></div>
+        </section>
         <div class="tcbar"><select class="fld sel" id="tcNight"></select>
           <button type="button" class="ghost small" id="tcAll">Chọn tất cả</button><button type="button" class="ghost small" id="tcNone">Bỏ chọn</button></div>
         <div class="tclist" id="tcList"></div>
@@ -2850,6 +2856,7 @@ var APP = (() => {
   const isAdmin = () => !!AUTH && ['admin','ICS'].includes(AUTH.role);
   const isRecoveryICS = () => AUTH?.role === 'ICS-thuhoi';
   const isLaoRecovery = () => isRecoveryICS() && AUTH.khuvuc === 'Lào';
+  const isLamDongScope = () => (isRoot() ? activeArea : AUTH?.khuvuc) === 'Lâm Đồng';
   const canSummary = () => isAdmin() || isRecoveryICS();
   const AREAS = ['Lào','Lâm Đồng','Sơn La'];
   const scopeKey = key => DBK+'_'+key;
@@ -3072,7 +3079,8 @@ var APP = (() => {
     const out = rows.map(r => { const p = pcts(r); return {
       rid: r.rid, date: r.date || '', gio: r.gio || '', stt: r.stt || '', soxe: r.soxe || '', hang: r.hang || '', khach: r.khach || '',
       tl1: numv(r.tl1) ?? '', tl2: numv(r.tl2) ?? '', tlh: numv(r.tlh) ?? '', bi: numv(r.bi) ?? '', thuc: numv(r.thuc) ?? '',
-      xanh: p.x ?? '', noi: p.n ?? '', chin: p.c ?? '', ghichu: r.ghichu || '' }; });
+      xanh: p.x ?? '', noi: p.n ?? '', chin: p.c ?? '', ghichu: r.ghichu || '',
+      ...(isLamDongScope() ? {vungMau: suggestedVehicleArea(r)} : {}) }; });
     const oldRows = DB.rows.filter(r => String(r.batch) === String(batchId));
     enqueue({ action: 'saveBatch', batch: { id: batchId, savedAt: nowStr(), rows: out }, fileJob:{kind:'batch',id:batchId} });
     LS.set(sigKey, batchId + sig()); saveBtnUI();
@@ -3308,8 +3316,106 @@ var APP = (() => {
   }
   document.querySelectorAll('#mauSeg button').forEach(b => b.addEventListener('click', () => setMode(+b.dataset.mau === 10000)));
   const thNum = sp => sp && sp.thuhoi !== '' && sp.thuhoi != null && !isNaN(+sp.thuhoi);
+  const areaPresets = ['Đà Lạt', 'Cà huyện', 'Dak Lak'];
+  const areaKey = value => String(value ?? '').trim().replace(/\s+/g,' ').toLocaleLowerCase('vi');
+  let tcAreaNight = '', tcAreaBusy = false;
+  function suggestedVehicleArea(row){
+    const existing = DB.rows.find(r => String(r.rid) === String(row.rid));
+    if (existing) return existing.vungMau || '';
+    const date = String(row.date || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!date) return '';
+    const previous = new Date(+date[3], +date[2] - 1, +date[1] - 1);
+    const previousKey = previous.getFullYear()*10000 + (previous.getMonth()+1)*100 + previous.getDate();
+    const plateKey = value => areaKey(value).replace(/[\s.-]+/g,'');
+    const plate = plateKey(row.soxe), name = areaKey(row.khach);
+    const history = DB.rows.filter(r => r.khuvuc === 'Lâm Đồng' && r.vungMau && nightKey(r.date) === previousKey);
+    const plates = plate ? history.filter(r => plateKey(r.soxe) === plate) : [];
+    const matches = plates.length ? plates : name ? history.filter(r => areaKey(r.khach) === name) : [];
+    return new Set(matches.map(r => areaKey(r.vungMau))).size === 1 ? matches[0].vungMau : '';
+  }
+  const areaVehicles = () => DB.rows.filter(r => r.khuvuc === 'Lâm Đồng' && rNight(r) === tcAreaNight);
+  function renderVehicleAreas(){
+    $('#tcAreas').hidden = !isLamDongScope();
+    if ($('#tcAreas').hidden || tcAreaBusy) return;
+    const nights = [...new Set(DB.rows.filter(r=>r.khuvuc === 'Lâm Đồng').map(rNight))].filter(Boolean).sort((a,b)=>nightKey(b)-nightKey(a));
+    if (!nights.includes(tcAreaNight)) tcAreaNight = nights[0] || '';
+    $('#tcAreaNight').innerHTML = nights.map(n=>`<option value="${esc(n)}"${n === tcAreaNight ? ' selected' : ''}>${esc(nightLabel(n))}</option>`).join('');
+    const vehicles = areaVehicles();
+    $('#tcAreaVehicles').innerHTML = vehicles.map(r=>{
+      const value = r.vungMau || '', custom = value && !areaPresets.includes(value);
+      return `<div class="tbar"><span class="sp">${esc(rowLabel(r))} · ${esc(r.soxe || '–')}${sampleOf(r.rid) ? ' · Đã có mẫu' : ''}</span>
+        <select class="fld sel" aria-label="Khu vực của ${esc(rowLabel(r))}" data-vehicle-area="${esc(r.rid)}">
+          <option value="">Chọn khu vực</option>${areaPresets.map(p=>`<option${value === p ? ' selected' : ''}>${p}</option>`).join('')}
+          <option value="custom"${custom ? ' selected' : ''}>${custom ? esc(value) + ' · Sửa tên' : 'Khác (tự nhập)'}</option></select></div>`;
+    }).join('');
+    const groups = new Map();
+    vehicles.filter(r=>r.vungMau && !sampleOf(r.rid)).forEach(r=>groups.set(areaKey(r.vungMau), {name:r.vungMau,count:(groups.get(areaKey(r.vungMau))?.count || 0)+1}));
+    $('#tcAreaGroups').innerHTML = [...groups].map(([key,g])=>`<fieldset class="card" data-area-group="${esc(key)}"><legend>${esc(g.name)} · ${g.count} xe chưa có thu hồi</legend>
+      <div class="tbar"><label>KL (g)<input class="fld num" data-area-kl inputmode="decimal"></label>
+      <label>KL quả (g)<input class="fld num" data-area-klq inputmode="decimal"></label>
+      <label>Độ ẩm<input class="fld num" data-area-am inputmode="decimal"></label>
+      <label>KL mẫu (g)<input class="fld num" data-area-mass inputmode="decimal" value="2000"></label>
+      <button type="button" class="ghost" data-area-calc>Tính thu hồi</button></div>
+      <div class="tbar"><label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"></label>
+      <button type="button" class="primary" data-area-save>Lưu cho nhóm</button></div></fieldset>`).join('');
+  }
+  $('#tcAreaNight').addEventListener('change',e=>{tcAreaNight=e.target.value;renderVehicleAreas();});
+  $('#tcAreaVehicles').addEventListener('change',async e=>{
+    const select=e.target.closest('[data-vehicle-area]');
+    if (!select || tcAreaBusy || !isLamDongScope()) return;
+    const row=areaVehicles().find(r=>String(r.rid)===select.dataset.vehicleArea);
+    if (!row) return;
+    let value=select.value;
+    if (value==='custom') value=prompt('Nhập khu vực mẫu',row.vungMau || '')?.trim();
+    if (value == null) {renderVehicleAreas();return;}
+    const areaScope=scopeEpoch;
+    tcAreaBusy=true;select.disabled=true;
+    try {
+      await flush();
+      if (Q.length || areaScope!==scopeEpoch) throw new Error('Cần đồng bộ dữ liệu trước khi chọn khu vực');
+      await api('setVehicleArea',{rid:row.rid,vungMau:value});
+      const current=DB.rows.find(r=>String(r.rid)===String(row.rid));
+      if (current && areaScope===scopeEpoch){current.vungMau=value;saveDB();}
+    } catch(err){toast(err.message);}
+    finally {tcAreaBusy=false;renderVehicleAreas();}
+  });
+  $('#tcAreaGroups').addEventListener('click',async e=>{
+    const button=e.target.closest('[data-area-calc],[data-area-save]');
+    if (!button || tcAreaBusy || !isLamDongScope()) return;
+    const card=button.closest('[data-area-group]');
+    const input=key=>card.querySelector('[data-area-'+key+']');
+    const num=key=>parseNum(input(key).value);
+    if (button.hasAttribute('data-area-calc')){
+      const kl=num('kl'), klq=num('klq') ?? 0, am=num('am'), mass=num('mass');
+      if (!(kl>0 && am>0 && mass>0 && Number.isFinite(klq) && klq>=0)){toast('Nhập KL, độ ẩm và KL mẫu hợp lệ');return;}
+      const result=computeWith(mass,kl,klq,am);
+      if (result.error || !(result.E>0) || !Number.isFinite(result.E)){toast(result.error || 'Kết quả không hợp lệ');return;}
+      input('result').value=f2(result.E);
+      return;
+    }
+    const recovery=r2(num('result') ?? 0);
+    if (!(recovery>0 && Number.isFinite(recovery))){toast('Nhập hoặc tính kết quả thu hồi trước khi lưu');return;}
+    const rows=areaVehicles().filter(r=>areaKey(r.vungMau)===card.dataset.areaGroup && !sampleOf(r.rid));
+    if (!rows.length){renderVehicleAreas();return;}
+    const scope=scopeEpoch, group='N'+uid();
+    tcAreaBusy=true;button.disabled=true;
+    try {
+      await flush();
+      if (Q.length || scope!==scopeEpoch) throw new Error('Cần đồng bộ dữ liệu trước khi lưu nhóm');
+      const ping=await api('ping');
+      if (!ping.features?.vehicleAreas) throw new Error('Máy chủ chưa hỗ trợ mẫu chung theo khu vực');
+      const ops=rows.map(r=>({action:'saveSample',onlyPending:true,vungMau:r.vungMau,requestId:'R'+uid(),sample:{
+        id:'M'+uid(),rid:String(r.rid),date:r.date,gio:r.gio,khach:r.khach || r.soxe || r.vungMau,soxe:r.soxe,
+        klTuoi:r.thuc,thuhoi:r2(recovery),mau:'Mẫu chung · '+r.vungMau,nhom:group,khuvuc:'Lâm Đồng',savedAt:nowStr()
+      }}));
+      for (let i=0;i<ops.length;i+=20) await api('saveMany',{ops:ops.slice(i,i+20)});
+      toast('Đã áp dụng thu hồi cho các xe chưa có mẫu');
+    } catch(err){toast(err.message);}
+    finally {try {if(scope===scopeEpoch) await pull(true);} finally {tcAreaBusy=false;renderVehicleAreas();}}
+  });
   function renderChung(){
     if (!chungMode) return;
+    renderVehicleAreas();
     const done = DB.samples.filter(thNum);
     const nights = [...new Set(done.map(sNight))].filter(Boolean).sort((a, b) => nightKey(b) - nightKey(a));
     if (tcNight !== '*' && !nights.includes(tcNight)) tcNight = nights[0] || '*';
@@ -4292,9 +4398,9 @@ var APP = (() => {
     $('#areaBar').hidden=!isRoot();
     $('#areaSelect').hidden=!isRoot();$('#areaSelect').value=activeArea;
     LSX.compact=isRecoveryICS();
-    LSX.arithmeticRecovery=isLaoRecovery();
-    $('#tmNameLabel').textContent=LSX.arithmeticRecovery ? 'Tên mẫu' : 'Tên khách hàng';
-    const lao = LSX.arithmeticRecovery;
+    LSX.arithmeticRecovery=(isRoot() ? activeArea : AUTH?.khuvuc) === 'Lào';
+    const lao = isLaoRecovery();
+    $('#tmNameLabel').textContent=lao ? 'Tên mẫu' : 'Tên khách hàng';
     const form = $('#thManual'), nameGroup = $('#tmNameGroup'), weighing = $('#tmWeighing');
     $('#tmLaoNames').hidden = !lao;
     $('#tmPlateLabel').hidden = lao;

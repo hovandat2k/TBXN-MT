@@ -28,7 +28,7 @@ const KHU_VUC = ['Lào','Lâm Đồng','Sơn La'];
 const COT_TUOI = [
   ['batch', 'Mã lô'], ['rid', 'Mã xe'], ['date', 'Ngày cân'], ['gio', 'Giờ cân'], ['stt', 'STT'], ['soxe', 'Số xe'],
   ['hang', 'Hàng hóa'], ['khach', 'Khách hàng'], ['tl1', 'TL Lần 1'], ['tl2', 'TL Lần 2'], ['tlh', 'TL Hàng'], ['bi', 'TL Bì'],
-  ['thuc', 'TL Thực'], ['xanh', 'Xanh (%)'], ['noi', 'Nổi (%)'], ['chin', 'Chín (%)'], ['ghichu', 'Ghi chú'], ['savedAt', 'Lưu lúc'], ['savedBy', 'Người lưu'], ['khuvuc','Khu vực']
+  ['thuc', 'TL Thực'], ['xanh', 'Xanh (%)'], ['noi', 'Nổi (%)'], ['chin', 'Chín (%)'], ['ghichu', 'Ghi chú'], ['savedAt', 'Lưu lúc'], ['savedBy', 'Người lưu'], ['khuvuc','Khu vực'], ['vungMau','Khu vực mẫu chung']
 ];
 const COT_THUHOI = [
   ['id', 'Mã mẫu'], ['rid', 'Mã xe'], ['date', 'Ngày cân'], ['khach', 'Khách hàng'], ['soxe', 'Số xe'], ['klTuoi', 'KL cà tươi (kg)'],
@@ -37,7 +37,7 @@ const COT_THUHOI = [
 ];
 const COT_USER = [['user', 'Tên đăng nhập'], ['pass', 'Mật khẩu'], ['role', 'Quyền'], ['name', 'Họ tên'], ['lock', 'Khoá'], ['khuvuc','Khu vực']];
 // cột luôn để dạng chữ (tránh Sheets tự đổi ngày/giờ/số xe/mật khẩu)
-const CHU = ['khuvuc', 'nhom', 'batch', 'rid', 'date', 'gio', 'stt', 'soxe', 'hang', 'khach', 'ghichu', 'savedAt', 'savedBy', 'id', 'mau', 'cachtinh', 'user', 'pass', 'role', 'name', 'lock'];
+const CHU = ['khuvuc', 'vungMau', 'nhom', 'batch', 'rid', 'date', 'gio', 'stt', 'soxe', 'hang', 'khach', 'ghichu', 'savedAt', 'savedBy', 'id', 'mau', 'cachtinh', 'user', 'pass', 'role', 'name', 'lock'];
 
 function doGet(e) { return tra({ ok: true, app: 'Cà tươi + Thu hồi', note: 'Máy chủ đang chạy. Hãy mở trang web để dùng.' }); }
 function doPost(e) {
@@ -57,6 +57,7 @@ function xuLy(p) {
         case 'ping': return tra({ ok: true, user: u.user, name: u.name, role: role, khuvuc: u.khuvuc, folderUrl: role === QUYEN_TOAN ? thuMucGoc().getUrl() : '', sheetUrl: role === QUYEN_TOAN ? b.ss.getUrl() : '' });
         case 'list': return tra(danhSach(b, u, p.khuvuc));
         case 'saveFile': return tra(luuPhieu(p, u));
+        case 'setVehicleArea': return tra(luuVungMau(b, u, p));
       }
     if (!['saveMany','saveBatch','saveSample','deleteSample'].includes(p.action)) return tra({ ok: false, error: 'Thao tác không hợp lệ: ' + p.action });
     const ops = p.action === 'saveMany' ? p.ops : [p];
@@ -75,7 +76,21 @@ function xuLy(p) {
   }
 }
 function khongDuQuyen() { return { ok: false, denied: true, error: 'Tài khoản không có quyền làm việc này' }; }
-function tra(o) { o.features = { fastSync: true, deferredFiles: true, regions: true, version: 3 }; return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function tra(o) { o.features = { fastSync: true, deferredFiles: true, regions: true, vehicleAreas: true, version: 4 }; return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+function luuVungMau(b, u, p){
+  if (!quanLyCan(u) && u.role !== QUYEN_TH) return khongDuQuyen();
+  const value = String(p.vungMau ?? '').trim();
+  if (value.length > 80) throw new Error('Tên khu vực mẫu quá dài');
+  const lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    const before = docBang(b.tuoi,COT_TUOI);
+    const row = before.find(r => String(r.rid) === String(p.rid));
+    if (!row || row.khuvuc !== 'Lâm Đồng' || !cungKhuVuc(u,row)) return khongDuQuyen();
+    ghiChenhLech(b.tuoi,COT_TUOI,before,before.map(r => r === row ? {...r,vungMau:value} : r),'rid');
+    return {ok:true};
+  } finally { lock.releaseLock(); }
+}
 
 /* ---------------- Đăng nhập ---------------- */
 function biMat() {
@@ -139,7 +154,7 @@ function thuMucCon(cha, ten) {
 }
 function bangTinh() {
   const pr = PropertiesService.getScriptProperties(), id = pr.getProperty('APP_SHEET_ID');
-  if (id && pr.getProperty('APP_SCHEMA') === '3'){
+  if (id && pr.getProperty('APP_SCHEMA') === '4'){
     try {
       const ss = SpreadsheetApp.openById(id), tuoi = ss.getSheetByName('Cà tươi'), thuhoi = ss.getSheetByName('Thu hồi'), user = ss.getSheetByName('User');
       if (tuoi && thuhoi && user) return { ss, tuoi, thuhoi, user };
@@ -174,7 +189,7 @@ function taoBangTinh(pr) {
     u.getRange(2,6,count,1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(KHU_VUC,true).build());
   }catch(e){}
   ss.getSheets().forEach(sh => { const n = sh.getName(); if (n !== 'Cà tươi' && n !== 'Thu hồi' && n !== 'User' && sh.getLastRow() === 0 && ss.getSheets().length > 3) ss.deleteSheet(sh); });
-  pr.setProperties({ APP_SHEET_ID: ss.getId(), APP_SCHEMA: '3' });
+  pr.setProperties({ APP_SHEET_ID: ss.getId(), APP_SCHEMA: '4' });
   return { ss: ss, tuoi: a, thuhoi: b, user: u };
 }
 function trang(ss, ten, cot) {
@@ -287,7 +302,7 @@ function luuNhieu(b, input, u){
         const existing=tuoi.find(r=>String(r.rid)===String(row.rid));kiemKhuVuc(u,existing);
         if(existing && (String(existing.batch)!==String(p.batch.id) || existing.khuvuc!==area)) throw new Error('Mã xe đã thuộc phiếu khác');
         if(row.khuvuc && row.khuvuc!==area) throw new Error('Một lô chỉ thuộc một khu vực');
-        return Object.assign({},row,{khuvuc:area});
+        return Object.assign({},row,{khuvuc:area,vungMau:area === 'Lâm Đồng' ? existing ? existing.vungMau : String(row.vungMau ?? '').trim().slice(0,80) : ''});
       })})});
     }else{
       const old=mau.find(r=>String(r.id)===String(p.action==='saveSample'?p.sample.id:p.id));kiemKhuVuc(u,old);
@@ -322,6 +337,12 @@ function luuNhieu(b, input, u){
       revise('batch',lo.id,requestId,!added.length,lo.khuvuc);
     } else if (p.action === 'saveSample'){
       const s = Object.assign({},p.sample,{savedBy:u.name});
+      if (p.onlyPending && (s.khuvuc !== 'Lâm Đồng' || !s.rid || !Number.isFinite(+s.thuhoi) || s.thuhoi === '' || +s.thuhoi <= 0))
+        throw new Error('Kết quả mẫu chung không hợp lệ');
+      if (p.onlyPending){
+        const vehicle = tuoi.find(r => String(r.rid) === String(s.rid));
+        if (!vehicle || vehicle.vungMau !== p.vungMau || mau.some(r => String(r.rid) === String(s.rid))) return;
+      }
       if (!quanLyCan(u) && u.role!==QUYEN_ICS_TH && s.rid && mau.some(r => String(r.rid) === String(s.rid) && String(r.id) !== String(s.id))) throw new Error('Xe đã có mẫu thu hồi — cần tài khoản Toàn quyền để làm lại');
       const removed = mau.filter(r => String(r.id) === String(s.id) || s.rid && String(r.rid) === String(s.rid));
       removed.forEach(r=>kiemKhuVuc(u,r));
@@ -387,6 +408,6 @@ function danhSach(b,u,filter){
   if(u.role!==QUYEN_TOAN && filter && filter!==u.khuvuc) return khongDuQuyen();
   const inScope=r=>cungKhuVuc(u,r) && (!filter || r.khuvuc===filter);
   const rows=docBang(b.tuoi,COT_TUOI).filter(inScope), samples=docBang(b.thuhoi,COT_THUHOI).filter(inScope);
-  return {ok:true,rows:quanLyCan(u) || u.role===QUYEN_XEM?rows:rows.map(r=>({batch:r.batch,rid:r.rid,date:r.date,gio:r.gio,soxe:r.soxe,khach:r.khach,thuc:r.thuc,xanh:r.xanh,noi:r.noi,chin:r.chin,khuvuc:r.khuvuc})),samples,
+  return {ok:true,rows:quanLyCan(u) || u.role===QUYEN_XEM?rows:rows.map(r=>({batch:r.batch,rid:r.rid,date:r.date,gio:r.gio,soxe:r.soxe,khach:r.khach,thuc:r.thuc,xanh:r.xanh,noi:r.noi,chin:r.chin,khuvuc:r.khuvuc,vungMau:r.vungMau})),samples,
     folderUrl:u.role===QUYEN_TOAN?thuMucGoc().getUrl():'',sheetUrl:u.role===QUYEN_TOAN?b.ss.getUrl():''};
 }
