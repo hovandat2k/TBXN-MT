@@ -352,6 +352,7 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .area-columns>div{min-width:0}
 @media(max-width:850px){.area-columns{grid-template-columns:minmax(0,1fr);gap:0}}
 #tcAreaVehicles:not(:empty),.area-group{margin:12px 0;border:1px solid var(--line);border-radius:12px;padding:12px}
+.area-group{border:2px solid var(--muted)}
 .area-group-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,150px) auto;gap:8px;align-items:center}
 .area-group-heading small,.area-vehicle-table small{display:block;color:var(--muted);font-weight:400}
 .area-group-heading label{min-width:0}
@@ -361,6 +362,8 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .area-vehicle-table th,.area-vehicle-table td{padding:7px 8px;border-bottom:1px solid var(--line)}
 .area-vehicle-table th{background:var(--soft)}
 .area-vehicle-table td:nth-child(2){white-space:nowrap}
+.area-vehicle-table .area-recovery{white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}
+.area-vehicle-table td.area-recovery{color:var(--brand);font-weight:700}
 .area-vehicle-table select{width:100%;min-width:112px}
 .area-group>details{margin-top:10px}
 .area-group>details summary{cursor:pointer;color:var(--brand)}

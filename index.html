@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261106-area-columns">
+<link rel="stylesheet" href="styles.css?v=20261106-area-group-border">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -3370,14 +3370,16 @@ var APP = (() => {
     groupBox.dataset.viewKey = viewKey;
     const vehicleRow = r => {
       const value = r.vungMau || '', custom = value && !areaPresets.includes(value);
+      const sample = sampleOf(r.rid);
+      const recovery = thNum(sample) ? f2(+sample.thuhoi) : '–';
       return `<tr><td><strong>${esc(rowLabel(r))}</strong></td><td>${esc(r.soxe || '–')}</td><td>
         <select class="fld sel" aria-label="Khu vực của ${esc(rowLabel(r))}" data-vehicle-area="${esc(r.rid)}">
           <option value=""${value ? '' : ' disabled selected'}>${value ? 'Bỏ chọn khu vực' : 'Chọn khu vực'}</option>${areaPresets.map(p=>`<option${value === p ? ' selected' : ''}>${p}</option>`).join('')}
           ${custom ? `<option selected value="existing-custom">${esc(value)}</option>` : ''}
-          <option value="custom">Khác</option></select></td></tr>`;
+          <option value="custom">Khác</option></select></td><td class="area-recovery">${recovery}</td></tr>`;
     };
     const vehicleTable = list => `<div class="area-vehicle-scroll"><table class="area-vehicle-table">
-      <thead><tr><th>Khách hàng</th><th>Biển số</th><th>Khu vực</th></tr></thead>
+      <thead><tr><th>Khách hàng</th><th>Biển số</th><th>Khu vực</th><th class="area-recovery">Thu hồi (kg)</th></tr></thead>
       <tbody>${list.map(vehicleRow).join('')}</tbody></table></div>`;
     const unassigned = vehicles.filter(r => !r.vungMau);
     $('#tcAreaVehicles').innerHTML = vehicles.length ? `<h3>Chưa chọn khu vực</h3>${unassigned.length ? vehicleTable(unassigned) : '<p>Đã chọn khu vực cho tất cả xe.</p>'}` : '';
@@ -3391,15 +3393,15 @@ var APP = (() => {
       const pendingCount = g.rows.filter(r => !sampleOf(r.rid)).length;
       return `<section class="area-group" data-area-group="${esc(key)}">
       <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small></h3>
-      <label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"${pendingCount ? '' : ' disabled'}></label>
-      <button type="button" class="primary" data-area-save${pendingCount ? '' : ' disabled'}>Lưu cho nhóm</button></div>
+      <label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"></label>
+      <button type="button" class="primary" data-area-save>Lưu</button></div>
       ${vehicleTable(g.rows)}
-      ${pendingCount ? `<details><summary>Tính thu hồi từ mẫu</summary>
+      <details><summary>Tính thu hồi từ mẫu</summary>
       <div class="tbar"><label>KL (g)<input class="fld num" data-area-kl inputmode="decimal"></label>
       <label>KL quả (g)<input class="fld num" data-area-klq inputmode="decimal"></label>
       <label>Độ ẩm<input class="fld num" data-area-am inputmode="decimal"></label>
       <label>KL mẫu (g)<input class="fld num" data-area-mass inputmode="decimal" value="2000"></label>
-      <button type="button" class="ghost" data-area-calc>Tính thu hồi</button></div></details>` : ''}</section>`;
+      <button type="button" class="ghost" data-area-calc>Tính thu hồi</button></div></details></section>`;
     }).join('');
     groupBox.querySelectorAll('[data-area-group]').forEach(group => {
       const draft = drafts.get(group.dataset.areaGroup);
@@ -3464,8 +3466,11 @@ var APP = (() => {
     }
     const recovery=r2(num('result') ?? 0);
     if (!(recovery>0 && Number.isFinite(recovery))){toast('Nhập hoặc tính kết quả thu hồi trước khi lưu');return;}
-    const rows=areaVehicles().filter(r=>areaKey(r.vungMau)===card.dataset.areaGroup && !sampleOf(r.rid));
+    const rows=areaVehicles().filter(r=>areaKey(r.vungMau)===card.dataset.areaGroup);
     if (!rows.length){renderVehicleAreas();return;}
+    const entries=rows.map(r=>({r,existing:sampleOf(r.rid)}));
+    const existingCount=entries.filter(x=>x.existing).length;
+    if (existingCount && !confirm(`Lưu ${f2(recovery)} kg cho cả nhóm “${rows[0].vungMau}” (${rows.length} xe)? Kết quả đã lưu của ${existingCount} xe sẽ được thay thế.`)) return;
     const scope=scopeEpoch, group='N'+uid();
     tcAreaBusy=true;button.disabled=true;
     try {
@@ -3473,12 +3478,12 @@ var APP = (() => {
       if (Q.length || scope!==scopeEpoch) throw new Error('Cần đồng bộ dữ liệu trước khi lưu nhóm');
       const ping=await api('ping');
       if (!ping.features?.vehicleAreas) throw new Error('Máy chủ chưa hỗ trợ mẫu chung theo khu vực');
-      const ops=rows.map(r=>({action:'saveSample',onlyPending:true,vungMau:r.vungMau,requestId:'R'+uid(),sample:{
-        id:'M'+uid(),rid:String(r.rid),date:r.date,gio:r.gio,khach:r.khach || r.soxe || r.vungMau,soxe:r.soxe,
+      const ops=entries.map(({r,existing})=>({action:'saveSample',onlyPending:!existing,vungMau:r.vungMau,requestId:'R'+uid(),sample:{
+        id:existing?.id || 'M'+uid(),rid:String(r.rid),date:r.date,gio:r.gio,khach:r.khach || r.soxe || r.vungMau,soxe:r.soxe,
         klTuoi:r.thuc,thuhoi:r2(recovery),mau:'Mẫu chung · '+r.vungMau,nhom:group,khuvuc:'Lâm Đồng',savedAt:nowStr()
       }}));
       for (let i=0;i<ops.length;i+=20) await api('saveMany',{ops:ops.slice(i,i+20)});
-      toast('Đã áp dụng thu hồi cho các xe chưa có mẫu');
+      toast(existingCount ? 'Đã cập nhật thu hồi cho nhóm' : 'Đã áp dụng thu hồi cho các xe chưa có mẫu');
     } catch(err){toast(err.message);}
     finally {try {if(scope===scopeEpoch) await pull(true);} finally {tcAreaBusy=false;renderVehicleAreas();}}
   });
