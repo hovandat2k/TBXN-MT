@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261104-lao-form-2">
+<link rel="stylesheet" href="styles.css?v=20261106-area-groups">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -177,14 +177,17 @@
       </div>
       <div id="thChung" hidden>
         <section id="tcAreas" hidden>
-          <label class="flbl" for="tcAreaNight">Đêm cân để chia khu vực</label>
+          <label class="flbl" for="tcAreaNight">Đêm</label>
           <select id="tcAreaNight" class="fld sel"></select>
           <div id="tcAreaVehicles"></div>
           <div id="tcAreaGroups"></div>
         </section>
+        <details id="tcSavedDetails">
+        <summary class="saved-summary">Phiếu đã lưu</summary>
         <div class="tcbar"><select class="fld sel" id="tcNight"></select>
           <button type="button" class="ghost small" id="tcAll">Chọn tất cả</button><button type="button" class="ghost small" id="tcNone">Bỏ chọn</button></div>
         <div class="tclist" id="tcList"></div>
+        </details>
         <div class="tcman">
           <div class="flbl" style="font-weight:800">Nhập tay</div>
           <div class="tcrow">
@@ -3341,26 +3344,59 @@ var APP = (() => {
     if (!nights.includes(tcAreaNight)) tcAreaNight = nights[0] || '';
     $('#tcAreaNight').innerHTML = nights.map(n=>`<option value="${esc(n)}"${n === tcAreaNight ? ' selected' : ''}>${esc(nightLabel(n))}</option>`).join('');
     const vehicles = areaVehicles();
-    $('#tcAreaVehicles').innerHTML = vehicles.map(r=>{
+    const groupBox = $('#tcAreaGroups');
+    const viewKey = scopeEpoch + '|' + tcAreaNight;
+    const drafts = new Map();
+    if (groupBox.dataset.viewKey === viewKey){
+      groupBox.querySelectorAll('[data-area-group]').forEach(group => {
+        const fields = [...group.querySelectorAll('input')].map(field => field.value);
+        drafts.set(group.dataset.areaGroup, {fields,open:group.querySelector('details')?.open});
+      });
+    }
+    groupBox.dataset.viewKey = viewKey;
+    const vehicleRow = r => {
       const value = r.vungMau || '', custom = value && !areaPresets.includes(value);
-      return `<div class="tbar"><span class="sp">${esc(rowLabel(r))} · ${esc(r.soxe || '–')}${sampleOf(r.rid) ? ' · Đã có mẫu' : ''}</span>
+      return `<tr><td><strong>${esc(rowLabel(r))}</strong>${sampleOf(r.rid) ? '<small>Đã có mẫu</small>' : ''}</td><td>${esc(r.soxe || '–')}</td><td>
         <select class="fld sel" aria-label="Khu vực của ${esc(rowLabel(r))}" data-vehicle-area="${esc(r.rid)}">
           <option value="">Chọn khu vực</option>${areaPresets.map(p=>`<option${value === p ? ' selected' : ''}>${p}</option>`).join('')}
-          <option value="custom"${custom ? ' selected' : ''}>${custom ? esc(value) + ' · Sửa tên' : 'Khác (tự nhập)'}</option></select></div>`;
-    }).join('');
+          ${custom ? `<option selected value="${esc(value)}">${esc(value)}</option>` : ''}
+          <option value="custom">Khác (tự nhập)</option></select></td></tr>`;
+    };
+    const vehicleTable = list => `<div class="area-vehicle-scroll"><table class="area-vehicle-table">
+      <thead><tr><th>Khách hàng</th><th>Biển số</th><th>Khu vực</th></tr></thead>
+      <tbody>${list.map(vehicleRow).join('')}</tbody></table></div>`;
+    const unassigned = vehicles.filter(r => !r.vungMau);
+    $('#tcAreaVehicles').innerHTML = unassigned.length ? `<h3>Chưa chọn khu vực</h3>${vehicleTable(unassigned)}` : '';
     const groups = new Map();
-    vehicles.filter(r=>r.vungMau && !sampleOf(r.rid)).forEach(r=>groups.set(areaKey(r.vungMau), {name:r.vungMau,count:(groups.get(areaKey(r.vungMau))?.count || 0)+1}));
-    $('#tcAreaGroups').innerHTML = [...groups].map(([key,g])=>`<fieldset class="card" data-area-group="${esc(key)}"><legend>${esc(g.name)} · ${g.count} xe chưa có thu hồi</legend>
+    vehicles.filter(r => r.vungMau).forEach(r => {
+      const key = areaKey(r.vungMau);
+      if (!groups.has(key)) groups.set(key, {name:r.vungMau,rows:[]});
+      groups.get(key).rows.push(r);
+    });
+    groupBox.innerHTML = [...groups].map(([key,g])=>{
+      const pendingCount = g.rows.filter(r => !sampleOf(r.rid)).length;
+      return `<section class="area-group" data-area-group="${esc(key)}">
+      <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small></h3>
+      <label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"${pendingCount ? '' : ' disabled'}></label>
+      <button type="button" class="primary" data-area-save${pendingCount ? '' : ' disabled'}>Lưu cho nhóm</button></div>
+      ${vehicleTable(g.rows)}
+      ${pendingCount ? `<details><summary>Tính thu hồi từ mẫu</summary>
       <div class="tbar"><label>KL (g)<input class="fld num" data-area-kl inputmode="decimal"></label>
       <label>KL quả (g)<input class="fld num" data-area-klq inputmode="decimal"></label>
       <label>Độ ẩm<input class="fld num" data-area-am inputmode="decimal"></label>
       <label>KL mẫu (g)<input class="fld num" data-area-mass inputmode="decimal" value="2000"></label>
-      <button type="button" class="ghost" data-area-calc>Tính thu hồi</button></div>
-      <div class="tbar"><label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"></label>
-      <button type="button" class="primary" data-area-save>Lưu cho nhóm</button></div></fieldset>`).join('');
+      <button type="button" class="ghost" data-area-calc>Tính thu hồi</button></div></details>` : ''}</section>`;
+    }).join('');
+    groupBox.querySelectorAll('[data-area-group]').forEach(group => {
+      const draft = drafts.get(group.dataset.areaGroup);
+      const details = group.querySelector('details');
+      if (!draft || !details) return;
+      details.open = !!draft.open;
+      group.querySelectorAll('input').forEach((field,i) => { if (draft.fields[i] != null) field.value = draft.fields[i]; });
+    });
   }
   $('#tcAreaNight').addEventListener('change',e=>{tcAreaNight=e.target.value;renderVehicleAreas();});
-  $('#tcAreaVehicles').addEventListener('change',async e=>{
+  $('#tcAreas').addEventListener('change',async e=>{
     const select=e.target.closest('[data-vehicle-area]');
     if (!select || tcAreaBusy || !isLamDongScope()) return;
     const row=areaVehicles().find(r=>String(r.rid)===select.dataset.vehicleArea);
