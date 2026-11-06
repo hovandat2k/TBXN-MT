@@ -321,6 +321,18 @@
   <div class="detbtns" id="detBtns"></div>
 </div></dialog>
 <dialog id="zoomDlg"><form method="dialog" class="dlg"><img id="zoomImg" alt=""><div class="row2"><button class="ghost" value="close">Đóng</button></div></form></dialog>
+<dialog id="vehicleAreaDialog" aria-labelledby="vehicleAreaTitle">
+  <form method="dialog" class="dlg">
+    <h3 id="vehicleAreaTitle">Khu vực khác</h3>
+    <p id="vehicleAreaCustomer"></p>
+    <label for="vehicleAreaName">Tên khu vực</label>
+    <input id="vehicleAreaName" class="fld" placeholder="Nhập tên khu vực" maxlength="80" required autofocus>
+    <div class="row2">
+      <button class="ghost" value="cancel" formnovalidate>Hủy</button>
+      <button class="primary" value="save">Lưu khu vực</button>
+    </div>
+  </form>
+</dialog>
 
 <script>
 /* Bộ biểu tượng nét mảnh (kiểu Lucide), màu theo chữ */
@@ -3358,11 +3370,11 @@ var APP = (() => {
     groupBox.dataset.viewKey = viewKey;
     const vehicleRow = r => {
       const value = r.vungMau || '', custom = value && !areaPresets.includes(value);
-      return `<tr><td><strong>${esc(rowLabel(r))}</strong>${sampleOf(r.rid) ? '<small>Đã có mẫu</small>' : ''}</td><td>${esc(r.soxe || '–')}</td><td>
+      return `<tr><td><strong>${esc(rowLabel(r))}</strong></td><td>${esc(r.soxe || '–')}</td><td>
         <select class="fld sel" aria-label="Khu vực của ${esc(rowLabel(r))}" data-vehicle-area="${esc(r.rid)}">
-          <option value="">Chọn khu vực</option>${areaPresets.map(p=>`<option${value === p ? ' selected' : ''}>${p}</option>`).join('')}
-          ${custom ? `<option selected value="${esc(value)}">${esc(value)}</option>` : ''}
-          <option value="custom">Khác (tự nhập)</option></select></td></tr>`;
+          <option value=""${value ? '' : ' disabled selected'}>${value ? 'Bỏ chọn khu vực' : 'Chọn khu vực'}</option>${areaPresets.map(p=>`<option${value === p ? ' selected' : ''}>${p}</option>`).join('')}
+          ${custom ? `<option selected value="existing-custom">${esc(value)}</option>` : ''}
+          <option value="custom">Khác</option></select></td></tr>`;
     };
     const vehicleTable = list => `<div class="area-vehicle-scroll"><table class="area-vehicle-table">
       <thead><tr><th>Khách hàng</th><th>Biển số</th><th>Khu vực</th></tr></thead>
@@ -3398,17 +3410,36 @@ var APP = (() => {
     });
   }
   $('#tcAreaNight').addEventListener('change',e=>{tcAreaNight=e.target.value;renderVehicleAreas();});
+  const vehicleAreaDialog = $('#vehicleAreaDialog');
+  const vehicleAreaName = $('#vehicleAreaName');
+  vehicleAreaName.addEventListener('input', () => vehicleAreaName.setCustomValidity(''));
+  vehicleAreaDialog.querySelector('form').addEventListener('submit', e => {
+    if (e.submitter?.value === 'cancel' || vehicleAreaName.value.trim()) return;
+    e.preventDefault();
+    vehicleAreaName.setCustomValidity('Nhập tên khu vực.');
+    vehicleAreaName.reportValidity();
+  });
+  function askVehicleArea(row){
+    $('#vehicleAreaCustomer').textContent = [rowLabel(row),row.soxe].filter(Boolean).join(' · ');
+    vehicleAreaName.value = areaPresets.includes(row.vungMau) ? '' : row.vungMau || '';
+    vehicleAreaName.setCustomValidity('');
+    vehicleAreaDialog.returnValue = '';
+    vehicleAreaDialog.showModal();
+    vehicleAreaName.select();
+    return new Promise(resolve => vehicleAreaDialog.addEventListener('close', () => {
+      resolve(vehicleAreaDialog.returnValue === 'save' ? vehicleAreaName.value.trim() : null);
+    }, {once:true}));
+  }
   $('#tcAreas').addEventListener('change',async e=>{
     const select=e.target.closest('[data-vehicle-area]');
-    if (!select || tcAreaBusy || !isLamDongScope()) return;
+    if (!select || select.value === 'existing-custom' || tcAreaBusy || !isLamDongScope()) return;
     const row=areaVehicles().find(r=>String(r.rid)===select.dataset.vehicleArea);
     if (!row) return;
-    let value=select.value;
-    if (value==='custom') value=prompt('Nhập khu vực mẫu',row.vungMau || '')?.trim();
-    if (value == null) {renderVehicleAreas();return;}
     const areaScope=scopeEpoch;
     tcAreaBusy=true;select.disabled=true;
     try {
+      const value = select.value === 'custom' ? await askVehicleArea(row) : select.value;
+      if (value == null) return;
       await flush();
       if (Q.length || areaScope!==scopeEpoch) throw new Error('Cần đồng bộ dữ liệu trước khi chọn khu vực');
       await api('setVehicleArea',{rid:row.rid,vungMau:value});
