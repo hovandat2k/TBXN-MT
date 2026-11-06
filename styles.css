@@ -348,6 +348,9 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 #tcSavedDetails{margin:16px 0 8px}
 #tcSavedDetails>.tcbar{margin-top:10px}
 #tcAreas h3{margin:0;font-size:1.05rem}
+.area-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.area-columns>div{min-width:0}
+@media(max-width:850px){.area-columns{grid-template-columns:minmax(0,1fr);gap:0}}
 #tcAreaVehicles:not(:empty),.area-group{margin:12px 0;border:1px solid var(--line);border-radius:12px;padding:12px}
 .area-group-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,150px) auto;gap:8px;align-items:center}
 .area-group-heading small,.area-vehicle-table small{display:block;color:var(--muted);font-weight:400}

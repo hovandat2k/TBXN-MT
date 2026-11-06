@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261106-area-groups">
+<link rel="stylesheet" href="styles.css?v=20261106-area-columns">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -179,8 +179,10 @@
         <section id="tcAreas" hidden>
           <label class="flbl" for="tcAreaNight">Đêm</label>
           <select id="tcAreaNight" class="fld sel"></select>
-          <div id="tcAreaVehicles"></div>
-          <div id="tcAreaGroups"></div>
+          <div class="area-columns">
+            <div id="tcAreaVehicles"></div>
+            <div id="tcAreaGroups"></div>
+          </div>
         </section>
         <details id="tcSavedDetails">
         <summary class="saved-summary">Phiếu đã lưu</summary>
@@ -3366,7 +3368,7 @@ var APP = (() => {
       <thead><tr><th>Khách hàng</th><th>Biển số</th><th>Khu vực</th></tr></thead>
       <tbody>${list.map(vehicleRow).join('')}</tbody></table></div>`;
     const unassigned = vehicles.filter(r => !r.vungMau);
-    $('#tcAreaVehicles').innerHTML = unassigned.length ? `<h3>Chưa chọn khu vực</h3>${vehicleTable(unassigned)}` : '';
+    $('#tcAreaVehicles').innerHTML = vehicles.length ? `<h3>Chưa chọn khu vực</h3>${unassigned.length ? vehicleTable(unassigned) : '<p>Đã chọn khu vực cho tất cả xe.</p>'}` : '';
     const groups = new Map();
     vehicles.filter(r => r.vungMau).forEach(r => {
       const key = areaKey(r.vungMau);
