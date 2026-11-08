@@ -3348,16 +3348,21 @@ var APP = (() => {
   function suggestedVehicleArea(row){
     const existing = DB.rows.find(r => String(r.rid) === String(row.rid));
     if (existing) return existing.vungMau || '';
-    const date = String(row.date || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (!date) return '';
-    const previous = new Date(+date[3], +date[2] - 1, +date[1] - 1);
-    const previousKey = previous.getFullYear()*10000 + (previous.getMonth()+1)*100 + previous.getDate();
+    const currentDate = nightKey(row.date);
+    if (!currentDate) return '';
     const plateKey = value => areaKey(value).replace(/[\s.-]+/g,'');
     const plate = plateKey(row.soxe), name = areaKey(row.khach);
-    const history = DB.rows.filter(r => r.khuvuc === 'Lâm Đồng' && r.vungMau && nightKey(r.date) === previousKey);
+    const history = DB.rows.filter(r => r.khuvuc === 'Lâm Đồng' && r.vungMau && nightKey(r.date) > 0 && nightKey(r.date) <= currentDate);
     const plates = plate ? history.filter(r => plateKey(r.soxe) === plate) : [];
     const matches = plates.length ? plates : name ? history.filter(r => areaKey(r.khach) === name) : [];
-    return new Set(matches.map(r => areaKey(r.vungMau))).size === 1 ? matches[0].vungMau : '';
+    if (!matches.length) return '';
+    const stamp = r => {
+      const [h=0,m=0,s=0] = String(r.gio || '').split(':').map(Number);
+      return nightKey(r.date)*1000000 + (h*10000+m*100+s || 0);
+    };
+    const latestStamp = Math.max(...matches.map(stamp));
+    const latest = matches.filter(r => stamp(r) === latestStamp);
+    return new Set(latest.map(r => areaKey(r.vungMau))).size === 1 ? latest[0].vungMau : '';
   }
   const areaVehicles = () => DB.rows.filter(r => r.khuvuc === 'Lâm Đồng' && rNight(r) === tcAreaNight);
   function renderVehicleAreas(){
