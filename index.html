@@ -3345,6 +3345,7 @@ var APP = (() => {
     return [...names.values()].sort((a,b)=>a.localeCompare(b,'vi'));
   }
   let tcAreaNight = '', tcAreaBusy = false;
+  const collapsedAreaGroups = new Set();
   function suggestedVehicleArea(row){
     const existing = DB.rows.find(r => String(r.rid) === String(row.rid));
     if (existing) return existing.vungMau || '';
@@ -3412,12 +3413,13 @@ var APP = (() => {
     });
     groupBox.innerHTML = [...groups].map(([key,g])=>{
       const pendingCount = g.rows.filter(r => !sampleOf(r.rid)).length;
+      const collapsed = collapsedAreaGroups.has(tcAreaNight+'|'+key);
       return `<section class="area-group" data-area-group="${esc(key)}">
-      <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small></h3>
+      <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small><button type="button" class="ghost" data-area-toggle aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Mở rộng' : 'Thu gọn'} nhóm ${esc(g.name)}">${collapsed ? 'Mở rộng ▾' : 'Thu gọn ▴'}</button></h3>
       <label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"></label>
       <button type="button" class="primary" data-area-save>Lưu</button></div>
-      ${vehicleTable(g.rows)}
-      <details><summary>Tính thu hồi từ mẫu</summary>
+      ${vehicleTable(g.rows).replace('class="area-vehicle-scroll"', 'class="area-vehicle-scroll" data-area-content'+(collapsed ? ' hidden' : ''))}
+      <details data-area-content${collapsed ? ' hidden' : ''}><summary>Tính thu hồi từ mẫu</summary>
       <div class="tbar"><label>KL (g)<input class="fld num" data-area-kl inputmode="decimal"></label>
       <label>KL quả (g)<input class="fld num" data-area-klq inputmode="decimal"></label>
       <label>Độ ẩm<input class="fld num" data-area-am inputmode="decimal"></label>
@@ -3484,6 +3486,17 @@ var APP = (() => {
     finally {tcAreaBusy=false;renderVehicleAreas();}
   });
   $('#tcAreaGroups').addEventListener('click',async e=>{
+    const toggle=e.target.closest('[data-area-toggle]');
+    if (toggle){
+      const card=toggle.closest('[data-area-group]'), key=tcAreaNight+'|'+card.dataset.areaGroup;
+      const collapsed=toggle.getAttribute('aria-expanded')==='true';
+      if (collapsed) collapsedAreaGroups.add(key); else collapsedAreaGroups.delete(key);
+      toggle.setAttribute('aria-expanded',String(!collapsed));
+      toggle.textContent=collapsed ? 'Mở rộng ▾' : 'Thu gọn ▴';
+      toggle.setAttribute('aria-label',(collapsed ? 'Mở rộng' : 'Thu gọn')+' nhóm '+card.querySelector('h3').firstChild.textContent);
+      card.querySelectorAll('[data-area-content]').forEach(el=>el.hidden=collapsed);
+      return;
+    }
     const button=e.target.closest('[data-area-calc],[data-area-save]');
     if (!button || tcAreaBusy || !isLamDongScope()) return;
     const card=button.closest('[data-area-group]');
