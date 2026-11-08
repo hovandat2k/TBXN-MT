@@ -184,7 +184,7 @@
             <div id="tcAreaGroups"></div>
           </div>
         </section>
-        <details id="tcSavedDetails">
+        <details id="tcSavedDetails" hidden>
         <summary class="saved-summary">Chọn phiếu ghép mẫu</summary>
         <div class="tcbar"><select class="fld sel" id="tcNight"></select>
           <button type="button" class="ghost small" id="tcAll">Chọn tất cả</button><button type="button" class="ghost small" id="tcNone">Bỏ chọn</button></div>
@@ -3333,7 +3333,7 @@ var APP = (() => {
   }
   document.querySelectorAll('#mauSeg button').forEach(b => b.addEventListener('click', () => setMode(+b.dataset.mau === 10000)));
   const thNum = sp => sp && sp.thuhoi !== '' && sp.thuhoi != null && !isNaN(+sp.thuhoi);
-  const areaPresets = ['Đà Lạt', 'Cà huyện', 'Dak Lak', 'Lạc Dương', 'Rìa Đà Lạt'];
+  const areaPresets = ['Đà Lạt', 'Cà huyện', 'Dak Lak', 'Lạc Dương', 'Rìa Đà Lạt', 'Đơn Dương'];
   const areaKey = value => String(value ?? '').trim().replace(/\s+/g,' ').toLocaleLowerCase('vi');
   function customVehicleAreas(){
     const hidden = new Set(LS.get('hiddenVehicleAreas', []));
@@ -3530,7 +3530,7 @@ var APP = (() => {
     const entries=rows.map(r=>({r,existing:sampleOf(r.rid)}));
     const existingCount=entries.filter(x=>x.existing).length;
     if (existingCount && !confirm(`Lưu ${f2(recovery)} kg cho cả nhóm “${rows[0].vungMau}” (${rows.length} xe)? Kết quả đã lưu của ${existingCount} xe sẽ được thay thế.`)) return;
-    const scope=scopeEpoch, group='N'+uid();
+    const scope=scopeEpoch;
     tcAreaBusy=true;button.disabled=true;
     try {
       await flush();
@@ -3539,7 +3539,7 @@ var APP = (() => {
       if (!ping.features?.vehicleAreas) throw new Error('Máy chủ chưa hỗ trợ mẫu chung theo khu vực');
       const ops=entries.map(({r,existing})=>({action:'saveSample',onlyPending:!existing,vungMau:r.vungMau,requestId:'R'+uid(),sample:{
         id:existing?.id || 'M'+uid(),rid:String(r.rid),date:r.date,gio:r.gio,khach:r.khach || r.soxe || r.vungMau,soxe:r.soxe,
-        klTuoi:r.thuc,thuhoi:r2(recovery),mau:'Mẫu chung · '+r.vungMau,nhom:group,khuvuc:'Lâm Đồng',savedAt:nowStr()
+        klTuoi:r.thuc,thuhoi:r2(recovery),mau:'Mẫu chung · '+r.vungMau,nhom:'',khuvuc:'Lâm Đồng',savedAt:nowStr()
       }}));
       for (let i=0;i<ops.length;i+=20) await api('saveMany',{ops:ops.slice(i,i+20)});
       toast(existingCount ? 'Đã cập nhật thu hồi cho nhóm' : 'Đã áp dụng thu hồi cho các xe chưa có mẫu');
