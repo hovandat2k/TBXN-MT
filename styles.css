@@ -353,7 +353,9 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 @media(max-width:850px){.area-columns{grid-template-columns:minmax(0,1fr);gap:0}}
 #tcAreaVehicles:not(:empty),.area-group{margin:12px 0;border:1px solid var(--line);border-radius:12px;padding:12px}
 .area-group{border:2px solid var(--muted)}
-.area-group-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,150px) auto;gap:8px;align-items:center}
+.area-group-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,130px) minmax(90px,130px) auto auto;gap:8px;align-items:center}
+.area-group-weight{min-width:0}
+.area-group-weight output{display:block;width:100%;font-weight:700}
 .area-group-heading small,.area-vehicle-table small{display:block;color:var(--muted);font-weight:400}
 .area-group-heading label{min-width:0}
 .area-group-heading label input{width:100%}
@@ -369,8 +371,8 @@ select.fld.sel{cursor:pointer;padding-right:32px;background-image:linear-gradien
 .area-group>details summary{cursor:pointer;color:var(--brand)}
 .area-group>details .tbar{flex-wrap:wrap;margin-top:8px}
 @media(max-width:520px){
-  .area-group-heading{grid-template-columns:minmax(0,1fr) minmax(85px,115px)}
-  .area-group-heading button{grid-column:2}
+  .area-group-heading{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto}
+  .area-group-heading h3{grid-column:1/-1}
   .area-vehicle-table th,.area-vehicle-table td{padding:5px;font-size:.88rem}
 }
 .saved-count{font-size:14px;font-weight:500;color:var(--muted)}
