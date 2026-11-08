@@ -11,7 +11,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=20261106-area-group-border">
+<link rel="stylesheet" href="styles.css?v=20261108-area-group-weight">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -3413,10 +3413,13 @@ var APP = (() => {
     });
     groupBox.innerHTML = [...groups].map(([key,g])=>{
       const pendingCount = g.rows.filter(r => !sampleOf(r.rid)).length;
+      const totalWeight = g.rows.reduce((sum,r)=>sum+(parseKg(r.thuc) ?? 0),0);
       const collapsed = collapsedAreaGroups.has(tcAreaNight+'|'+key);
       return `<section class="area-group" data-area-group="${esc(key)}">
-      <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small><button type="button" class="ghost" style="color:var(--brand)" data-area-toggle aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Mở rộng' : 'Thu gọn'} nhóm ${esc(g.name)}">${collapsed ? '▾' : '▴'}</button></h3>
+      <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small></h3>
+      <div class="area-group-weight">Khối lượng (kg)<output class="fld num">${fmtKg(totalWeight)}</output></div>
       <label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"></label>
+      <button type="button" class="ghost" style="color:var(--brand)" data-area-toggle aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Mở rộng' : 'Thu gọn'} nhóm ${esc(g.name)}">${collapsed ? '▾' : '▴'}</button>
       <button type="button" class="primary" data-area-save>Lưu</button></div>
       ${vehicleTable(g.rows).replace('class="area-vehicle-scroll"', 'class="area-vehicle-scroll" data-area-content'+(collapsed ? ' hidden' : ''))}
       <details data-area-content${collapsed ? ' hidden' : ''}><summary>Tính thu hồi từ mẫu</summary>
