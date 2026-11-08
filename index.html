@@ -3415,7 +3415,7 @@ var APP = (() => {
       const pendingCount = g.rows.filter(r => !sampleOf(r.rid)).length;
       const collapsed = collapsedAreaGroups.has(tcAreaNight+'|'+key);
       return `<section class="area-group" data-area-group="${esc(key)}">
-      <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small><button type="button" class="ghost" data-area-toggle aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Mở rộng' : 'Thu gọn'} nhóm ${esc(g.name)}">${collapsed ? 'Mở rộng ▾' : 'Thu gọn ▴'}</button></h3>
+      <div class="area-group-heading"><h3>${esc(g.name)}<small>${pendingCount} xe chưa có thu hồi</small><button type="button" class="ghost" style="color:var(--brand)" data-area-toggle aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Mở rộng' : 'Thu gọn'} nhóm ${esc(g.name)}">${collapsed ? '▾' : '▴'}</button></h3>
       <label>Thu hồi (kg)<input class="fld num" data-area-result inputmode="decimal"></label>
       <button type="button" class="primary" data-area-save>Lưu</button></div>
       ${vehicleTable(g.rows).replace('class="area-vehicle-scroll"', 'class="area-vehicle-scroll" data-area-content'+(collapsed ? ' hidden' : ''))}
@@ -3492,7 +3492,7 @@ var APP = (() => {
       const collapsed=toggle.getAttribute('aria-expanded')==='true';
       if (collapsed) collapsedAreaGroups.add(key); else collapsedAreaGroups.delete(key);
       toggle.setAttribute('aria-expanded',String(!collapsed));
-      toggle.textContent=collapsed ? 'Mở rộng ▾' : 'Thu gọn ▴';
+      toggle.textContent=collapsed ? '▾' : '▴';
       toggle.setAttribute('aria-label',(collapsed ? 'Mở rộng' : 'Thu gọn')+' nhóm '+card.querySelector('h3').firstChild.textContent);
       card.querySelectorAll('[data-area-content]').forEach(el=>el.hidden=collapsed);
       return;
